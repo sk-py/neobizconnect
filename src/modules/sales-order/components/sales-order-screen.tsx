@@ -1,3 +1,4 @@
+// Component data dikhata hai
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
 import { useCartStore } from "@/store/cart.store";
