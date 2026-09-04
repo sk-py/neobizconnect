@@ -45,6 +45,15 @@ const TabLayout = () => {
                     }}
                     name='customer-ledger' />
 
+                        <Tabs.Screen
+                    options={{
+                        title: "Item Master",
+                        tabBarIcon: ({ color, size }) => (
+                            <Feather name='package' size={size} color={color} />
+                        )
+                    }}
+                    name='item-master' />
+
                 <Tabs.Screen
                     options={{
                         title: "Queries",
