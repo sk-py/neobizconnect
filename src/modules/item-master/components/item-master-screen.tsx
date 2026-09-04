@@ -59,59 +59,86 @@ export default function ItemMasterScreen() {
   const rangeStart = totalItems === 0 ? 0 : safePage * PAGE_SIZE + 1;
   const rangeEnd = Math.min(totalItems, (safePage + 1) * PAGE_SIZE);
 
+  const renderRow = ({ item }: { item: ItemMasterEntry }) => {
+    const outOfStock = item.inStockQty <= 0;
+    return (
+      <View style={styles.row}>
+        <View style={styles.rowMain}>
+          <Text style={styles.itemName} numberOfLines={1}>
+            {item.itemName}
+          </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaText}>{item.brand}</Text>
+            <Text style={styles.metaDot}>•</Text>
+            <Text style={styles.metaText}>{item.wheelSize}&quot;</Text>
+          </View>
+        </View>
+        <View style={[styles.stockBadge, outOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
+          <Text style={[styles.stockBadgeText, outOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}>
+            {item.inStockQty}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Text style={styles.title}>Item Master</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Item Master</Text>
 
-      <View style={styles.brandRow}>
-        {BRANDS.map((b) => {
-          const active = brand === b.value;
-          return (
-            <TouchableOpacity
-              key={b.value}
-              style={[styles.brandPill, active && styles.brandPillActive]}
-              onPress={() => handleBrandChange(b.value)}
-            >
-              <Text style={[styles.brandPillText, active && styles.brandPillTextActive]}>
-                {b.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+        <View style={styles.controlsRow}>
+          <View style={styles.brandRow}>
+            {BRANDS.map((b) => {
+              const active = brand === b.value;
+              return (
+                <TouchableOpacity
+                  key={b.value}
+                  style={[styles.brandPill, active && styles.brandPillActive]}
+                  onPress={() => handleBrandChange(b.value)}
+                >
+                  <Text style={[styles.brandPillText, active && styles.brandPillTextActive]}>
+                    {b.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-      <View style={styles.searchContainer}>
-        <Feather name="search" size={14} color={colors.muted} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search product or wheel size..."
-          placeholderTextColor={colors.muted}
-          value={searchQuery}
-          onChangeText={handleSearchChange}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
-            <Feather name="x-circle" size={14} color={colors.muted} />
-          </TouchableOpacity>
-        )}
+          <View style={styles.searchContainer}>
+            <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search..."
+              placeholderTextColor={colors.muted}
+              value={searchQuery}
+              onChangeText={handleSearchChange}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
+                <Feather name="x-circle" size={13} color={colors.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
       </View>
 
       {isLoading ? (
-        <Text style={styles.text}>Loading...</Text>
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>Loading...</Text>
+        </View>
       ) : filteredData.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.text}>No items found</Text>
+          <Feather name="package" size={32} color={colors.muted} />
+          <Text style={styles.emptyText}>No items found</Text>
         </View>
       ) : (
         <>
           <FlatList
             data={paginatedData}
             keyExtractor={(item: ItemMasterEntry) => item.itemCode}
-            renderItem={({ item }) => (
-              <View style={styles.row}>
-                <Text style={styles.text}>{item.itemName}</Text>
-              </View>
-            )}
+            renderItem={renderRow}
+            contentContainerStyle={styles.listContent}
           />
 
           <View style={styles.paginationBar}>
@@ -124,7 +151,7 @@ export default function ItemMasterScreen() {
                 onPress={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={safePage === 0}
               >
-                <Feather name="chevron-left" size={16} color={safePage === 0 ? colors.muted : colors.text} />
+                <Feather name="chevron-left" size={15} color={safePage === 0 ? colors.muted : colors.text} />
               </TouchableOpacity>
               <Text style={styles.pageIndicator}>
                 {safePage + 1} / {totalPages}
@@ -134,7 +161,7 @@ export default function ItemMasterScreen() {
                 onPress={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={safePage >= totalPages - 1}
               >
-                <Feather name="chevron-right" size={16} color={safePage >= totalPages - 1 ? colors.muted : colors.text} />
+                <Feather name="chevron-right" size={15} color={safePage >= totalPages - 1 ? colors.muted : colors.text} />
               </TouchableOpacity>
             </View>
           </View>
@@ -146,23 +173,44 @@ export default function ItemMasterScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.white },
-  title: { fontSize: 16, fontFamily: typography.bold, color: colors.text, padding: spacing.md, paddingBottom: 8 },
-  brandRow: { flexDirection: "row", gap: 8, paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
-  brandPill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+
+  header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
+  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 6 },
+
+  controlsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  brandRow: { flexDirection: "row", gap: 6 },
+  brandPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   brandPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  brandPillText: { fontSize: 12, fontFamily: typography.semibold, color: colors.textSecondary },
+  brandPillText: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary },
   brandPillTextActive: { color: colors.white },
-  searchContainer: { flexDirection: "row", alignItems: "center", marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 36 },
+
+  searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 32 },
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, fontSize: 12, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 2 },
-  row: { paddingHorizontal: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
-  text: { fontSize: 13, fontFamily: typography.medium, color: colors.text },
-  emptyBox: { flex: 1, alignItems: "center", justifyContent: "center" },
-  paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border },
-  paginationText: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary },
-  paginationControls: { flexDirection: "row", alignItems: "center", gap: 8 },
-  pageBtn: { width: 28, height: 28, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+
+  listContent: { paddingBottom: spacing.sm },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.sm },
+  rowMain: { flex: 1 },
+  itemName: { fontSize: 12, fontFamily: typography.semibold, color: colors.text },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  metaText: { fontSize: 10, fontFamily: typography.medium, color: colors.muted },
+  metaDot: { fontSize: 10, color: colors.muted },
+
+  stockBadge: { minWidth: 34, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  stockBadgeAvailable: { backgroundColor: "#F0FDF4" },
+  stockBadgeEmpty: { backgroundColor: "#FEF2F2" },
+  stockBadgeText: { fontSize: 12, fontFamily: typography.bold },
+  stockTextAvailable: { color: colors.success },
+  stockTextEmpty: { color: colors.error },
+
+  emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6 },
+  emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
+
+  paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.border },
+  paginationText: { fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pageBtn: { width: 26, height: 26, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
   pageBtnDisabled: { opacity: 0.5 },
-  pageIndicator: { fontSize: 12, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
+  pageIndicator: { fontSize: 11, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
 });
