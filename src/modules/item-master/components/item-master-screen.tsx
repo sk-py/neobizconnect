@@ -4,7 +4,7 @@ import { ItemMasterBrand, ItemMasterEntry } from "@/modules/item-master/types";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const BRANDS: { label: string; value: ItemMasterBrand }[] = [
@@ -17,6 +17,7 @@ const PAGE_SIZE = 20;
 export default function ItemMasterScreen() {
   const [brand, setBrand] = useState<ItemMasterBrand>("NEO");
   const [page, setPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["item-master", brand],
@@ -28,15 +29,32 @@ export default function ItemMasterScreen() {
     setPage(0);
   };
 
-  const totalItems = data?.length ?? 0;
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    setPage(0);
+  };
+
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    if (!searchQuery.trim()) return data;
+
+    const query = searchQuery.toLowerCase();
+    return data.filter(
+      (item) =>
+        item.itemName?.toLowerCase().includes(query) ||
+        item.itemCode?.toLowerCase().includes(query) ||
+        item.wheelSize?.toLowerCase().includes(query),
+    );
+  }, [data, searchQuery]);
+
+  const totalItems = filteredData.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
 
   const paginatedData = useMemo(() => {
-    if (!data) return [];
     const start = safePage * PAGE_SIZE;
-    return data.slice(start, start + PAGE_SIZE);
-  }, [data, safePage]);
+    return filteredData.slice(start, start + PAGE_SIZE);
+  }, [filteredData, safePage]);
 
   const rangeStart = totalItems === 0 ? 0 : safePage * PAGE_SIZE + 1;
   const rangeEnd = Math.min(totalItems, (safePage + 1) * PAGE_SIZE);
@@ -62,8 +80,28 @@ export default function ItemMasterScreen() {
         })}
       </View>
 
+      <View style={styles.searchContainer}>
+        <Feather name="search" size={14} color={colors.muted} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search product or wheel size..."
+          placeholderTextColor={colors.muted}
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
+            <Feather name="x-circle" size={14} color={colors.muted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
       {isLoading ? (
         <Text style={styles.text}>Loading...</Text>
+      ) : filteredData.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.text}>No items found</Text>
+        </View>
       ) : (
         <>
           <FlatList
@@ -114,8 +152,13 @@ const styles = StyleSheet.create({
   brandPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   brandPillText: { fontSize: 12, fontFamily: typography.semibold, color: colors.textSecondary },
   brandPillTextActive: { color: colors.white },
+  searchContainer: { flexDirection: "row", alignItems: "center", marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 36 },
+  searchIcon: { marginRight: 6 },
+  searchInput: { flex: 1, fontSize: 12, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
+  clearSearchBtn: { padding: 2 },
   row: { paddingHorizontal: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   text: { fontSize: 13, fontFamily: typography.medium, color: colors.text },
+  emptyBox: { flex: 1, alignItems: "center", justifyContent: "center" },
   paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border },
   paginationText: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary },
   paginationControls: { flexDirection: "row", alignItems: "center", gap: 8 },
