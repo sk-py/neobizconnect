@@ -1,157 +1,183 @@
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { fetchDealers } from "@/modules/dealers/services/dealers.api";
-import { Dealer } from "@/modules/dealers/types";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function DealersListScreen() {
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
+const STAT_CARDS = [
+  { key: "pendingOrders", label: "Pending Orders", icon: "shopping-cart" },
+  { key: "proformaInvoices", label: "Proforma Invoices", icon: "file-text" },
+  { key: "arInvoices", label: "AR Invoices", icon: "dollar-sign" },
+  { key: "arCreditMemos", label: "AR Credit Memos", icon: "credit-card" },
+  { key: "targetAssigned", label: "Target Assigned", icon: "target" },
+  { key: "achievement", label: "Achievement", icon: "award" },
+] as const;
 
-  const { data, isLoading, isError, error, isRefetching, refetch } = useQuery({
+const TABS = [
+  { key: "pendingOrders", label: "Pending Orders" },
+  { key: "proformaInvoice", label: "Proforma Invoice" },
+  { key: "arInvoice", label: "AR Invoice" },
+  { key: "arCreditMemo", label: "AR Credit Memo" },
+  { key: "ledgerSummary", label: "Ledger Summary" },
+] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
+
+export default function DealerDetailScreen() {
+  const router = useRouter();
+  const { cardCode } = useLocalSearchParams<{ cardCode: string }>();
+  const [activeTab, setActiveTab] = useState<TabKey>("pendingOrders");
+
+  const { data, isLoading } = useQuery({
     queryKey: ["dealers"],
     queryFn: fetchDealers,
   });
 
-  const filteredData = useMemo(() => {
-    if (!data) return [];
-    if (!searchQuery.trim()) return data;
+  const dealer = data?.find((d) => d.cardCode === cardCode);
 
-    const query = searchQuery.toLowerCase();
-    return data.filter(
-      (d) =>
-        d.cardName?.toLowerCase().includes(query) ||
-        d.cardCode?.toLowerCase().includes(query) ||
-        d.phone1?.toLowerCase().includes(query) ||
-        d.emailAddress?.toLowerCase().includes(query),
-    );
-  }, [data, searchQuery]);
-
-  const renderRow = ({ item }: { item: Dealer }) => {
-    const isActive = item.portalStatus === "Yes" && item.lock_status !== 0;
-
+  if (isLoading) {
     return (
-      <TouchableOpacity
-        style={styles.row}
-        activeOpacity={0.7}
-        onPress={() => router.push(`/dealer-details/${item.cardCode}`)}
-      >
-        <View style={styles.rowMain}>
-          <View style={styles.nameRow}>
-            <Text style={styles.dealerName} numberOfLines={1}>
-              {item.cardName}
-            </Text>
-            <View style={[styles.statusDot, isActive ? styles.statusDotActive : styles.statusDotInactive]} />
-          </View>
-          <Text style={styles.dealerCode}>{item.cardCode}</Text>
-          <View style={styles.contactRow}>
-            <Feather name="phone" size={11} color={colors.muted} />
-            <Text style={styles.contactText}>{item.phone1 || "-"}</Text>
-          </View>
-          {!!item.emailAddress && (
-            <View style={styles.contactRow}>
-              <Feather name="mail" size={11} color={colors.muted} />
-              <Text style={styles.contactText} numberOfLines={1}>
-                {item.emailAddress}
-              </Text>
-            </View>
-          )}
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <View style={styles.centerBox}>
+          <Text style={styles.text}>Loading...</Text>
         </View>
-        <Feather name="chevron-right" size={18} color={colors.muted} />
-      </TouchableOpacity>
+      </SafeAreaView>
     );
-  };
+  }
+
+  if (!dealer) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <View style={styles.centerBox}>
+          <Feather name="alert-circle" size={40} color={colors.muted} />
+          <Text style={styles.text}>Dealer not found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const isActive = dealer.portalStatus === "Yes" && dealer.lock_status !== 0;
+  const activeTabLabel = TABS.find((t) => t.key === activeTab)?.label ?? "";
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>Dealers</Text>
-          {!isLoading && !isError && <Text style={styles.countBadge}>{filteredData.length}</Text>}
-        </View>
-        <View style={styles.searchContainer}>
-          <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search name, code, phone, email..."
-            placeholderTextColor={colors.muted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
-              <Feather name="x-circle" size={13} color={colors.muted} />
-            </TouchableOpacity>
-          )}
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="arrow-left" size={20} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerTitleBlock}>
+          <View style={styles.nameRow}>
+            <Text style={styles.dealerName}>{dealer.cardName}</Text>
+            <View style={[styles.statusPill, isActive ? styles.statusPillActive : styles.statusPillInactive]}>
+              <Text style={[styles.statusPillText, isActive ? styles.statusTextActive : styles.statusTextInactive]}>
+                {isActive ? "Active" : "Inactive"}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.infoLine}>
+            Code: {dealer.cardCode} | Mobile: {dealer.phone1} | Email: {dealer.emailAddress} | Sales Manager: {dealer.salesManager}
+          </Text>
         </View>
       </View>
 
-      {isLoading ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Loading...</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/*
+          IMPORTANT: These stat cards are UI placeholders only.
+          Real numbers require separate per-dealer API endpoints we don't have yet.
+        */}
+        <View style={styles.statsGrid}>
+          {STAT_CARDS.map((stat) => (
+            <View key={stat.key} style={styles.statCard}>
+              <View style={styles.statIconCircle}>
+                <Feather name={stat.icon as any} size={14} color={colors.textSecondary} />
+              </View>
+              <Text style={styles.statValue}>--</Text>
+              <Text style={styles.statLabel} numberOfLines={1}>{stat.label}</Text>
+              <View style={styles.statPendingBadge}>
+                <Text style={styles.statPendingText}>awaiting API</Text>
+              </View>
+            </View>
+          ))}
         </View>
-      ) : isError ? (
-        <View style={styles.emptyBox}>
-          <Feather name="alert-triangle" size={32} color={colors.error} />
-          <Text style={styles.errorTitle}>Couldn't load dealers</Text>
-          <Text style={styles.errorSubtitle}>{(error as any)?.message || "Something went wrong."}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
-            <Text style={styles.retryBtnText}>Retry</Text>
-          </TouchableOpacity>
+
+        {/* Tab switcher */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabBar}
+          contentContainerStyle={styles.tabBarContent}
+        >
+          {TABS.map((tab) => {
+            const active = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tabItem, active && styles.tabItemActive]}
+                onPress={() => setActiveTab(tab.key)}
+              >
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/*
+          IMPORTANT: Tab content below is a placeholder.
+          Each tab needs its own API endpoint, filtered by dealer code,
+          which we don't have yet.
+        */}
+        <View style={styles.tabContentBox}>
+          <View style={styles.tabContentIconCircle}>
+            <Feather name="inbox" size={26} color={colors.muted} />
+          </View>
+          <Text style={styles.tabContentTitle}>{activeTabLabel}</Text>
+          <Text style={styles.tabContentSubtitle}>Awaiting API endpoint for this tab</Text>
         </View>
-      ) : filteredData.length === 0 ? (
-        <View style={styles.emptyBox}>
-          <Feather name="users" size={32} color={colors.muted} />
-          <Text style={styles.emptyText}>No dealers found</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredData}
-          keyExtractor={(item: Dealer) => item.cardCode}
-          renderItem={renderRow}
-          contentContainerStyle={styles.listContent}
-          onRefresh={refetch}
-          refreshing={isRefetching}
-        />
-      )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.white },
+  safeArea: { flex: 1, backgroundColor: colors.surface },
+  centerBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
+  text: { fontSize: 13, fontFamily: typography.medium, color: colors.text },
 
-  header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: 6 },
-  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
-  countBadge: { fontSize: 11, fontFamily: typography.bold, color: colors.primary, backgroundColor: "#FEF2F2", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.xl },
+  header: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
+  backBtn: { padding: 4 },
+  headerTitleBlock: { flex: 1 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
+  dealerName: { fontSize: 16, fontFamily: typography.bold, color: colors.text },
+  statusPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.xl },
+  statusPillActive: { backgroundColor: "#F0FDF4" },
+  statusPillInactive: { backgroundColor: colors.surface },
+  statusPillText: { fontSize: 10, fontFamily: typography.bold },
+  statusTextActive: { color: colors.success },
+  statusTextInactive: { color: colors.muted },
+  infoLine: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, lineHeight: 16 },
 
-  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 34 },
-  searchIcon: { marginRight: 6 },
-  searchInput: { flex: 1, fontSize: 12, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
-  clearSearchBtn: { padding: 2 },
+  scrollContent: { padding: spacing.md },
 
-  listContent: { paddingBottom: spacing.sm },
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.md },
+  statCard: { width: "31%", backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, gap: 4 },
+  statIconCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", marginBottom: 2 },
+  statValue: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
+  statLabel: { fontSize: 10, fontFamily: typography.semibold, color: colors.textSecondary },
+  statPendingBadge: { alignSelf: "flex-start", backgroundColor: colors.surface, borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2 },
+  statPendingText: { fontSize: 8, fontFamily: typography.medium, color: colors.muted, fontStyle: "italic" },
 
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.sm },
-  rowMain: { flex: 1 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  dealerName: { fontSize: 13, fontFamily: typography.semibold, color: colors.text, flexShrink: 1 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusDotActive: { backgroundColor: colors.success },
-  statusDotInactive: { backgroundColor: colors.muted },
-  dealerCode: { fontSize: 10, fontFamily: typography.medium, color: colors.primary, marginTop: 2 },
-  contactRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
-  contactText: { fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary },
+  tabBar: { marginBottom: spacing.sm },
+  tabBarContent: { gap: 6 },
+  tabItem: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.sm, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
+  tabItemActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tabText: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary },
+  tabTextActive: { color: colors.white },
 
-  emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
-  emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
-  errorTitle: { fontSize: 13, fontFamily: typography.bold, color: colors.error },
-  errorSubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, textAlign: "center" },
-  retryBtn: { marginTop: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radius.sm },
-  retryBtnText: { fontSize: 13, fontFamily: typography.bold, color: colors.white },
+  tabContentBox: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.xl, alignItems: "center", gap: 8 },
+  tabContentIconCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  tabContentTitle: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
+  tabContentSubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, fontStyle: "italic" },
 });

@@ -5,14 +5,14 @@ import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function DealersListScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, isRefetching, refetch } = useQuery({
     queryKey: ["dealers"],
     queryFn: fetchDealers,
   });
@@ -48,17 +48,32 @@ export default function DealersListScreen() {
             <View style={[styles.statusDot, isActive ? styles.statusDotActive : styles.statusDotInactive]} />
           </View>
           <Text style={styles.dealerCode}>{item.cardCode}</Text>
-          <View style={styles.contactRow}>
-            <Feather name="phone" size={11} color={colors.muted} />
-            <Text style={styles.contactText}>{item.phone1 || "-"}</Text>
-          </View>
+
+          {!!item.phone1 && (
+            <TouchableOpacity
+              style={styles.contactRow}
+              onPress={(e) => {
+                e.stopPropagation();
+                Linking.openURL(`tel:${item.phone1}`);
+              }}
+            >
+              <Feather name="phone" size={11} color={colors.muted} />
+              <Text style={styles.contactText}>{item.phone1}</Text>
+            </TouchableOpacity>
+          )}
           {!!item.emailAddress && (
-            <View style={styles.contactRow}>
+            <TouchableOpacity
+              style={styles.contactRow}
+              onPress={(e) => {
+                e.stopPropagation();
+                Linking.openURL(`mailto:${item.emailAddress}`);
+              }}
+            >
               <Feather name="mail" size={11} color={colors.muted} />
               <Text style={styles.contactText} numberOfLines={1}>
                 {item.emailAddress}
               </Text>
-            </View>
+            </TouchableOpacity>
           )}
         </View>
         <Feather name="chevron-right" size={18} color={colors.muted} />
@@ -69,7 +84,13 @@ export default function DealersListScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Dealers</Text>
+        <View style={styles.titleRow}>
+          <View style={styles.titleIconCircle}>
+            <Feather name="users" size={14} color={colors.white} />
+          </View>
+          <Text style={styles.title}>Dealers</Text>
+          {!isLoading && !isError && <Text style={styles.countBadge}>{filteredData.length}</Text>}
+        </View>
         <View style={styles.searchContainer}>
           <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
           <TextInput
@@ -91,6 +112,15 @@ export default function DealersListScreen() {
         <View style={styles.emptyBox}>
           <Text style={styles.emptyText}>Loading...</Text>
         </View>
+      ) : isError ? (
+        <View style={styles.emptyBox}>
+          <Feather name="alert-triangle" size={32} color={colors.error} />
+          <Text style={styles.errorTitle}>Couldn't load dealers</Text>
+          <Text style={styles.errorSubtitle}>{(error as any)?.message || "Something went wrong."}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       ) : filteredData.length === 0 ? (
         <View style={styles.emptyBox}>
           <Feather name="users" size={32} color={colors.muted} />
@@ -102,6 +132,8 @@ export default function DealersListScreen() {
           keyExtractor={(item: Dealer) => item.cardCode}
           renderItem={renderRow}
           contentContainerStyle={styles.listContent}
+          onRefresh={refetch}
+          refreshing={isRefetching}
         />
       )}
     </SafeAreaView>
@@ -112,7 +144,10 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.white },
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
-  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 6 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: 6 },
+  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
+  titleIconCircle: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  countBadge: { fontSize: 11, fontFamily: typography.bold, color: colors.primary, backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.xl },
 
   searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 34 },
   searchIcon: { marginRight: 6 },
@@ -124,14 +159,18 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.sm },
   rowMain: { flex: 1 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  dealerName: { fontSize: 13, fontFamily: typography.semibold, color: colors.text, flexShrink: 1 },
+  dealerName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusDotActive: { backgroundColor: colors.success },
   statusDotInactive: { backgroundColor: colors.muted },
-  dealerCode: { fontSize: 10, fontFamily: typography.medium, color: colors.primary, marginTop: 2 },
+  dealerCode: { fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
   contactRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
   contactText: { fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary },
 
-  emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6 },
+  emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
   emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
+  errorTitle: { fontSize: 13, fontFamily: typography.bold, color: colors.error },
+  errorSubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, textAlign: "center" },
+  retryBtn: { marginTop: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radius.sm },
+  retryBtnText: { fontSize: 13, fontFamily: typography.bold, color: colors.white },
 });
