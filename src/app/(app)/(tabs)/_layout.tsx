@@ -19,13 +19,29 @@ const TabLayout = () => {
                         )
                     }}
                     name='index' />
+                                    <Tabs.Screen
+                    options={{
+                        title: "Dealers",
+                        tabBarIcon: ({ color, size }) => (
+                            <Feather name='users' size={size} color={color} />
+                        )
+                    }}
+                    name='dealers' />
+                <Tabs.Screen
+                    options={{
+                        title: "Item Master",
+                        tabBarIcon: ({ color, size }) => (
+                            <Feather name='package' size={size} color={color} />
+                        )
+                    }}
+                    name='item-master' />
                 <Tabs.Screen
                     options={{
                         title: "Sales Order",
                         tabBarIcon: ({ color, size }) => (
                             <Feather name='shopping-bag' size={size} color={color} />
                         ),
-                        // href: isAdmin ? "/sales-order" : null
+
                     }}
                     name='sales-order' />
                 <Tabs.Screen
@@ -38,13 +54,20 @@ const TabLayout = () => {
                     name='order-history' />
                 <Tabs.Screen
                     options={{
+                        title: "Transaction History",
+                        tabBarIcon: ({ color, size }) => (
+                            <Feather name='credit-card' size={size} color={color} />
+                        )
+                    }}
+                    name='transaction-history' />
+                <Tabs.Screen
+                    options={{
                         title: "Customer Ledger",
                         tabBarIcon: ({ color, size, focused }) => (
                             <Feather name={focused ? 'book-open' : 'book'} size={size} color={color} />
                         )
                     }}
                     name='customer-ledger' />
-
                 <Tabs.Screen
                     options={{
                         title: "Queries",

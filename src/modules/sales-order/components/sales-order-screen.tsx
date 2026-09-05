@@ -3,7 +3,7 @@ import { colors, radius, spacing, txtSize, typography } from "@/constants/theme"
 import { useAuth } from "@/hooks/use-auth";
 import { useCartStore } from "@/store/cart.store";
 import { LegendList } from "@legendapp/list/react-native";
-import { Feather } from "@react-native-vector-icons/feather";
+import { Feather } from "@react-native-vector-icons/feather/static";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
