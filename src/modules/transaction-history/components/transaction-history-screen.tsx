@@ -175,9 +175,9 @@ export default function TransactionHistoryScreen() {
           <Text style={styles.emptyText}>Loading...</Text>
         </View>
       ) : filteredData.length === 0 ? (
-        <View style={styles.emptyBox}>
+                <View style={styles.emptyBox}>
           <View style={styles.emptyIconCircle}>
-            <Feather name="inbox" size={28} color={colors.primary} />
+            <Feather name="inbox" size={28} color={colors.muted} />
           </View>
           <Text style={styles.emptyText}>No transactions found</Text>
         </View>
@@ -238,6 +238,6 @@ const styles = StyleSheet.create({
   lineItemQty: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
-  emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center" },
+    emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
   emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
 });
