@@ -39,3 +39,6 @@ export type LeadQuery = {
   stage_status_list: any[];
   meeting_list: any[];
 };
+
+export const LEAD_STATUS_OPTIONS = ["Open", "Under Review", "In Progress", "Closed"] as const;
+export type LeadStatus = (typeof LEAD_STATUS_OPTIONS)[number];
