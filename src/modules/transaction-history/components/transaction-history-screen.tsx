@@ -151,9 +151,6 @@ export default function TransactionHistoryScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <View style={styles.titleIconCircle}>
-            <Feather name="credit-card" size={14} color={colors.white} />
-          </View>
           <Text style={styles.title}>Transaction History</Text>
         </View>
         <View style={styles.searchContainer}>

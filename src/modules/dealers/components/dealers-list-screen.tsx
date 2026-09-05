@@ -85,11 +85,7 @@ export default function DealersListScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <View style={styles.titleIconCircle}>
-            <Feather name="users" size={14} color={colors.white} />
-          </View>
           <Text style={styles.title}>Dealers</Text>
-          {!isLoading && !isError && <Text style={styles.countBadge}>{filteredData.length}</Text>}
         </View>
         <View style={styles.searchContainer}>
           <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
