@@ -21,11 +21,19 @@ const TabLayout = () => {
                     name='index' />
                 <Tabs.Screen
                     options={{
+                        title: "Item Master",
+                        tabBarIcon: ({ color, size }) => (
+                            <Feather name='package' size={size} color={color} />
+                        )
+                    }}
+                    name='item-master' />
+                <Tabs.Screen
+                    options={{
                         title: "Sales Order",
                         tabBarIcon: ({ color, size }) => (
                             <Feather name='shopping-bag' size={size} color={color} />
                         ),
-                        // href: isAdmin ? "/sales-order" : null
+
                     }}
                     name='sales-order' />
                 <Tabs.Screen
@@ -44,16 +52,6 @@ const TabLayout = () => {
                         )
                     }}
                     name='customer-ledger' />
-
-                        <Tabs.Screen
-                    options={{
-                        title: "Item Master",
-                        tabBarIcon: ({ color, size }) => (
-                            <Feather name='package' size={size} color={color} />
-                        )
-                    }}
-                    name='item-master' />
-
                 <Tabs.Screen
                     options={{
                         title: "Queries",

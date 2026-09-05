@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 12, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 2 },
 
-  listContent: { paddingBottom: spacing.sm },
+  listContent: { paddingBottom: 0 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.sm },
   rowMain: { flex: 1 },
   itemName: { fontSize: 12, fontFamily: typography.semibold, color: colors.text },
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6 },
   emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
 
-  paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.border },
+  paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 4, borderTopWidth: 1, borderTopColor: colors.border },
   paginationText: { fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary },
   paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
   pageBtn: { width: 26, height: 26, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
