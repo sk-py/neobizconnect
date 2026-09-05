@@ -5,6 +5,7 @@ import { fetchDealerPendingOrders } from "@/modules/dealers/services/dealer-pend
 import { fetchDealerProformaInvoices } from "@/modules/dealers/services/dealer-proforma-invoice.api";
 import { fetchDealerArInvoices } from "@/modules/dealers/services/dealer-ar-invoice.api";
 import { fetchDealerArCreditMemos } from "@/modules/dealers/services/dealer-ar-credit-memo.api";
+import { fetchDealerTargetAchievement } from "@/modules/dealers/services/dealer-target-achievement.api";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -208,8 +209,14 @@ export default function DealerDetailScreen() {
     enabled: !!cardCode,
   });
 
-  const getCount = (query: UseQueryResult<any>) =>
-    Array.isArray(query.data) ? query.data.length : query.isLoading ? null : 0;
+  const summaryQuery = useQuery({
+    queryKey: ["dealer-target-achievement", cardCode],
+    queryFn: () => fetchDealerTargetAchievement(cardCode),
+    enabled: !!cardCode,
+  });
+
+  const summary = summaryQuery.data;
+  const summaryLoading = summaryQuery.isLoading;
 
   const STAT_CARDS = [
     {
@@ -218,7 +225,7 @@ export default function DealerDetailScreen() {
       icon: "shopping-cart",
       bg: "#DBEAFE",
       iconColor: "#2563EB",
-      value: getCount(pendingOrdersQuery),
+      value: summary ? summary.pending_order_count : null,
     },
     {
       key: "proformaInvoices",
@@ -226,7 +233,7 @@ export default function DealerDetailScreen() {
       icon: "file-text",
       bg: "#EDE9FE",
       iconColor: "#7C3AED",
-      value: getCount(proformaInvoiceQuery),
+      value: summary ? summary.performa_invoice_count : null,
     },
     {
       key: "arInvoices",
@@ -234,7 +241,7 @@ export default function DealerDetailScreen() {
       icon: "check-circle",
       bg: "#DCFCE7",
       iconColor: "#16A34A",
-      value: getCount(arInvoiceQuery),
+      value: summary ? summary.ar_invoice_count : null,
     },
     {
       key: "arCreditMemos",
@@ -242,7 +249,7 @@ export default function DealerDetailScreen() {
       icon: "rotate-ccw",
       bg: "#FEE2E2",
       iconColor: "#DC2626",
-      value: getCount(arCreditMemoQuery),
+      value: summary ? summary.ar_credit_count : null,
     },
     {
       key: "targetAssigned",
@@ -250,7 +257,7 @@ export default function DealerDetailScreen() {
       icon: "target",
       bg: "#FEF3C7",
       iconColor: "#D97706",
-      value: null,
+      value: summary ? summary.target_assigned_quantity : null,
     },
     {
       key: "achievement",
@@ -258,7 +265,7 @@ export default function DealerDetailScreen() {
       icon: "award",
       bg: "#FFEDD5",
       iconColor: "#EA580C",
-      value: null,
+      value: summary ? summary.achievement_quantity : null,
     },
   ] as const;
 
@@ -460,13 +467,10 @@ export default function DealerDetailScreen() {
               <View style={[styles.statIconCircle, { backgroundColor: stat.bg }]}>
                 <Feather name={stat.icon as any} size={20} color={stat.iconColor} />
               </View>
-              <Text style={styles.statValue}>{stat.value === null ? "--" : stat.value}</Text>
+              <Text style={styles.statValue}>
+                {stat.value === null ? (summaryLoading ? "..." : "--") : stat.value}
+              </Text>
               <Text style={styles.statLabel} numberOfLines={1}>{stat.label}</Text>
-              {stat.value === null && (
-                <View style={styles.statPendingBadge}>
-                  <Text style={styles.statPendingText}>awaiting API</Text>
-                </View>
-              )}
             </View>
           ))}
         </View>
@@ -484,6 +488,8 @@ export default function DealerDetailScreen() {
                 key={tab.key}
                 style={[styles.tabItem, active && styles.tabItemActive]}
                 onPress={() => setActiveTab(tab.key)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
               >
                 <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
               </TouchableOpacity>
@@ -526,12 +532,10 @@ const styles = StyleSheet.create({
   statIconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", marginBottom: 2 },
   statValue: { fontSize: 22, fontFamily: typography.bold, color: colors.text },
   statLabel: { fontSize: 12, fontFamily: typography.semibold, color: colors.textSecondary },
-  statPendingBadge: { alignSelf: "flex-start", backgroundColor: colors.surface, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 3, marginTop: 2 },
-  statPendingText: { fontSize: 9, fontFamily: typography.medium, color: colors.muted, fontStyle: "italic" },
 
   tabBar: { marginBottom: spacing.sm },
   tabBarContent: { gap: 6 },
-    tabItem: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.xl, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
+  tabItem: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.xl, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
   tabItemActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   tabText: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary },
   tabTextActive: { color: colors.white },

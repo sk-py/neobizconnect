@@ -10,8 +10,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const getBrandAccent = (brand: string) => {
   const normalized = (brand || "").toLowerCase();
   if (normalized === "zetta") {
-    return { bar: "#7C3AED", badgeBg: "#EDE9FE", badgeText: "#7C3AED" };
+    return { bar: "#2563EB", badgeBg: "#DBEAFE", badgeText: "#2563EB" };
   }
+  // Default to Neo (or unknown brand) using the app's primary color
   return { bar: colors.primary, badgeBg: "#FEF2F2", badgeText: colors.primary };
 };
 
@@ -109,7 +110,7 @@ export default function LeadQueryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-            <View style={styles.header}>
+      <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>Lead / Query</Text>
         </View>
@@ -167,7 +168,6 @@ const styles = StyleSheet.create({
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  titleIconCircle: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
 
   searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 34 },
