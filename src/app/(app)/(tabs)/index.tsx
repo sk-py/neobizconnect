@@ -1,18 +1,10 @@
-import { useAuth } from '@/hooks/use-auth'
-import { StyleSheet, Text, View } from 'react-native'
+import { SalesManagerHomeScreen } from '@/modules/sales-manager-tracking/components/sales-manager-home-screen'
 
-const tracker = () => {
-
-  const { user } = useAuth()
-
-
+const TrackerRoute = () => {
   return (
-    <View>
-      <Text>tracker</Text>
-    </View>
+    <SalesManagerHomeScreen />
   )
 }
 
-export default tracker
+export default TrackerRoute
 
-const styles = StyleSheet.create({})
