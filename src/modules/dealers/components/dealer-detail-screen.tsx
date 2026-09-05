@@ -1,6 +1,7 @@
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { fetchDealerLedger } from "@/modules/dealers/services/dealer-ledger.api";
+import { fetchDealerPendingOrders } from "@/modules/dealers/services/dealer-pending-orders.api";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -53,6 +54,12 @@ export default function DealerDetailScreen() {
     queryKey: ["dealer-ledger", cardCode],
     queryFn: () => fetchDealerLedger(cardCode),
     enabled: activeTab === "ledgerSummary" && !!cardCode,
+  });
+
+  const pendingOrdersQuery = useQuery({
+    queryKey: ["dealer-pending-orders", cardCode],
+    queryFn: () => fetchDealerPendingOrders(cardCode),
+    enabled: activeTab === "pendingOrders" && !!cardCode,
   });
 
   if (isLoading) {
@@ -149,6 +156,37 @@ export default function DealerDetailScreen() {
       );
     }
 
+    if (activeTab === "pendingOrders") {
+      if (pendingOrdersQuery.isLoading) {
+        return (
+          <View style={styles.tabContentBox}>
+            <Text style={styles.tabContentTitle}>Loading pending orders...</Text>
+          </View>
+        );
+      }
+      if (pendingOrdersQuery.isError) {
+        return (
+          <View style={styles.tabContentBox}>
+            <Feather name="alert-triangle" size={26} color={colors.error} />
+            <Text style={styles.tabContentTitle}>Couldn't load pending orders</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => pendingOrdersQuery.refetch()}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+      // DEBUG: temporary, check terminal console log for raw shape
+      return (
+        <View style={styles.tabContentBox}>
+          <Text style={styles.tabContentTitle}>Check terminal for raw response</Text>
+          <Text style={styles.tabContentSubtitle}>
+            Count: {Array.isArray(pendingOrdersQuery.data) ? pendingOrdersQuery.data.length : "not an array"}
+          </Text>
+        </View>
+      );
+    }
+
+    // Other tabs still pending their APIs
     const label = TABS.find((t) => t.key === activeTab)?.label ?? "";
     return (
       <View style={styles.tabContentBox}>
