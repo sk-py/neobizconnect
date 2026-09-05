@@ -76,6 +76,16 @@ const TabLayout = () => {
                         )
                     }}
                     name='dealer-query' />
+
+                                    <Tabs.Screen
+                    options={{
+                        title: "Leads",
+                        tabBarIcon: ({ color, size }) => (
+                            <Feather name='user-plus' size={size} color={color} />
+                        )
+                    }}
+                    name='lead-query' />
+                    
                 <Tabs.Screen
                     options={{
                         title: "Sub Dealers",
