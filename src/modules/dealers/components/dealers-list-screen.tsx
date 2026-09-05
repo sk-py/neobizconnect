@@ -3,11 +3,13 @@ import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { Dealer } from "@/modules/dealers/types";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function DealersListScreen() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data, isLoading } = useQuery({
@@ -33,7 +35,11 @@ export default function DealersListScreen() {
     const isActive = item.portalStatus === "Yes" && item.lock_status !== 0;
 
     return (
-      <View style={styles.row}>
+      <TouchableOpacity
+        style={styles.row}
+        activeOpacity={0.7}
+        onPress={() => router.push(`/dealer-details/${item.cardCode}`)}
+      >
         <View style={styles.rowMain}>
           <View style={styles.nameRow}>
             <Text style={styles.dealerName} numberOfLines={1}>
@@ -56,7 +62,7 @@ export default function DealersListScreen() {
           )}
         </View>
         <Feather name="chevron-right" size={18} color={colors.muted} />
-      </View>
+      </TouchableOpacity>
     );
   };
 
