@@ -4,7 +4,7 @@ import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const STAT_CARDS = [
@@ -78,7 +78,15 @@ export default function DealerDetailScreen() {
             </View>
           </View>
           <Text style={styles.infoLine}>
-            Code: {dealer.cardCode} | Mobile: {dealer.phone1} | Email: {dealer.emailAddress} | Sales Manager: {dealer.salesManager}
+            Code: {dealer.cardCode} | Mobile:{" "}
+            <Text style={styles.infoLink} onPress={() => Linking.openURL(`tel:${dealer.phone1}`)}>
+              {dealer.phone1}
+            </Text>
+            {" | "}Email:{" "}
+            <Text style={styles.infoLink} onPress={() => Linking.openURL(`mailto:${dealer.emailAddress}`)}>
+              {dealer.emailAddress}
+            </Text>
+            {" | "}Sales Manager: {dealer.salesManager}
           </Text>
         </View>
       </View>
@@ -158,6 +166,7 @@ const styles = StyleSheet.create({
   statusTextActive: { color: colors.success },
   statusTextInactive: { color: colors.muted },
   infoLine: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, lineHeight: 16 },
+  infoLink: { color: colors.text, fontFamily: typography.semibold },
 
   scrollContent: { padding: spacing.md },
 
