@@ -46,6 +46,14 @@ const TabLayout = () => {
                     name='order-history' />
                 <Tabs.Screen
                     options={{
+                        title: "Transaction History",
+                        tabBarIcon: ({ color, size }) => (
+                            <Feather name='credit-card' size={size} color={color} />
+                        )
+                    }}
+                    name='transaction-history' />
+                <Tabs.Screen
+                    options={{
                         title: "Customer Ledger",
                         tabBarIcon: ({ color, size, focused }) => (
                             <Feather name={focused ? 'book-open' : 'book'} size={size} color={color} />
