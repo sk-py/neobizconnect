@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
 
   tabBar: { marginBottom: spacing.sm },
   tabBarContent: { gap: 6 },
-  tabItem: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.sm, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
+    tabItem: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.xl, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
   tabItemActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   tabText: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary },
   tabTextActive: { color: colors.white },
