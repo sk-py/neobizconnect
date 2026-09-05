@@ -1,3 +1,4 @@
+import { UserRole } from "@/constants/modules";
 import { validateToken } from "@/services/validateToken";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store";
@@ -9,7 +10,7 @@ export type User = {
   //   id: string;
   name: string;
   authority_id: number;
-  authority: string;
+  authority: UserRole;
   dealer_code?: string;
   dealer_brand_type: BrandType[];
   group_company_name: string;

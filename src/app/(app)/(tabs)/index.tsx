@@ -1,5 +1,18 @@
-import { DashboardScreen } from "@/modules/dashboard/components/dealer-dashboard";
+import { useAuth } from '@/hooks/use-auth'
+import { StyleSheet, Text, View } from 'react-native'
 
-export default function ProfileRoute() {
-    return <DashboardScreen />;
+const tracker = () => {
+
+  const { user } = useAuth()
+
+
+  return (
+    <View>
+      <Text>tracker</Text>
+    </View>
+  )
 }
+
+export default tracker
+
+const styles = StyleSheet.create({})

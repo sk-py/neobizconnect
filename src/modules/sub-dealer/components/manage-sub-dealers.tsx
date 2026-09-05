@@ -22,7 +22,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
-import { createSubDealer, fetchSubDealers, updateSubDealer } from "../services/service-api";
+import { createSubDealer, fetchSubDealers, updateSubDealer } from "../services/sub-dealers-api";
 import { SubDealer } from "../types";
 
 const formSchema = z.object({
