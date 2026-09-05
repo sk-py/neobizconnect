@@ -1,5 +1,6 @@
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { fetchDealers } from "@/modules/dealers/services/dealers.api";
+import { fetchDealerLedger } from "@/modules/dealers/services/dealer-ledger.api";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -26,6 +27,16 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
+const formatCurrency = (val: number) =>
+  (val || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const formatDate = (isoDate: string) => {
+  if (!isoDate) return "-";
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+};
+
 export default function DealerDetailScreen() {
   const router = useRouter();
   const { cardCode } = useLocalSearchParams<{ cardCode: string }>();
@@ -37,6 +48,12 @@ export default function DealerDetailScreen() {
   });
 
   const dealer = data?.find((d) => d.cardCode === cardCode);
+
+  const ledgerQuery = useQuery({
+    queryKey: ["dealer-ledger", cardCode],
+    queryFn: () => fetchDealerLedger(cardCode),
+    enabled: activeTab === "ledgerSummary" && !!cardCode,
+  });
 
   if (isLoading) {
     return (
@@ -60,7 +77,89 @@ export default function DealerDetailScreen() {
   }
 
   const isActive = dealer.portalStatus === "Yes" && dealer.lock_status !== 0;
-  const activeTabLabel = TABS.find((t) => t.key === activeTab)?.label ?? "";
+
+  const renderTabContent = () => {
+    if (activeTab === "ledgerSummary") {
+      if (ledgerQuery.isLoading) {
+        return (
+          <View style={styles.tabContentBox}>
+            <Text style={styles.tabContentTitle}>Loading ledger...</Text>
+          </View>
+        );
+      }
+
+      if (ledgerQuery.isError) {
+        return (
+          <View style={styles.tabContentBox}>
+            <Feather name="alert-triangle" size={26} color={colors.error} />
+            <Text style={styles.tabContentTitle}>Couldn't load ledger</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => ledgerQuery.refetch()}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+
+      const entries = ledgerQuery.data?.AccountBalance ?? [];
+
+      if (entries.length === 0) {
+        return (
+          <View style={styles.tabContentBox}>
+            <View style={styles.tabContentIconCircle}>
+              <Feather name="inbox" size={26} color={colors.muted} />
+            </View>
+            <Text style={styles.tabContentTitle}>No ledger entries</Text>
+          </View>
+        );
+      }
+
+      return (
+        <View>
+          <View style={styles.balanceCard}>
+            <Text style={styles.balanceLabel}>Account Balance</Text>
+            <Text style={styles.balanceValue}>
+              Rs. {formatCurrency(ledgerQuery.data?.TotalCumulativeBalanceLC ?? 0)}
+            </Text>
+          </View>
+          {entries.map((entry, idx) => (
+            <View key={idx} style={styles.ledgerRow}>
+              <View style={styles.ledgerRowTop}>
+                <Text style={styles.ledgerDocName} numberOfLines={1}>
+                  {entry.Origin || "Entry"}
+                </Text>
+                <Text style={styles.ledgerDate}>{formatDate(entry.PostingDate)}</Text>
+              </View>
+              <Text style={styles.ledgerDetails} numberOfLines={2}>
+                {entry.Details}
+              </Text>
+              <View style={styles.ledgerAmountsRow}>
+                {entry.DebitLC > 0 && (
+                  <Text style={styles.ledgerDebit}>Debit: Rs. {formatCurrency(entry.DebitLC)}</Text>
+                )}
+                {entry.CreditLC > 0 && (
+                  <Text style={styles.ledgerCredit}>Credit: Rs. {formatCurrency(entry.CreditLC)}</Text>
+                )}
+                <Text style={styles.ledgerBalance}>
+                  Bal: Rs. {formatCurrency(entry.CumulativeBalanceLC)}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      );
+    }
+
+    const label = TABS.find((t) => t.key === activeTab)?.label ?? "";
+    return (
+      <View style={styles.tabContentBox}>
+        <View style={styles.tabContentIconCircle}>
+          <Feather name="inbox" size={26} color={colors.muted} />
+        </View>
+        <Text style={styles.tabContentTitle}>{label}</Text>
+        <Text style={styles.tabContentSubtitle}>Awaiting API endpoint for this tab</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -92,10 +191,6 @@ export default function DealerDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/*
-          IMPORTANT: These stat cards are UI placeholders only.
-          Real numbers require separate per-dealer API endpoints we don't have yet.
-        */}
         <View style={styles.statsGrid}>
           {STAT_CARDS.map((stat) => (
             <View key={stat.key} style={styles.statCard}>
@@ -111,7 +206,6 @@ export default function DealerDetailScreen() {
           ))}
         </View>
 
-        {/* Tab switcher */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -132,18 +226,7 @@ export default function DealerDetailScreen() {
           })}
         </ScrollView>
 
-        {/*
-          IMPORTANT: Tab content below is a placeholder.
-          Each tab needs its own API endpoint, filtered by dealer code,
-          which we don't have yet.
-        */}
-        <View style={styles.tabContentBox}>
-          <View style={styles.tabContentIconCircle}>
-            <Feather name="inbox" size={26} color={colors.muted} />
-          </View>
-          <Text style={styles.tabContentTitle}>{activeTabLabel}</Text>
-          <Text style={styles.tabContentSubtitle}>Awaiting API endpoint for this tab</Text>
-        </View>
+        {renderTabContent()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -189,4 +272,20 @@ const styles = StyleSheet.create({
   tabContentIconCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
   tabContentTitle: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
   tabContentSubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, fontStyle: "italic" },
+  retryBtn: { marginTop: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radius.sm },
+  retryBtnText: { fontSize: 13, fontFamily: typography.bold, color: colors.white },
+
+  balanceCard: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.sm, alignItems: "center" },
+  balanceLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 4 },
+  balanceValue: { fontSize: 20, fontFamily: typography.bold, color: colors.primary },
+
+  ledgerRow: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, marginBottom: spacing.xs },
+  ledgerRowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  ledgerDocName: { fontSize: 12, fontFamily: typography.bold, color: colors.text, flex: 1 },
+  ledgerDate: { fontSize: 10, fontFamily: typography.medium, color: colors.muted },
+  ledgerDetails: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 6 },
+  ledgerAmountsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  ledgerDebit: { fontSize: 10, fontFamily: typography.semibold, color: colors.error },
+  ledgerCredit: { fontSize: 10, fontFamily: typography.semibold, color: colors.success },
+  ledgerBalance: { fontSize: 10, fontFamily: typography.semibold, color: colors.text },
 });
