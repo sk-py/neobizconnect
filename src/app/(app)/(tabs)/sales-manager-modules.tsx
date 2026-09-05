@@ -103,12 +103,9 @@ const styles = StyleSheet.create({
     },
     header: { 
         padding: spacing.md, 
-        backgroundColor: colors.white, 
-        borderBottomWidth: 1, 
-        borderBottomColor: colors.border 
     },
     headerTitle: { 
-        fontSize: 22, 
+        fontSize: 20, 
         fontFamily: typography.bold, 
         color: colors.text 
     },
@@ -116,7 +113,7 @@ const styles = StyleSheet.create({
         fontSize: txtSize.small, 
         fontFamily: typography.medium, 
         color: colors.textSecondary, 
-        marginTop: 4 
+        marginTop: 2
     },
     content: { 
         padding: spacing.md, 

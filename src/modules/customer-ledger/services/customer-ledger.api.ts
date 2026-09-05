@@ -36,3 +36,15 @@ export const downloadAndOpenLedgerPdf = async (
 
   return file.uri;
 };
+
+export const fetchDealersList = async () => {
+  const res = await api.get(`/Neo/Dealer/User/AccountBalenceList`);
+  return res.data;
+};
+
+export const fetchDealerAccountBalance = async (cardCode: string) => {
+  const res = await api.post(`/Neo/SAP/GetAccountBalance`, {
+    cardcode: cardCode,
+  });
+  return res.data;
+};

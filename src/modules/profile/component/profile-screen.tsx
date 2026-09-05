@@ -6,6 +6,13 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fetchDealerProfile } from "../service/profile.api";
 
+// Helper function to check if a value is actually valid and not an empty string or 'NA'
+const isValidValue = (val?: string | null) => {
+  if (!val) return false;
+  const normalized = val.trim().toUpperCase();
+  return normalized !== "" && normalized !== "NA" && normalized !== "N/A" && normalized !== "NULL";
+};
+
 export const ProfileScreen = () => {
   const { user, clearSession } = useAuth();
   const groupCompanyName = user?.group_company_name || "Neo";
@@ -27,22 +34,32 @@ export const ProfileScreen = () => {
   const primaryBillTo = profile.bill_to?.[0];
   const primaryShipTo = profile.ship_to?.[0];
 
-  const gstin = primaryBillTo?.bill_to_gstin || primaryShipTo?.ship_to_gstin || "N/A";
+  const gstin = primaryBillTo?.bill_to_gstin || primaryShipTo?.ship_to_gstin || "";
 
   const billToAddressStr = primaryBillTo
     ? `${primaryBillTo.bill_to_buildingfloorroom ? primaryBillTo.bill_to_buildingfloorroom + " " : ""}${primaryBillTo.bill_to_address}`
-    : "N/A";
+    : "";
 
   const shipToAddressStr = primaryShipTo
     ? `${primaryShipTo.ship_to_buildingfloorroom ? primaryShipTo.ship_to_buildingfloorroom + " " : ""}${primaryShipTo.ship_to_address}`
-    : "N/A";
+    : "";
+
+  // Array of all potential fields filtered by valid values
+  const displayFields = [
+    { id: "contact", icon: "user", label: "Contact Person", value: profile.contact_person },
+    { id: "phone", icon: "phone", label: "Phone No.", value: profile.phone_no },
+    { id: "email", icon: "mail", label: "Email Address", value: profile.email },
+    { id: "gstin", icon: "file-text", label: "GST Number", value: gstin },
+    { id: "billing", icon: "map-pin", label: "Billing Address", value: billToAddressStr },
+    { id: "shipping", icon: "truck", label: "Shipping Address", value: shipToAddressStr },
+  ].filter(field => isValidValue(field.value));
 
   const InfoRow = ({ icon, label, value, isLast = false }: { icon: string; label: string; value: string; isLast?: boolean }) => (
     <View style={[styles.infoRow, isLast && styles.infoRowLast]}>
       <Feather name={icon as any} size={18} color={colors.textSecondary} style={styles.infoIcon} />
       <View style={styles.infoTextContainer}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <Text selectable style={styles.infoValue}>{value || "N/A"}</Text>
+        <Text selectable style={styles.infoValue}>{value}</Text>
       </View>
     </View>
   );
@@ -60,18 +77,25 @@ export const ProfileScreen = () => {
             <Text selectable style={styles.dealerName}>{profile.dealer_name}</Text>
             <Feather name="check-circle" size={18} color={colors.success} />
           </View>
-          <Text selectable style={styles.dealerCode}>Dealer Code: {profile.dealer_code}</Text>
+          {isValidValue(profile.dealer_code) && (
+            <Text selectable style={styles.dealerCode}>Dealer Code: {profile.dealer_code}</Text>
+          )}
         </View>
 
-        {/* Clean Data List */}
-        <View style={styles.sectionCard}>
-          <InfoRow icon="user" label="Contact Person" value={profile.contact_person} />
-          <InfoRow icon="phone" label="Phone No." value={profile.phone_no} />
-          <InfoRow icon="mail" label="Email Address" value={profile.email} />
-          <InfoRow icon="file-text" label="GST Number" value={gstin} />
-          <InfoRow icon="map-pin" label="Billing Address" value={billToAddressStr} />
-          <InfoRow icon="truck" label="Shipping Address" value={shipToAddressStr} isLast />
-        </View>
+        {/* Clean Data List - Only renders if there are valid fields */}
+        {displayFields.length > 0 && (
+          <View style={styles.sectionCard}>
+            {displayFields.map((field, index) => (
+              <InfoRow 
+                key={field.id} 
+                icon={field.icon} 
+                label={field.label} 
+                value={field.value} 
+                isLast={index === displayFields.length - 1} 
+              />
+            ))}
+          </View>
+        )}
 
         <Pressable
           onPress={clearSession}
