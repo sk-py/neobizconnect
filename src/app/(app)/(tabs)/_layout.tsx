@@ -19,6 +19,14 @@ const TabLayout = () => {
                         )
                     }}
                     name='index' />
+                                    <Tabs.Screen
+                    options={{
+                        title: "Dealers",
+                        tabBarIcon: ({ color, size }) => (
+                            <Feather name='users' size={size} color={color} />
+                        )
+                    }}
+                    name='dealers' />
                 <Tabs.Screen
                     options={{
                         title: "Item Master",
