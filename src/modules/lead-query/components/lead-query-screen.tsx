@@ -16,11 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const getBrandAccent = (brand: string) => {
-  const normalized = (brand || "").toLowerCase();
-  if (normalized === "zetta") {
-    return { badgeBg: "#DBEAFE", badgeText: "#2563EB" };
-  }
+const getBrandAccent = () => {
   return { badgeBg: "#FEF2F2", badgeText: colors.primary };
 };
 
@@ -101,7 +97,7 @@ export default function LeadQueryScreen() {
   const renderRow = ({ item }: { item: LeadQuery }) => {
     const form = item.formJson?.[0];
     const latestRemark = item.remarks_list?.[item.remarks_list.length - 1];
-    const accent = getBrandAccent(form?.brand_interest || "");
+    const accent = getBrandAccent();
 
     return (
       <View style={styles.card}>
