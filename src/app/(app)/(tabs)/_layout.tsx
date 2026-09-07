@@ -19,9 +19,8 @@ const TabLayout = () => {
                 screenOptions={{
                     headerShown: false,
                     tabBarActiveTintColor: colors.primary,
-                    // Remove bottom inset from tabs so we can apply it to our custom footer
                     tabBarStyle: {
-                        elevation: 0, // Removes shadow on Android so it blends with footer
+                        elevation: 0,
                         borderTopWidth: 1,
                         borderTopColor: colors.border || '#E2E8F0',
                         marginBottom: "-3%",

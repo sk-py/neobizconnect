@@ -1,11 +1,5 @@
-import { Text, View } from 'react-native'
+import LeadQueryScreen from "@/modules/lead-query/components/lead-query-screen";
 
-const LeadQuery = () => {
-  return (
-    <View>
-      <Text>LeadQuery</Text>
-    </View>
-  )
+export default function LeadQueryRoute() {
+  return <LeadQueryScreen />;
 }
-
-export default LeadQuery
