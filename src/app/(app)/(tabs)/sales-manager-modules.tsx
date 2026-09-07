@@ -17,15 +17,15 @@ export const SalesManagerIndexScreen = () => {
             iconColor: "#3B82F6",
             iconBg: "#EFF6FF"
         },
-        {
-            id: "sub-dealers",
-            title: "Sub Dealers",
-            description: "Track and manage the sub-dealer network.",
-            icon: "users",
-            route: "/sub-dealer",
-            iconColor: "#8B5CF6",
-            iconBg: "#F5F3FF"
-        },
+        // {
+        //     id: "sub-dealers",
+        //     title: "Sub Dealers",
+        //     description: "Track and manage the sub-dealer network.",
+        //     icon: "users",
+        //     route: "/sub-dealer",
+        //     iconColor: "#8B5CF6",
+        //     iconBg: "#F5F3FF"
+        // },
         {
             id: "item-master",
             title: "Item Master",
@@ -44,15 +44,15 @@ export const SalesManagerIndexScreen = () => {
             iconColor: "#14B8A6",
             iconBg: "#F0FDFA"
         },
-        {
-            id: "expense",
-            title: "Expense",
-            description: "Log and track your daily sales expenses.",
-            icon: "dollar-sign",
-            route: "/expense",
-            iconColor: "#EF4444",
-            iconBg: "#FEF2F2"
-        },
+        // {
+        //     id: "expense",
+        //     title: "Expense",
+        //     description: "Log and track your daily sales expenses.",
+        //     icon: "dollar-sign",
+        //     route: "/expense",
+        //     iconColor: "#EF4444",
+        //     iconBg: "#FEF2F2"
+        // },
         {
             id: "lead-query",
             title: "Lead Query",
