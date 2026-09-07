@@ -5,6 +5,7 @@ import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -84,7 +85,7 @@ export default function LeadQueryScreen() {
     setSaving(true);
     setSaveError(null);
     try {
-      await updateLeadQuery(editingLead.id, selectedStatus, remarksText);
+            await updateLeadQuery(editingLead, selectedStatus, remarksText);
       closeEditModal();
       refetch();
     } catch (err: any) {

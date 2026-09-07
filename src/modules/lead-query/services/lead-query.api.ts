@@ -6,16 +6,33 @@ export const fetchLeadQueries = async (): Promise<LeadQuery[]> => {
   return response.data;
 };
 
-// NOTE: No real update/save endpoint has been provided yet.
-// This is a placeholder so the UI can be built and tested now.
-// Once the TL gives the actual endpoint, replace the body below
-// with a real api.post/api.put call.
 export const updateLeadQuery = async (
-  leadId: number,
+  lead: LeadQuery,
   status: string,
   remarks: string,
 ): Promise<void> => {
-  throw new Error(
-    "Update endpoint not configured yet — ask TL for the correct URL to save lead status/remarks.",
-  );
+  const originalForm = lead.formJson?.[0] ?? {};
+
+  const payload = {
+    formJson: [
+      {
+        ...originalForm,
+        status,
+        sales_manager_remarks: remarks,
+        id: lead.id,
+        account_owner_id: String(originalForm.account_owner_id ?? ""),
+      },
+    ],
+    id: lead.id,
+    companyid: lead.companyid,
+  };
+
+  try {
+    console.log("LEAD UPDATE PAYLOAD:", JSON.stringify(payload));
+    await api.post(`/Neo/Lead/Query`, payload);
+  } catch (err: any) {
+    console.log("LEAD UPDATE ERROR STATUS:", err?.response?.status);
+    console.log("LEAD UPDATE ERROR BODY:", JSON.stringify(err?.response?.data));
+    throw err;
+  }
 };
