@@ -1,10 +1,12 @@
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { MOCK_CATEGORIES } from "@/modules/expense/types";
-import { saveExpenses } from "@/modules/expense/services/expense.api";
+import { createExpenses, CreateExpensePayload } from "@/modules/expense/services/expense.api";
+import { useAuth } from "@/hooks/use-auth";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Modal,
@@ -46,6 +48,8 @@ const formatDate = (d: Date) =>
 
 export default function ExpenseCreateScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [rows, setRows] = useState<RowState[]>([makeEmptyRow()]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -86,7 +90,24 @@ export default function ExpenseCreateScreen() {
     setSaving(true);
     setSaveError(null);
     try {
-      await saveExpenses(rows);
+      const payload: CreateExpensePayload[] = rows.map((r) => ({
+        title: r.title || "",
+        date: r.date.toISOString().slice(0, 10),
+        category: r.category || "",
+        subCategory: r.subCategory || "",
+        description: r.description || "",
+        attachment: "",
+        amount: r.amount || "0",
+        isUploading: false,
+        isDeleting: false,
+        status: "Pending",
+        remarks: "",
+        employee_id: String((user as any)?.employeeid ?? (user as any)?.id ?? "7"),
+        employee_name: (user?.name ?? "").trim(),
+      }));
+
+            await createExpenses(payload);
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
       router.back();
     } catch (err: any) {
       setSaveError(err?.message || "Failed to save expenses. Please try again.");

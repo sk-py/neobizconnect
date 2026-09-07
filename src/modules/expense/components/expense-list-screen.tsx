@@ -86,6 +86,11 @@ export default function ExpenseListScreen() {
           <Text style={styles.amountValue}>Rs. {formatCurrency(item.amount)}</Text>
         </View>
 
+                <View style={styles.employeeRow}>
+          <Feather name="user" size={11} color={colors.muted} />
+          <Text style={styles.employeeText}>{item.employeeName}</Text>
+        </View>
+
         {!!item.remarks && (
           <View style={styles.remarkRow}>
             <Feather name="message-circle" size={12} color={colors.textSecondary} />
@@ -194,7 +199,8 @@ const styles = StyleSheet.create({
 
   remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: spacing.sm },
   remarkText: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, flex: 1, lineHeight: 16 },
-
+  employeeRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: spacing.xs },
+  employeeText: { fontSize: 11, fontFamily: typography.medium, color: colors.muted },
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
   emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
   emptySubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.muted },
