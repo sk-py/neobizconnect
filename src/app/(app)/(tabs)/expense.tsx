@@ -1,11 +1,5 @@
-import { Text, View } from 'react-native'
+import ExpenseListScreen from "@/modules/expense/components/expense-list-screen";
 
-const expense = () => {
-  return (
-    <View>
-      <Text>expense</Text>
-    </View>
-  )
+export default function ExpenseRoute() {
+  return <ExpenseListScreen />;
 }
-
-export default expense
