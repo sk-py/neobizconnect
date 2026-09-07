@@ -1,41 +1,77 @@
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export const SubDealerIndexScreen = () => {
+export const SalesManagerIndexScreen = () => {
     const router = useRouter();
 
     const MENU_OPTIONS = [
         {
-            id: "manage",
-            title: "Manage Sub Dealers",
-            description: "View, register, or update sub-dealer profiles.",
-            icon: "users",
-            route: "/manage-sub-dealers",
-            iconColor: colors.primary,
+            id: "dealers",
+            title: "Dealers",
+            description: "Manage and view your primary dealer network.",
+            icon: "briefcase",
+            route: "/dealers",
+            iconColor: "#3B82F6",
             iconBg: "#EFF6FF"
         },
         {
-            id: "targets",
-            title: "Sub Dealers Sales Target",
-            description: "Assign and track monthly sales targets for sub-dealers.",
-            icon: "target",
-            route: "/sub-dealers-targets",
-            iconColor: "#16A34A",
-            iconBg: "#F0FDF4"
+            id: "sub-dealers",
+            title: "Sub Dealers",
+            description: "Track and manage the sub-dealer network.",
+            icon: "users",
+            route: "/sub-dealer",
+            iconColor: "#8B5CF6",
+            iconBg: "#F5F3FF"
+        },
+        {
+            id: "item-master",
+            title: "Item Master",
+            description: "View product catalog, stock, and pricing.",
+            icon: "package",
+            route: "/item-master",
+            iconColor: "#F59E0B",
+            iconBg: "#FFFBEB"
+        },
+        {
+            id: "transaction-history",
+            title: "Transaction History",
+            description: "Review past orders and financial records.",
+            icon: "file-text",
+            route: "/transaction-history",
+            iconColor: "#14B8A6",
+            iconBg: "#F0FDFA"
+        },
+        {
+            id: "expense",
+            title: "Expense",
+            description: "Log and track your daily sales expenses.",
+            icon: "dollar-sign",
+            route: "/expense",
+            iconColor: "#EF4444",
+            iconBg: "#FEF2F2"
+        },
+        {
+            id: "lead-query",
+            title: "Lead Query",
+            description: "Manage new leads and customer inquiries.",
+            icon: "message-square",
+            route: "/lead-query",
+            iconColor: "#10B981",
+            iconBg: "#ECFDF5"
         }
     ];
 
     return (
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Sub Dealer Network</Text>
-                <Text style={styles.headerSubtitle}>Manage your network and assign targets</Text>
+                <Text style={styles.headerTitle}>Sales Workspace</Text>
+                <Text style={styles.headerSubtitle}>Manage your daily operations and network</Text>
             </View>
 
-            <View style={styles.content}>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {MENU_OPTIONS.map((option) => (
                     <TouchableOpacity
                         key={option.id}
@@ -44,7 +80,7 @@ export const SubDealerIndexScreen = () => {
                         onPress={() => router.push(option.route as any)}
                     >
                         <View style={[styles.iconContainer, { backgroundColor: option.iconBg }]}>
-                            <Feather name={option.icon as any} size={24} color={option.iconColor} />
+                            <Feather name={option.icon as any} size={22} color={option.iconColor} />
                         </View>
                         
                         <View style={styles.textContainer}>
@@ -55,7 +91,7 @@ export const SubDealerIndexScreen = () => {
                         <Feather name="chevron-right" size={20} color={colors.muted} />
                     </TouchableOpacity>
                 ))}
-            </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };
@@ -67,9 +103,6 @@ const styles = StyleSheet.create({
     },
     header: { 
         padding: spacing.md, 
-        // backgroundColor: colors.white, 
-        // borderBottomWidth: 1, 
-        // borderBottomColor: colors.border 
     },
     headerTitle: { 
         fontSize: 20, 
@@ -120,3 +153,5 @@ const styles = StyleSheet.create({
         lineHeight: 18 
     }
 });
+
+export default SalesManagerIndexScreen

@@ -1,6 +1,11 @@
 import { PdfViewerModal } from "@/components/shared/pdf-viewer-modal";
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
-import { downloadAndOpenLedgerPdf, fetchCustomerLedger } from "@/modules/customer-ledger/services/customer-ledger.api";
+import {
+  downloadAndOpenLedgerPdf,
+  fetchCustomerLedger,
+  fetchDealerAccountBalance,
+  fetchDealersList
+} from "@/modules/customer-ledger/services/customer-ledger.api";
 import { LedgerEntry } from "@/modules/customer-ledger/types";
 import { useAuthStore } from "@/store/auth.store";
 import { LegendList } from "@legendapp/list/react-native";
@@ -11,6 +16,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Modal,
   Platform,
   StyleSheet,
@@ -23,10 +29,16 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+type DealerOption = {
+  card_code: string;
+  card_name: string;
+};
+
 export default function CustomerLedgerScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const groupCompanyName = user?.group_company_name || "Neo";
+  const isDealer = user?.authority === "Dealer";
 
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,14 +51,35 @@ export default function CustomerLedgerScreen() {
   const [appliedToDate, setAppliedToDate] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState<"from" | "to" | null>(null);
 
+  // Dealer Selection States (For Sales Managers)
+  const [selectedDealer, setSelectedDealer] = useState<DealerOption | null>(null);
+  const [isDealerModalVisible, setDealerModalVisible] = useState(false);
+  const [dealerSearchQuery, setDealerSearchQuery] = useState("");
+
   // PDF Loader State
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
 
+  // Query: Fetch list of dealers (Only if NOT a dealer)
+  const { data: dealersList = [], isLoading: isLoadingDealers } = useQuery({
+    queryKey: ["dealers-list", groupCompanyName],
+    queryFn: () => fetchDealersList(),
+    enabled: Boolean(groupCompanyName) && !isDealer,
+  });
+
+  // Query: Fetch Ledger Data (Dynamic based on role)
   const { data, isLoading, isRefetching, refetch } = useQuery({
-    queryKey: ["customer-ledger", groupCompanyName, appliedFromDate, appliedToDate],
-    queryFn: () => fetchCustomerLedger(groupCompanyName, appliedFromDate, appliedToDate),
-    enabled: Boolean(groupCompanyName),
+    queryKey: ["customer-ledger", groupCompanyName, appliedFromDate, appliedToDate, selectedDealer?.card_code],
+    queryFn: async () => {
+      if (!isDealer) {
+        if (!selectedDealer) return null;
+        // Ideally, dates should be passed if the new API supports them.
+        // Keeping signature based on provided API payload.
+        return fetchDealerAccountBalance(selectedDealer.card_code);
+      }
+      return fetchCustomerLedger(groupCompanyName, appliedFromDate, appliedToDate);
+    },
+    enabled: Boolean(groupCompanyName) && (isDealer || Boolean(selectedDealer)),
   });
 
   const { mutate: handleDownloadPdf, isPending: pdfDownloadPending } = useMutation({
@@ -54,7 +87,7 @@ export default function CustomerLedgerScreen() {
     onMutate: (docEntry) => setDownloadingId(docEntry),
     onSuccess: (uri) => {
       setDownloadingId(null);
-      setPdfUri(uri); // Open the viewer modal with the downloaded URI
+      setPdfUri(uri);
     },
     onError: (error) => {
       setDownloadingId(null);
@@ -63,18 +96,27 @@ export default function CustomerLedgerScreen() {
     },
   });
 
-  // Local Search Filtering
+  // Local Search Filtering for Ledger
   const filteredData = useMemo(() => {
     if (!data?.AccountBalance) return [];
     if (!searchQuery.trim()) return data.AccountBalance;
 
     const query = searchQuery.toLowerCase();
-    return data.AccountBalance.filter(item =>
+    return data.AccountBalance.filter((item: LedgerEntry) =>
       item.OriginNo?.toLowerCase().includes(query) ||
       item.Details?.toLowerCase().includes(query) ||
       item.Origin?.toLowerCase().includes(query)
     );
   }, [data?.AccountBalance, searchQuery]);
+
+  // Local Search Filtering for Dealers List
+  const filteredDealers = useMemo(() => {
+    if (!dealerSearchQuery.trim()) return dealersList;
+    const query = dealerSearchQuery.toLowerCase();
+    return dealersList.filter((d: DealerOption) => 
+      d.card_name.toLowerCase().includes(query) || d.card_code.toLowerCase().includes(query)
+    );
+  }, [dealersList, dealerSearchQuery]);
 
   const formatCurrency = (val: string | number) => {
     const num = typeof val === "string" ? parseFloat(val) : val;
@@ -175,7 +217,6 @@ export default function CustomerLedgerScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        {/* Top Row: Back, Title, Calendar Icon */}
         <View style={styles.headerTopRow}>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Customer Ledger</Text>
@@ -187,7 +228,23 @@ export default function CustomerLedgerScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Search Bar */}
+        {/* Manager Specific Dealer Selection Filter */}
+        {!isDealer && (
+          <TouchableOpacity 
+            style={styles.dealerSelector} 
+            activeOpacity={0.7} 
+            onPress={() => setDealerModalVisible(true)}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+              <Feather name="user" size={16} color={selectedDealer ? colors.primary : colors.muted} />
+              <Text style={[styles.dealerSelectorText, !selectedDealer && { color: colors.muted }]} numberOfLines={1}>
+                {selectedDealer ? `${selectedDealer.card_name} (${selectedDealer.card_code})` : "Select a Dealer"}
+              </Text>
+            </View>
+            <Feather name="chevron-down" size={18} color={colors.muted} />
+          </TouchableOpacity>
+        )}
+
         <View style={styles.searchContainer}>
           <Feather name="search" size={18} color={colors.muted} style={styles.searchIcon} />
           <TextInput
@@ -196,6 +253,7 @@ export default function CustomerLedgerScreen() {
             placeholderTextColor={colors.muted}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            editable={isDealer || Boolean(selectedDealer)}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
@@ -205,16 +263,23 @@ export default function CustomerLedgerScreen() {
         </View>
       </View>
 
-      {/* Compact Account Balance Banner */}
       {!isLoading && data && (
         <View style={styles.balanceBanner}>
           <Text style={styles.balanceLabel}>Account Balance</Text>
-          <Text style={styles.balanceValue}>₹{formatCurrency(data.AccBalance)}</Text>
+          <Text style={styles.balanceValue}>
+            ₹{formatCurrency(data.TotalCumulativeBalanceLC ?? data.AccBalance)}
+          </Text>
         </View>
       )}
 
-      {/* List */}
-      {isLoading ? (
+      {/* Main List Rendering */}
+      {!isDealer && !selectedDealer ? (
+        <View style={styles.centerBox}>
+          <Feather name="users" size={48} color={colors.border} />
+          <Text style={styles.emptyTitle}>Select a Dealer</Text>
+          <Text style={styles.emptySubTitle}>Choose a dealer from the dropdown to view their ledger entries.</Text>
+        </View>
+      ) : isLoading ? (
         <SkeletonCardList />
       ) : filteredData.length === 0 ? (
         <View style={styles.centerBox}>
@@ -236,7 +301,55 @@ export default function CustomerLedgerScreen() {
         />
       )}
 
-      {/* Filter Modal */}
+      {/* Dealer Selection Modal */}
+      <Modal visible={isDealerModalVisible} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={styles.modalSafeArea}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select Dealer</Text>
+            <TouchableOpacity onPress={() => setDealerModalVisible(false)} style={styles.closeBtn}>
+              <Feather name="x" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.modalSearchWrapper}>
+            <Feather name="search" size={18} color={colors.muted} />
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder="Search by name or code..."
+              placeholderTextColor={colors.muted}
+              value={dealerSearchQuery}
+              onChangeText={setDealerSearchQuery}
+            />
+          </View>
+
+          {isLoadingDealers ? (
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xl }} />
+          ) : (
+            <FlatList
+              data={filteredDealers}
+              keyExtractor={(item) => item.card_code}
+              contentContainerStyle={{ padding: spacing.md }}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={[styles.dealerOption, selectedDealer?.card_code === item.card_code && styles.dealerOptionSelected]}
+                  onPress={() => {
+                    setSelectedDealer(item);
+                    setDealerModalVisible(false);
+                    setDealerSearchQuery("");
+                  }}
+                >
+                  <Text style={[styles.dealerOptionName, selectedDealer?.card_code === item.card_code && { color: colors.primary }]}>
+                    {item.card_name}
+                  </Text>
+                  <Text style={styles.dealerOptionCode}>{item.card_code}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </SafeAreaView>
+      </Modal>
+
+      {/* Date Filter Modal */}
       <Modal visible={isFilterModalVisible} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -287,7 +400,6 @@ export default function CustomerLedgerScreen() {
         />
       )}
 
-      {/* Reusable PDF Modal */}
       <PdfViewerModal 
         visible={Boolean(pdfUri)}
         uri={pdfUri}
@@ -298,7 +410,7 @@ export default function CustomerLedgerScreen() {
   );
 }
 
-// ---- Skeleton loading state (initial ledger fetch) ----
+// ---- Skeleton loading state ----
 
 const SkeletonBlock = ({ style }: { style?: any }) => {
   const pulse = useSharedValue(0.55);
@@ -357,16 +469,20 @@ const SkeletonCardList = ({ count = 6 }: { count?: number }) => (
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
-  centerBox: { flex: 1, justifyContent: "center", alignItems: "center" },
+  centerBox: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.xl },
+  emptyTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text, marginTop: spacing.md },
+  emptySubTitle: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.muted, textAlign: "center", marginTop: 4 },
 
   header: { padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md },
-  backButton: { padding: 4, marginLeft: -4 },
   headerTitleContainer: { alignItems: "flex-start", justifyContent: "center" },
   headerTitle: { fontSize: 20, fontFamily: typography.bold, color: colors.text, paddingBottom: 2 },
   headerSubTitle: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.textSecondary },
   calendarBtn: { padding: 8, backgroundColor: colors.surface, borderRadius: radius.md, position: "relative" },
   activeFilterDot: { position: "absolute", top: 6, right: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.error, borderWidth: 1, borderColor: colors.surface },
+
+  dealerSelector: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: 12, marginBottom: spacing.sm },
+  dealerSelectorText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
 
   searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 44 },
   searchIcon: { marginRight: spacing.sm },
@@ -377,7 +493,6 @@ const styles = StyleSheet.create({
   balanceLabel: { fontSize: 12, fontFamily: typography.medium, color: "#166534" },
   balanceValue: { fontSize: 15, fontFamily: typography.bold, color: "#16A34A" },
 
-  emptyTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text, marginTop: spacing.md },
   listContent: { padding: spacing.md, gap: spacing.md },
 
   card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
@@ -401,22 +516,29 @@ const styles = StyleSheet.create({
 
   skeletonBlock: { backgroundColor: colors.border },
 
-  // Modal Styles
+  // Filter Modal
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: spacing.lg },
   modalContent: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.lg },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg },
-  modalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
-  closeBtn: { padding: 4, marginRight: -4 },
-
   dateInputContainer: { marginBottom: spacing.xl },
   dateLabel: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 6 },
   datePickerBtn: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surface, marginBottom: spacing.md },
   dateText: { fontSize: 14, fontFamily: typography.medium, color: colors.text },
   datePlaceholder: { color: colors.muted },
-
   filterActionRow: { flexDirection: "row", gap: spacing.md },
   resetBtn: { flex: 1, paddingVertical: 14, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, alignItems: "center" },
   resetBtnText: { fontSize: 15, fontFamily: typography.medium, color: colors.text },
   searchBtn: { flex: 1, paddingVertical: 14, backgroundColor: colors.primary, borderRadius: radius.sm, alignItems: "center" },
   searchBtnText: { fontSize: 15, fontFamily: typography.bold, color: colors.white },
+
+  // Dealer Modal
+  modalSafeArea: { flex: 1, backgroundColor: colors.surface },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
+  closeBtn: { padding: 4, marginRight: -4 },
+  modalSearchWrapper: { flexDirection: "row", alignItems: "center", backgroundColor: colors.white, paddingHorizontal: spacing.md, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
+  modalSearchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, padding: 0 },
+  dealerOption: { padding: spacing.md, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.surface, borderRadius: radius.sm, marginBottom: spacing.md },
+  dealerOptionSelected: { borderColor: colors.primary, borderWidth: 1 },
+  dealerOptionName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 4 },
+  dealerOptionCode: { fontSize: 12, fontFamily: typography.medium, color: colors.muted },
 });

@@ -1,13 +1,15 @@
+import { hasModuleAccess } from '@/constants/modules'
 import { useAuth } from '@/hooks/use-auth'
 import DealerProductsScreen from '@/modules/sales-order/components/sales-order-screen'
+import { Redirect } from 'expo-router'
 
 // Importing the Screen from the given path
 const SalesOrder = () => {
   const { user } = useAuth()
 
-  // if (!hasAccessToModule("abcd", false, user!)) {
-  //   return <Redirect href={"/"} />
-  // }
+  if (!hasModuleAccess("Sales Order", user?.authority)) {
+    return <Redirect href={"/"} />
+  }
 
   // React component returns the Sales Order UI
   return (
