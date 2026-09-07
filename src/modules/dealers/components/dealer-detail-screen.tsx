@@ -35,18 +35,18 @@ const formatDate = (isoDate: string) => {
 
 const pick = (obj: any, keys: string[]): any => {
   for (const k of keys) {
-    if (obj?.[k] !== undefined && obj?.[k] !== null) return obj[k];
+    if (obj?.[k] !== undefined && obj?.[k] !== null && obj?.[k] !== "") return obj[k];
   }
   return undefined;
 };
 
-const DOC_NO_KEYS = ["DocNum", "docNum", "OrderNo", "ProformaNo", "InvoiceNo", "CreditNo", "DocEntry"];
-const CARD_CODE_KEYS = ["CardCode", "cardCode", "ClientCode"];
-const CARD_NAME_KEYS = ["CardName", "cardName", "ClientName"];
-const DATE_KEYS = ["DocDate", "docDate", "OrderDate", "ProformaDate", "InvoiceDate", "PostingDate"];
-const STATUS_KEYS = ["DocumentStatus", "Status", "u_DealerStatus", "U_DealerStatus", "DealerStatus"];
-const QTY_KEYS = ["Quantity", "TotalQty", "U_TotalQty", "Qty"];
-const AMOUNT_KEYS = ["DocTotal", "docTotal", "Amount", "TotalAmount"];
+const DOC_NO_KEYS = ["salesorderno", "arcreditmemono", "proformano", "invoiceno", "creditno", "DocNum", "docNum", "OrderNo", "ProformaNo", "InvoiceNo", "CreditNo", "DocEntry"];
+const CARD_CODE_KEYS = ["customer_code", "CardCode", "cardCode", "ClientCode"];
+const CARD_NAME_KEYS = ["customer_name", "CardName", "cardName", "ClientName"];
+const DATE_KEYS = ["document_date", "posting_date", "delivery_date", "DocDate", "docDate", "OrderDate", "ProformaDate", "InvoiceDate", "PostingDate"];
+const STATUS_KEYS = ["doc_status", "portal_status", "status", "DocumentStatus", "Status", "u_DealerStatus", "U_DealerStatus", "DealerStatus"];
+const AMOUNT_KEYS = ["doc_total", "DocTotal", "docTotal", "Amount", "TotalAmount"];
+const ITEMS_ARRAY_KEYS = ["items", "documentLines", "DocumentLines"];
 
 const getStatusStyle = (status: string) => {
   const normalized = (status || "").toLowerCase();
@@ -62,6 +62,16 @@ const getStatusStyle = (status: string) => {
   return { bg: colors.surface, text: colors.textSecondary };
 };
 
+const getQtyFromItems = (obj: any): number | undefined => {
+  for (const key of ITEMS_ARRAY_KEYS) {
+    const arr = obj?.[key];
+    if (Array.isArray(arr) && arr.length > 0) {
+      return arr.reduce((sum: number, line: any) => sum + (Number(line.Quantity) || 0), 0);
+    }
+  }
+  return undefined;
+};
+
 type GenericDocCardProps = { item: any; docPrefix: string };
 
 const GenericDocCard = ({ item, docPrefix }: GenericDocCardProps) => {
@@ -70,8 +80,9 @@ const GenericDocCard = ({ item, docPrefix }: GenericDocCardProps) => {
   const cardCode = pick(item, CARD_CODE_KEYS);
   const date = pick(item, DATE_KEYS);
   const status = pick(item, STATUS_KEYS);
-  const qty = pick(item, QTY_KEYS);
-  const amount = pick(item, AMOUNT_KEYS);
+  const rawAmount = pick(item, AMOUNT_KEYS);
+  const amount = rawAmount !== undefined ? Number(rawAmount) : undefined;
+  const qty = getQtyFromItems(item);
   const statusStyle = getStatusStyle(status);
 
   return (
@@ -110,7 +121,7 @@ const GenericDocCard = ({ item, docPrefix }: GenericDocCardProps) => {
         )}
       </View>
 
-      {amount !== undefined && (
+      {amount !== undefined && !isNaN(amount) && (
         <View style={styles.ledgerBalanceRow}>
           <Text style={styles.ledgerBalanceLabel}>Amount</Text>
           <Text style={styles.ledgerBalanceValue}>Rs. {formatCurrency(amount)}</Text>

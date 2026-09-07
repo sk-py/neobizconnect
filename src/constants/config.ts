@@ -9,3 +9,4 @@ const BASE_URLS: Record<Environment, string> = {
 const ENVIRONMENT: Environment = "production";
 
 export const BASE_URL = BASE_URLS[ENVIRONMENT];
+
