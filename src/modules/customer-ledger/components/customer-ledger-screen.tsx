@@ -16,7 +16,6 @@ import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Modal,
   Platform,
   StyleSheet,
@@ -325,10 +324,12 @@ export default function CustomerLedgerScreen() {
           {isLoadingDealers ? (
             <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xl }} />
           ) : (
-            <FlatList
+                        <LegendList
               data={filteredDealers}
               keyExtractor={(item) => item.card_code}
               contentContainerStyle={{ padding: spacing.md }}
+              estimatedItemSize={70}
+              recycleItems
               renderItem={({ item }) => (
                 <TouchableOpacity 
                   style={[styles.dealerOption, selectedDealer?.card_code === item.card_code && styles.dealerOptionSelected]}
