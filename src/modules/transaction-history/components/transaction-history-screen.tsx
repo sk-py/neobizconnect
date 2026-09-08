@@ -81,10 +81,8 @@ export default function TransactionHistoryScreen() {
     const stock = getWarehouse(item.documentLines);
     const isExpanded = expandedIds.has(item.id);
 
-    return (
-      <View style={styles.cardWrapper}>
-        <View style={styles.accentBar} />
-        <View style={styles.card}>
+        return (
+      <View style={styles.card}>
           <View style={styles.cardTop}>
             <View style={styles.soBadge}>
               <Feather name="hash" size={11} color={colors.white} />
@@ -141,12 +139,10 @@ export default function TransactionHistoryScreen() {
                 </View>
               ))}
             </View>
-          )}
+                   )}
         </View>
-      </View>
     );
   };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
@@ -208,9 +204,7 @@ const styles = StyleSheet.create({
 
   listContent: { padding: spacing.md, gap: spacing.sm },
 
-  cardWrapper: { flexDirection: "row", marginBottom: spacing.sm, borderRadius: radius.md, overflow: "hidden", borderWidth: 1, borderColor: colors.border },
-  accentBar: { width: 4, backgroundColor: colors.primary },
-  card: { flex: 1, backgroundColor: colors.white, padding: spacing.md },
+   card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.sm },
 
   cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
   soBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm },

@@ -472,11 +472,11 @@ export default function DealerDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.statsGrid}>
+                <View style={styles.statsGrid}>
           {STAT_CARDS.map((stat) => (
             <View key={stat.key} style={styles.statCard}>
               <View style={[styles.statIconCircle, { backgroundColor: stat.bg }]}>
-                <Feather name={stat.icon as any} size={20} color={stat.iconColor} />
+                <Feather name={stat.icon as any} size={14} color={stat.iconColor} />
               </View>
               <Text style={styles.statValue}>
                 {stat.value === null ? (summaryLoading ? "..." : "--") : stat.value}
@@ -538,11 +538,11 @@ const styles = StyleSheet.create({
 
   scrollContent: { padding: spacing.md },
 
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.md },
-  statCard: { width: "47%", backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: 6 },
-  statIconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", marginBottom: 2 },
-  statValue: { fontSize: 22, fontFamily: typography.bold, color: colors.text },
-  statLabel: { fontSize: 12, fontFamily: typography.semibold, color: colors.textSecondary },
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: spacing.md },
+  statCard: { width: "31%", backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, gap: 4 },
+  statIconCircle: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 2 },
+  statValue: { fontSize: 16, fontFamily: typography.bold, color: colors.text },
+  statLabel: { fontSize: 10, fontFamily: typography.semibold, color: colors.textSecondary },
 
   tabBar: { marginBottom: spacing.sm },
   tabBarContent: { gap: 6 },

@@ -49,32 +49,36 @@ export default function DealersListScreen() {
           </View>
           <Text style={styles.dealerCode}>{item.cardCode}</Text>
 
-          {!!item.phone1 && (
-            <TouchableOpacity
-              style={styles.contactRow}
-              onPress={(e) => {
-                e.stopPropagation();
-                Linking.openURL(`tel:${item.phone1}`);
-              }}
-            >
-              <Feather name="phone" size={11} color={colors.muted} />
-              <Text style={styles.contactText}>{item.phone1}</Text>
-            </TouchableOpacity>
-          )}
-          {!!item.emailAddress && (
-            <TouchableOpacity
-              style={styles.contactRow}
-              onPress={(e) => {
-                e.stopPropagation();
-                Linking.openURL(`mailto:${item.emailAddress}`);
-              }}
-            >
-              <Feather name="mail" size={11} color={colors.muted} />
-              <Text style={styles.contactText} numberOfLines={1}>
-                {item.emailAddress}
-              </Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.contactGroup}>
+            {!!item.phone1 && (
+              <TouchableOpacity
+                style={styles.contactChip}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  Linking.openURL(`tel:${item.phone1}`);
+                }}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Feather name="phone" size={11} color={colors.textSecondary} />
+                <Text style={styles.contactChipText}>{item.phone1}</Text>
+              </TouchableOpacity>
+            )}
+            {!!item.emailAddress && (
+              <TouchableOpacity
+                style={styles.contactChip}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  Linking.openURL(`mailto:${item.emailAddress}`);
+                }}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Feather name="mail" size={11} color={colors.textSecondary} />
+                <Text style={styles.contactChipText} numberOfLines={1}>
+                  {item.emailAddress}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
         <Feather name="chevron-right" size={18} color={colors.muted} />
       </TouchableOpacity>
@@ -142,26 +146,26 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: 6 },
   title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
-  titleIconCircle: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
-  countBadge: { fontSize: 11, fontFamily: typography.bold, color: colors.primary, backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.xl },
 
   searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 34 },
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, fontSize: 12, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 2 },
 
-  listContent: { paddingBottom: spacing.sm },
+  listContent: { paddingBottom: spacing.md },
 
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.sm },
-  rowMain: { flex: 1 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.sm },
+  rowMain: { flex: 1, gap: 4 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   dealerName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusDotActive: { backgroundColor: colors.success },
   statusDotInactive: { backgroundColor: colors.muted },
-  dealerCode: { fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
-  contactRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
-  contactText: { fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary },
+  dealerCode: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 4 },
+
+  contactGroup: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  contactChip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.surface, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 4 },
+  contactChipText: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
   emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },

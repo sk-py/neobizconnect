@@ -44,15 +44,15 @@ export const SalesManagerIndexScreen = () => {
             iconColor: "#14B8A6",
             iconBg: "#F0FDFA"
         },
-        // {
-        //     id: "expense",
-        //     title: "Expense",
-        //     description: "Log and track your daily sales expenses.",
-        //     icon: "dollar-sign",
-        //     route: "/expense",
-        //     iconColor: "#EF4444",
-        //     iconBg: "#FEF2F2"
-        // },
+        {
+            id: "expense",
+            title: "Expense",
+            description: "Log and track your daily sales expenses.",
+            icon: "dollar-sign",
+            route: "/expense",
+            iconColor: "#EF4444",
+            iconBg: "#FEF2F2"
+        },
         {
             id: "lead-query",
             title: "Lead Query",
