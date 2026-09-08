@@ -1,11 +1,13 @@
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
 import { fetchExpenses } from "@/modules/expense/services/expense.api";
 import { ExpenseListItem } from "@/modules/expense/types";
+import { SkeletonList } from "@/components/custom/skeleton";
 import { Feather } from "@react-native-vector-icons/feather/static";
+import { LegendList } from "@legendapp/list/react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const formatCurrency = (val: number) =>
@@ -39,18 +41,18 @@ export default function ExpenseListScreen() {
     if (!searchQuery.trim()) return data;
     const query = searchQuery.toLowerCase();
     return data.filter(
-      (item: ExpenseListItem) =>
+      (item) =>
         item.title?.toLowerCase().includes(query) ||
         item.category?.toLowerCase().includes(query) ||
         item.subCategory?.toLowerCase().includes(query),
     );
   }, [data, searchQuery]);
 
-  const renderCard = (item: ExpenseListItem) => {
+  const renderCard = ({ item }: { item: ExpenseListItem }) => {
     const statusStyle = getStatusStyle(item.status);
 
     return (
-      <View key={item.id} style={styles.card}>
+      <View style={styles.card}>
         <View style={styles.cardTop}>
           <Text style={styles.title} numberOfLines={1}>
             {item.title}
@@ -86,7 +88,7 @@ export default function ExpenseListScreen() {
           <Text style={styles.amountValue}>Rs. {formatCurrency(item.amount)}</Text>
         </View>
 
-                <View style={styles.employeeRow}>
+        <View style={styles.employeeRow}>
           <Feather name="user" size={11} color={colors.muted} />
           <Text style={styles.employeeText}>{item.employeeName}</Text>
         </View>
@@ -107,6 +109,12 @@ export default function ExpenseListScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
+          <TouchableOpacity
+            onPress={() => router.push("/sales-manager-modules")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>Expense</Text>
           <TouchableOpacity
             style={styles.addBtn}
@@ -134,9 +142,7 @@ export default function ExpenseListScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Loading...</Text>
-        </View>
+        <SkeletonList count={6} />
       ) : isError ? (
         <View style={styles.emptyBox}>
           <Feather name="alert-triangle" size={32} color={colors.error} />
@@ -153,9 +159,16 @@ export default function ExpenseListScreen() {
           <Text style={styles.emptySubtitle}>Tap "Create" to add your first expense</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.listContent}>
-          {filteredData.map(renderCard)}
-        </ScrollView>
+        <LegendList
+          data={filteredData}
+          keyExtractor={(item: ExpenseListItem) => String(item.id)}
+          renderItem={renderCard}
+          contentContainerStyle={styles.listContent}
+          onRefresh={refetch}
+          refreshing={isRefetching}
+          estimatedItemSize={200}
+          recycleItems
+        />
       )}
     </SafeAreaView>
   );
@@ -165,47 +178,49 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
-  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  headerTitle: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: 8 },
+  headerTitle: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flex: 1 },
   addBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.sm },
-  addBtnText: { fontSize: 12, fontFamily: typography.bold, color: colors.white },
+  addBtnText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.white },
 
   searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 34 },
   searchIcon: { marginRight: 6 },
-  searchInput: { flex: 1, fontSize: 12, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
+  searchInput: { flex: 1, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 2 },
 
   listContent: { padding: spacing.md },
 
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text, flex: 1, marginRight: spacing.sm },
+  title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flex: 1, marginRight: spacing.sm },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.xl },
-  statusBadgeText: { fontSize: 10, fontFamily: typography.bold },
-  dateText: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginBottom: spacing.sm },
+  statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold },
+  dateText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted, marginBottom: spacing.sm },
 
   divider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.sm },
 
   infoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.sm },
   infoBlock: { flex: 1 },
-  infoLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginBottom: 3 },
-  infoValue: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
+  infoLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted, marginBottom: 3 },
+  infoValue: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
 
-  description: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, lineHeight: 16, marginBottom: spacing.sm },
+  description: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, lineHeight: 16, marginBottom: spacing.sm },
 
   amountRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
-  amountLabel: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
-  amountValue: { fontSize: 15, fontFamily: typography.bold, color: colors.primary },
+  amountLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  amountValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
+
+  employeeRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: spacing.xs },
+  employeeText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted },
 
   remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: spacing.sm },
-  remarkText: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, flex: 1, lineHeight: 16 },
-  employeeRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: spacing.xs },
-  employeeText: { fontSize: 11, fontFamily: typography.medium, color: colors.muted },
+  remarkText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flex: 1, lineHeight: 16 },
+
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
-  emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
-  emptySubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.muted },
-  errorTitle: { fontSize: 13, fontFamily: typography.bold, color: colors.error },
-  errorSubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, textAlign: "center" },
+  emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
+  emptySubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted },
+  errorTitle: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.error },
+  errorSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, textAlign: "center" },
   retryBtn: { marginTop: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radius.sm },
-  retryBtnText: { fontSize: 13, fontFamily: typography.bold, color: colors.white },
+  retryBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.white },
 });

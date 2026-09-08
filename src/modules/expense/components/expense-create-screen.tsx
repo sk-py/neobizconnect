@@ -1,4 +1,4 @@
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
 import { MOCK_CATEGORIES } from "@/modules/expense/types";
 import { createExpenses, CreateExpensePayload } from "@/modules/expense/services/expense.api";
 import { useAuth } from "@/hooks/use-auth";
@@ -6,7 +6,6 @@ import { Feather } from "@react-native-vector-icons/feather/static";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Modal,
@@ -49,7 +48,6 @@ const formatDate = (d: Date) =>
 export default function ExpenseCreateScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [rows, setRows] = useState<RowState[]>([makeEmptyRow()]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -106,8 +104,7 @@ export default function ExpenseCreateScreen() {
         employee_name: (user?.name ?? "").trim(),
       }));
 
-            await createExpenses(payload);
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      await createExpenses(payload);
       router.back();
     } catch (err: any) {
       setSaveError(err?.message || "Failed to save expenses. Please try again.");
@@ -260,7 +257,6 @@ export default function ExpenseCreateScreen() {
         </View>
       </View>
 
-      {/* Date Picker */}
       {datePickerFor && (
         <DateTimePicker
           value={rows.find((r) => r.localId === datePickerFor)?.date || new Date()}
@@ -275,7 +271,6 @@ export default function ExpenseCreateScreen() {
         />
       )}
 
-      {/* Category Modal */}
       <Modal visible={!!categoryModalFor} transparent animationType="fade" onRequestClose={() => setCategoryModalFor(null)}>
         <Pressable style={styles.modalOverlay} onPress={() => setCategoryModalFor(null)}>
           <View style={styles.modalCard}>
@@ -301,7 +296,6 @@ export default function ExpenseCreateScreen() {
         </Pressable>
       </Modal>
 
-      {/* Sub Category Modal */}
       <Modal visible={!!subCategoryModalFor} transparent animationType="fade" onRequestClose={() => setSubCategoryModalFor(null)}>
         <Pressable style={styles.modalOverlay} onPress={() => setSubCategoryModalFor(null)}>
           <View style={styles.modalCard}>
@@ -335,18 +329,18 @@ const styles = StyleSheet.create({
 
   header: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 16, fontFamily: typography.bold, color: colors.text },
-  headerSubtitle: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
+  headerTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
+  headerSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
 
   scrollContent: { padding: spacing.md, paddingBottom: 140 },
 
   rowCard: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
   rowCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
-  rowNumber: { fontSize: 12, fontFamily: typography.bold, color: colors.muted },
+  rowNumber: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.muted },
 
-  fieldLabel: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 4, marginTop: spacing.sm },
+  fieldLabel: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 4, marginTop: spacing.sm },
   input: { backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, paddingVertical: 10, justifyContent: "center" },
-  inputText: { fontSize: 13, fontFamily: typography.medium, color: colors.text, flex: 1 },
+  inputText: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, flex: 1 },
   inputRowContent: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 },
   inputDisabled: { opacity: 0.5 },
   multilineInput: { minHeight: 60, textAlignVertical: "top" },
@@ -355,24 +349,24 @@ const styles = StyleSheet.create({
   fieldHalf: { flex: 1 },
 
   addRowBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.primary, borderStyle: "dashed" },
-  addRowText: { fontSize: 13, fontFamily: typography.bold, color: colors.primary },
+  addRowText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
 
   saveErrorBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: "#FEF2F2", borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.md },
-  saveErrorText: { fontSize: 11, fontFamily: typography.medium, color: colors.error, flex: 1 },
+  saveErrorText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.error, flex: 1 },
 
   footer: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border, padding: spacing.md },
-  totalLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary },
-  totalValue: { fontSize: 18, fontFamily: typography.bold, color: colors.primary, marginBottom: spacing.sm },
+  totalLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  totalValue: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.primary, marginBottom: spacing.sm },
   footerBtnRow: { flexDirection: "row", gap: spacing.sm },
   cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center" },
-  cancelBtnText: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
+  cancelBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
   saveBtn: { flex: 1, paddingVertical: 12, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: "center" },
   saveBtnDisabled: { opacity: 0.6 },
-  saveBtnText: { fontSize: 13, fontFamily: typography.bold, color: colors.white },
+  saveBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.white },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: spacing.xl },
   modalCard: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md, maxHeight: "70%" },
-  modalTitle: { fontSize: 14, fontFamily: typography.bold, color: colors.text, marginBottom: spacing.sm },
+  modalTitle: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginBottom: spacing.sm },
   modalOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, paddingHorizontal: 8, borderRadius: radius.sm },
-  modalOptionText: { fontSize: 13, fontFamily: typography.medium, color: colors.text },
+  modalOptionText: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text },
 });

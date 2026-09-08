@@ -1,10 +1,5 @@
-import { SalesManagerHomeScreen } from '@/modules/sales-manager-tracking/components/sales-manager-home-screen'
+import ExpenseListScreen from "@/modules/expense/components/expense-list-screen";
 
-const TrackerRoute = () => {
-  return (
-    <SalesManagerHomeScreen />
-  )
+export default function ExpenseRoute() {
+  return <ExpenseListScreen />;
 }
-
-export default TrackerRoute
-

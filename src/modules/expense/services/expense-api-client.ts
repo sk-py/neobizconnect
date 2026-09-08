@@ -11,10 +11,11 @@ export const expenseApi = axios.create({
 
 expenseApi.interceptors.request.use((config) => {
   let token = (useAuthStore.getState().accessToken || "").trim();
-  console.log("MY TOKEN:", token);
   token = token.replace(/^Bearer\s+/i, "").trim();
 
   if (token) {
+    // Fixes "Illegal base64url character" error caused by + being
+    // URL-decoded into a space somewhere along the request path.
     const safeToken = token.includes("+") ? token.replace(/\+/g, "%2B") : token;
     config.headers.Authorization = `Bearer ${safeToken}`;
   }

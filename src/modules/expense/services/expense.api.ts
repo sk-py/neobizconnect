@@ -1,15 +1,29 @@
+import axios from "axios";
+import { useAuthStore } from "@/store/auth.store";
 import { ExpenseListItem } from "../types";
-import { expenseApi } from "./expense-api-client";
+
+const expenseApi = axios.create({
+  baseURL: "https://dealer-uat.actifyzone.com/crm-uat/Crm/Portal",
+  timeout: 15000,
+  headers: { "Content-Type": "application/json" },
+});
+
+expenseApi.interceptors.request.use((config) => {
+  let token = (useAuthStore.getState().accessToken || "").trim();
+  token = token.replace(/^Bearer\s+/i, "").trim();
+  if (token) {
+    const safeToken = token.includes("+") ? token.replace(/\+/g, "%2B") : token;
+    config.headers.Authorization = `Bearer ${safeToken}`;
+  }
+  return config;
+});
 
 export const fetchExpenses = async (): Promise<ExpenseListItem[]> => {
-  try {
-    const res = await expenseApi.get<ExpenseListItem[]>("/api/dynamic-expense");
-    console.log("EXPENSE LIST IDS:", res.data.map((e) => e.id));
-    return res.data;
-  } catch (err: any) {
-    console.log("EXPENSE LIST ERROR:", err?.response?.status, JSON.stringify(err?.response?.data));
-    throw err;
-  }
+  const res = await expenseApi.get<ExpenseListItem[]>(
+    `/api/dynamic-expense?_=${Date.now()}`
+  );
+  console.log("LIST IDS:", res.data.map((e) => e.id));
+  return res.data;
 };
 
 export type CreateExpensePayload = {
@@ -28,21 +42,12 @@ export type CreateExpensePayload = {
   employee_name: string;
 };
 
-// Server expects a single object {...}, NOT an array [...]
 export const createExpense = async (payload: CreateExpensePayload): Promise<void> => {
-  try {
-    console.log("CREATE EXPENSE PAYLOAD:", JSON.stringify(payload));
-    const res = await expenseApi.post("/api/dynamic-expense", payload);
-    console.log("CREATE EXPENSE RESPONSE STATUS:", res.status);
-    console.log("CREATE EXPENSE RESPONSE BODY:", JSON.stringify(res.data));
-  } catch (err: any) {
-    console.log("CREATE EXPENSE ERROR STATUS:", err?.response?.status);
-    console.log("CREATE EXPENSE ERROR BODY:", JSON.stringify(err?.response?.data));
-    throw err;
-  }
+  console.log("CREATE PAYLOAD:", JSON.stringify(payload));
+  const res = await expenseApi.post("/api/dynamic-expense", payload);
+  console.log("CREATE RESPONSE:", res.status, JSON.stringify(res.data));
 };
 
-// If multiple rows are added on the Create screen, loop and send one at a time
 export const createExpenses = async (payloads: CreateExpensePayload[]): Promise<void> => {
   for (const p of payloads) {
     await createExpense(p);
