@@ -1,10 +1,12 @@
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
 import { fetchItemMasterList } from "@/modules/item-master/services/item-master.api";
 import { ItemMasterBrand, ItemMasterEntry } from "@/modules/item-master/types";
+import { SkeletonList } from "@/components/custom/skeleton";
 import { Feather } from "@react-native-vector-icons/feather/static";
+import { LegendList } from "@legendapp/list/react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const BRANDS: { label: string; value: ItemMasterBrand }[] = [
@@ -124,9 +126,7 @@ export default function ItemMasterScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Loading...</Text>
-        </View>
+        <SkeletonList count={8} />
       ) : filteredData.length === 0 ? (
         <View style={styles.emptyBox}>
           <Feather name="package" size={32} color={colors.muted} />
@@ -134,11 +134,13 @@ export default function ItemMasterScreen() {
         </View>
       ) : (
         <>
-          <FlatList
+          <LegendList
             data={paginatedData}
             keyExtractor={(item: ItemMasterEntry) => item.itemCode}
             renderItem={renderRow}
             contentContainerStyle={styles.listContent}
+            estimatedItemSize={56}
+            recycleItems
           />
 
           <View style={styles.paginationBar}>
@@ -175,42 +177,42 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.white },
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
-  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 6 },
+  title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginBottom: 6 },
 
   controlsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   brandRow: { flexDirection: "row", gap: 6 },
   brandPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   brandPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  brandPillText: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary },
+  brandPillText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
   brandPillTextActive: { color: colors.white },
 
   searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 32 },
   searchIcon: { marginRight: 6 },
-  searchInput: { flex: 1, fontSize: 12, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
+  searchInput: { flex: 1, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 2 },
 
   listContent: { paddingBottom: 0 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.sm },
   rowMain: { flex: 1 },
-  itemName: { fontSize: 12, fontFamily: typography.semibold, color: colors.text },
+  itemName: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
-  metaText: { fontSize: 10, fontFamily: typography.medium, color: colors.muted },
-  metaDot: { fontSize: 10, color: colors.muted },
+  metaText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted },
+  metaDot: { fontSize: txtSize.xs, color: colors.muted },
 
   stockBadge: { minWidth: 34, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
   stockBadgeAvailable: { backgroundColor: "#F0FDF4" },
   stockBadgeEmpty: { backgroundColor: "#FEF2F2" },
-  stockBadgeText: { fontSize: 12, fontFamily: typography.bold },
+  stockBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold },
   stockTextAvailable: { color: colors.success },
   stockTextEmpty: { color: colors.error },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6 },
-  emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
+  emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
 
   paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 4, borderTopWidth: 1, borderTopColor: colors.border },
-  paginationText: { fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
   paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
   pageBtn: { width: 26, height: 26, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
   pageBtnDisabled: { opacity: 0.5 },
-  pageIndicator: { fontSize: 11, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
+  pageIndicator: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
 });

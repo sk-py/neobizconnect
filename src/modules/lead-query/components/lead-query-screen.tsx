@@ -3,8 +3,12 @@ import { fetchLeadQueries, updateLeadQuery } from "@/modules/lead-query/services
 import { LEAD_STATUS_OPTIONS, LeadQuery } from "@/modules/lead-query/types";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { LegendList } from "@legendapp/list/react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { SkeletonList } from "@/components/custom/skeleton";
+import { useCallback, useMemo, useState } from "react";
 import {
+  BackHandler,
   Modal,
   Pressable,
   ScrollView,
@@ -24,6 +28,20 @@ const BRAND_FILTERS = ["All", "Neo", "Zetta"] as const;
 type BrandFilter = (typeof BRAND_FILTERS)[number];
 
 export default function LeadQueryScreen() {
+  const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.push("/sales-manager-modules");
+        return true; // tells Android "we handled this, don't do default behavior"
+      };
+
+      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => subscription.remove();
+    }, [router]),
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
   const [brandFilter, setBrandFilter] = useState<BrandFilter>("All");
   const [editingLead, setEditingLead] = useState<LeadQuery | null>(null);
@@ -179,8 +197,14 @@ export default function LeadQueryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <View style={styles.header}>
+            <View style={styles.header}>
         <View style={styles.titleRow}>
+          <TouchableOpacity
+            onPress={() => router.push("/sales-manager-modules")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+          </TouchableOpacity>
           <Text style={styles.title}>Lead / Query</Text>
         </View>
 
@@ -218,10 +242,8 @@ export default function LeadQueryScreen() {
         </View>
       </View>
 
-      {isLoading ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Loading...</Text>
-        </View>
+            {isLoading ? (
+        <SkeletonList count={6} />
       ) : isError ? (
         <View style={styles.emptyBox}>
           <Feather name="alert-triangle" size={32} color={colors.error} />
@@ -236,12 +258,15 @@ export default function LeadQueryScreen() {
           <Feather name="help-circle" size={32} color={colors.muted} />
           <Text style={styles.emptyText}>No queries found</Text>
         </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.listContent}>
-          {filteredData.map((item) => (
-            <View key={item.id}>{renderRow({ item })}</View>
-          ))}
-        </ScrollView>
+            ) : (
+        <LegendList
+          data={filteredData}
+          keyExtractor={(item: LeadQuery) => String(item.id)}
+          renderItem={renderRow}
+          contentContainerStyle={styles.listContent}
+          estimatedItemSize={200}
+          recycleItems
+        />
       )}
 
       {/* Edit Lead/Query Modal */}
@@ -344,8 +369,8 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
   title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
 
   brandFilterRow: { flexDirection: "row", gap: 6, marginBottom: 8 },
   brandFilterPill: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
