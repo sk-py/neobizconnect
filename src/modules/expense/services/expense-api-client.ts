@@ -11,6 +11,7 @@ export const expenseApi = axios.create({
 
 expenseApi.interceptors.request.use((config) => {
   let token = (useAuthStore.getState().accessToken || "").trim();
+  console.log("MY TOKEN:", token);
   token = token.replace(/^Bearer\s+/i, "").trim();
 
   if (token) {
