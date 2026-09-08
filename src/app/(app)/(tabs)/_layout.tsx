@@ -1,4 +1,4 @@
-import { hasModuleAccess, type AppModuleName, type UserRole } from '@/constants/modules';
+import { type UserRole } from '@/constants/modules';
 import { colors, typography } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import Feather from '@react-native-vector-icons/feather/static';
@@ -11,7 +11,6 @@ const TabLayout = () => {
     const userRole = user?.authority as UserRole | undefined;
     const insets = useSafeAreaInsets();
 
-    const canAccess = (moduleName: AppModuleName) => hasModuleAccess(moduleName, userRole);
 
     return (
         <View style={styles.container}>
@@ -27,7 +26,7 @@ const TabLayout = () => {
                     }
                 }}
             >
-                <Tabs.Protected guard={user?.authority === "Sales Manager"} >
+                <Tabs.Protected guard={user?.authority === "Query Manager"} >
                     <Tabs.Screen
                         name='index'
                         options={{
@@ -168,7 +167,7 @@ const TabLayout = () => {
             </Tabs>
 
             {/* Custom Branding Footer */}
-            <View style={[styles.footer, { paddingBottom: 10 }]}>
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2 }} >
                     <Text style={styles.footerText}>By</Text>
                     <Image source={require("../../../../assets/images/favicon.png")} style={{ width: 20, height: 20, resizeMode: 'contain' }} />

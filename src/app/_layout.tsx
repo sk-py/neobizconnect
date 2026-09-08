@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from "react";
+import { StatusBar } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -35,6 +36,8 @@ const RootNavigator = () => {
   const { isAuthenticated } = useAuth()
 
   return (
+    <>
+      <StatusBar barStyle={"dark-content"} />
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={isAuthenticated}  >
         <Stack.Screen name="(app)" />
@@ -43,5 +46,6 @@ const RootNavigator = () => {
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>
+    </>
   )
 }

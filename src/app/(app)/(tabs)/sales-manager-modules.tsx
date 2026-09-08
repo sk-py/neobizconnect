@@ -17,15 +17,15 @@ export const SalesManagerIndexScreen = () => {
             iconColor: "#3B82F6",
             iconBg: "#EFF6FF"
         },
-        {
-            id: "sub-dealers",
-            title: "Sub Dealers",
-            description: "Track and manage the sub-dealer network.",
-            icon: "users",
-            route: "/sub-dealer",
-            iconColor: "#8B5CF6",
-            iconBg: "#F5F3FF"
-        },
+        // {
+        //     id: "sub-dealers",
+        //     title: "Sub Dealers",
+        //     description: "Track and manage the sub-dealer network.",
+        //     icon: "users",
+        //     route: "/sub-dealer",
+        //     iconColor: "#8B5CF6",
+        //     iconBg: "#F5F3FF"
+        // },
         {
             id: "item-master",
             title: "Item Master",

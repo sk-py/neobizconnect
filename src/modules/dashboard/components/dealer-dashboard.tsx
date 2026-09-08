@@ -564,9 +564,9 @@ export const DashboardScreen = () => {
                         >
                             <Feather name="filter" size={16} color={colors.textSecondary} />
                         </TouchableOpacity>
-                        {user?.authority !== "Sales Manager" && <TouchableOpacity onPress={() => router.push("/profile")} style={styles.headerBtn}>
+                        <TouchableOpacity onPress={() => router.push("/profile")} style={styles.headerBtn}>
                             <Feather name="user" size={16} color={colors.textSecondary} />
-                        </TouchableOpacity>}
+                        </TouchableOpacity>
                     </View>
                 </View>
 
