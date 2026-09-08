@@ -137,9 +137,9 @@ export default function TransactionHistoryScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => toggleExpand(item.id)}>
+               <TouchableOpacity style={styles.actionRow} onPress={() => toggleExpand(item.id)}>
           <Text style={styles.actionText}>{isExpanded ? "Hide items" : "View items"}</Text>
-          <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={colors.primary} />
+          <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={colors.textSecondary} />
         </TouchableOpacity>
 
         {isExpanded && (
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   amountValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
 
   actionRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  actionText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.primary },
+    actionText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
 
   expandedBox: { marginTop: 8, backgroundColor: colors.surface, borderRadius: radius.sm, padding: spacing.sm, gap: 6 },
   lineItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -18,7 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 type RowState = {
   localId: string;
@@ -48,6 +49,7 @@ const formatDate = (d: Date) =>
 export default function ExpenseCreateScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [rows, setRows] = useState<RowState[]>([makeEmptyRow()]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export default function ExpenseCreateScreen() {
     setRows((prev) => [...prev, makeEmptyRow()]);
   };
 
-  const pickAttachment = async (localId: string) => {
+      const pickAttachment = async (localId: string) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.6,
@@ -80,6 +82,10 @@ export default function ExpenseCreateScreen() {
         attachmentName: asset.fileName || "attachment.jpg",
       });
     }
+  };
+
+  const removeAttachment = (localId: string) => {
+    updateRow(localId, { attachmentUri: undefined, attachmentName: undefined });
   };
 
   const totalAmount = rows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
@@ -135,10 +141,16 @@ export default function ExpenseCreateScreen() {
         {rows.map((row, idx) => (
           <View key={row.localId} style={styles.rowCard}>
             <View style={styles.rowCardTop}>
-              <Text style={styles.rowNumber}>#{idx + 1}</Text>
+              <View style={styles.rowNumberBadge}>
+                <Text style={styles.rowNumberText}>{idx + 1}</Text>
+              </View>
               {rows.length > 1 && (
-                <TouchableOpacity onPress={() => removeRow(row.localId)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Feather name="trash-2" size={16} color={colors.error} />
+                <TouchableOpacity
+                  onPress={() => removeRow(row.localId)}
+                  style={styles.deleteRowBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather name="trash-2" size={15} color={colors.error} />
                 </TouchableOpacity>
               )}
             </View>
@@ -155,7 +167,9 @@ export default function ExpenseCreateScreen() {
             <Text style={styles.fieldLabel}>Date</Text>
             <TouchableOpacity style={styles.input} onPress={() => setDatePickerFor(row.localId)}>
               <View style={styles.inputRowContent}>
-                <Feather name="calendar" size={14} color={colors.muted} />
+                <View style={styles.inputIconWrap}>
+                  <Feather name="calendar" size={13} color={colors.primary} />
+                </View>
                 <Text style={styles.inputText}>{formatDate(row.date)}</Text>
               </View>
             </TouchableOpacity>
@@ -165,7 +179,7 @@ export default function ExpenseCreateScreen() {
                 <Text style={styles.fieldLabel}>Category</Text>
                 <TouchableOpacity style={styles.input} onPress={() => setCategoryModalFor(row.localId)}>
                   <View style={styles.inputRowContent}>
-                    <Text style={styles.inputText} numberOfLines={1}>
+                    <Text style={[styles.inputText, !row.category && styles.placeholderText]} numberOfLines={1}>
                       {row.category || "Select"}
                     </Text>
                     <Feather name="chevron-down" size={14} color={colors.muted} />
@@ -179,7 +193,7 @@ export default function ExpenseCreateScreen() {
                   onPress={() => row.category && setSubCategoryModalFor(row.localId)}
                 >
                   <View style={styles.inputRowContent}>
-                    <Text style={styles.inputText} numberOfLines={1}>
+                    <Text style={[styles.inputText, !row.subCategory && styles.placeholderText]} numberOfLines={1}>
                       {row.subCategory || "Select"}
                     </Text>
                     <Feather name="chevron-down" size={14} color={colors.muted} />
@@ -201,25 +215,41 @@ export default function ExpenseCreateScreen() {
             <View style={styles.fieldPairRow}>
               <View style={styles.fieldHalf}>
                 <Text style={styles.fieldLabel}>Amount</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0.00"
-                  placeholderTextColor={colors.muted}
-                  value={row.amount}
-                  onChangeText={(text) => updateRow(row.localId, { amount: text.replace(/[^0-9.]/g, "") })}
-                  keyboardType="decimal-pad"
-                />
+                <View style={styles.amountInputWrap}>
+                  <Text style={styles.rupeeSign}>₹</Text>
+                  <TextInput
+                    style={styles.amountInput}
+                    placeholder="0.00"
+                    placeholderTextColor={colors.muted}
+                    value={row.amount}
+                    onChangeText={(text) => updateRow(row.localId, { amount: text.replace(/[^0-9.]/g, "") })}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
               </View>
               <View style={styles.fieldHalf}>
                 <Text style={styles.fieldLabel}>Attachment</Text>
-                <TouchableOpacity style={styles.input} onPress={() => pickAttachment(row.localId)}>
-                  <View style={styles.inputRowContent}>
-                    <Feather name="paperclip" size={14} color={colors.muted} />
-                    <Text style={styles.inputText} numberOfLines={1}>
-                      {row.attachmentName || "Upload"}
-                    </Text>
+                {row.attachmentUri ? (
+                  <View style={styles.attachmentPreviewWrap}>
+                    <Image source={{ uri: row.attachmentUri }} style={styles.attachmentThumb} contentFit="cover" />
+                    <TouchableOpacity
+                      style={styles.attachmentRemoveBtn}
+                      onPress={() => removeAttachment(row.localId)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Feather name="x" size={12} color={colors.white} />
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.input} onPress={() => pickAttachment(row.localId)}>
+                    <View style={styles.inputRowContent}>
+                      <Feather name="paperclip" size={14} color={colors.muted} />
+                      <Text style={[styles.inputText, styles.placeholderText]} numberOfLines={1}>
+                        Upload
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -238,10 +268,10 @@ export default function ExpenseCreateScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
-        <View>
+              <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.md }]}>
+        <View style={styles.footerTotalRow}>
           <Text style={styles.totalLabel}>Total Expense Amount</Text>
-          <Text style={styles.totalValue}>Rs. {totalAmount.toFixed(2)}</Text>
+          <Text style={styles.totalValue}>₹{totalAmount.toFixed(2)}</Text>
         </View>
         <View style={styles.footerBtnRow}>
           <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()}>
@@ -332,31 +362,44 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   headerSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
 
-  scrollContent: { padding: spacing.md, paddingBottom: 140 },
+   scrollContent: { padding: spacing.md, paddingBottom: 180 },
 
   rowCard: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
   rowCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
-  rowNumber: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.muted },
+  rowNumberBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  rowNumberText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.white },
+  deleteRowBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center" },
 
   fieldLabel: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 4, marginTop: spacing.sm },
   input: { backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, paddingVertical: 10, justifyContent: "center" },
   inputText: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, flex: 1 },
+  placeholderText: { color: colors.muted },
   inputRowContent: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 },
+  inputIconWrap: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center" },
   inputDisabled: { opacity: 0.5 },
   multilineInput: { minHeight: 60, textAlignVertical: "top" },
+
+  amountInputWrap: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm },
+  rupeeSign: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.textSecondary, marginRight: 4 },
+  amountInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, paddingVertical: 10, padding: 0 },
+
+  attachmentPreviewWrap: { position: "relative", height: 38 },
+  attachmentThumb: { width: "100%", height: "100%", borderRadius: radius.sm, backgroundColor: colors.surface },
+  attachmentRemoveBtn: { position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.error, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.white },
 
   fieldPairRow: { flexDirection: "row", gap: spacing.sm },
   fieldHalf: { flex: 1 },
 
-  addRowBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.primary, borderStyle: "dashed" },
+  addRowBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
   addRowText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
 
   saveErrorBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: "#FEF2F2", borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.md },
   saveErrorText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.error, flex: 1 },
 
   footer: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border, padding: spacing.md },
-  totalLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
-  totalValue: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.primary, marginBottom: spacing.sm },
+  footerTotalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  totalLabel: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.textSecondary },
+totalValue: { fontSize: 20, fontFamily: typography.bold, color: colors.primary },
   footerBtnRow: { flexDirection: "row", gap: spacing.sm },
   cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center" },
   cancelBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
