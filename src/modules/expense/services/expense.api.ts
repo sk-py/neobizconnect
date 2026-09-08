@@ -1,29 +1,22 @@
-import axios from "axios";
-import { useAuthStore } from "@/store/auth.store";
+import { expenseApi } from "./expense-api-client";
 import { ExpenseListItem } from "../types";
 
-const expenseApi = axios.create({
-  baseURL: "https://dealer-uat.actifyzone.com/crm-uat/Crm/Portal",
-  timeout: 15000,
-  headers: { "Content-Type": "application/json" },
-});
-
-expenseApi.interceptors.request.use((config) => {
-  let token = (useAuthStore.getState().accessToken || "").trim();
-  token = token.replace(/^Bearer\s+/i, "").trim();
-  if (token) {
-    const safeToken = token.includes("+") ? token.replace(/\+/g, "%2B") : token;
-    config.headers.Authorization = `Bearer ${safeToken}`;
-  }
-  return config;
-});
-
 export const fetchExpenses = async (): Promise<ExpenseListItem[]> => {
-  const res = await expenseApi.get<ExpenseListItem[]>(
-    `/api/dynamic-expense?_=${Date.now()}`
-  );
-  console.log("LIST IDS:", res.data.map((e) => e.id));
-  return res.data;
+  const res = await expenseApi.get<any>(`/api/dynamic-expense`);
+  
+  // Handle both formats: { expenses: [...] } or [...]
+  const data = res.data;
+  
+  if (Array.isArray(data)) {
+    console.log("LIST IDS (direct array):", data.map((e) => e.id));
+    return data;
+  } else if (data && Array.isArray(data.expenses)) {
+    console.log("LIST IDS (wrapped):", data.expenses.map((e: any) => e.id));
+    return data.expenses;
+  }
+  
+  console.log("LIST IDS (empty/fallback):", []);
+  return [];
 };
 
 export type CreateExpensePayload = {
@@ -43,19 +36,33 @@ export type CreateExpensePayload = {
 };
 
 export const createExpense = async (payload: CreateExpensePayload): Promise<void> => {
-  console.log("CREATE PAYLOAD:", JSON.stringify(payload));
-  const res = await expenseApi.post("/api/dynamic-expense", payload);
-  console.log("CREATE RESPONSE:", res.status, JSON.stringify(res.data));
+  console.log("═══════════════════════════════════════");
+  console.log("📦 PAYLOAD TO SEND:");
+  console.log(JSON.stringify({ expenses: [payload] }, null, 2));
+  console.log("═══════════════════════════════════════");
+  
+  await expenseApi.post("/api/dynamic-expense", { 
+    expenses: [payload] 
+  });
 };
 
 export const createExpenses = async (payloads: CreateExpensePayload[]): Promise<void> => {
-  for (const p of payloads) {
-    await createExpense(p);
-  }
+  console.log("═══════════════════════════════════════");
+  console.log("📦 PAYLOADS TO SEND:");
+  console.log(JSON.stringify({ expenses: payloads }, null, 2));
+  console.log("═══════════════════════════════════════");
+  
+  await expenseApi.post("/api/dynamic-expense", { 
+    expenses: payloads 
+  });
 };
 
 export type UpdateExpensePayload = Omit<CreateExpensePayload, "isDeleting">;
 
 export const updateExpense = async (id: number, payload: UpdateExpensePayload): Promise<void> => {
-  await expenseApi.put(`/api/dynamic-expense/${id}`, payload);
+  await expenseApi.put(`/api/dynamic-expense/${id}`, { expenses: [payload] });
+};
+
+export const deleteExpense = async (id: number): Promise<void> => {
+  await expenseApi.delete(`/api/dynamic-expense/${id}`);
 };

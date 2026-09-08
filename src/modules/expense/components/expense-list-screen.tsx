@@ -7,7 +7,7 @@ import { LegendList } from "@legendapp/list/react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { BackHandler, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { BackHandler, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const formatCurrency = (val: number) =>
@@ -97,7 +97,7 @@ export default function ExpenseListScreen() {
 
         <View style={styles.amountRow}>
           <Text style={styles.amountLabel}>Amount</Text>
-          <Text style={styles.amountValue}>Rs. {formatCurrency(item.amount)}</Text>
+          <Text style={styles.amountValue}>₹{formatCurrency(item.amount)}</Text>
         </View>
 
         <View style={styles.employeeRow}>

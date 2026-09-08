@@ -20,6 +20,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
 
 type RowState = {
   localId: string;
@@ -53,6 +54,7 @@ export default function ExpenseCreateScreen() {
   const [rows, setRows] = useState<RowState[]>([makeEmptyRow()]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const [datePickerFor, setDatePickerFor] = useState<string | null>(null);
   const [categoryModalFor, setCategoryModalFor] = useState<string | null>(null);
@@ -70,11 +72,13 @@ export default function ExpenseCreateScreen() {
     setRows((prev) => [...prev, makeEmptyRow()]);
   };
 
-      const pickAttachment = async (localId: string) => {
+  // ✅ FIXED: Use MediaTypeOptions (correct property name)
+  const pickAttachment = async (localId: string) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.6,
     });
+    
     if (!result.canceled && result.assets?.[0]) {
       const asset = result.assets[0];
       updateRow(localId, {
@@ -94,6 +98,7 @@ export default function ExpenseCreateScreen() {
     setSaving(true);
     setSaveError(null);
     try {
+      // Build payload array
       const payload: CreateExpensePayload[] = rows.map((r) => ({
         title: r.title || "",
         date: r.date.toISOString().slice(0, 10),
@@ -110,7 +115,12 @@ export default function ExpenseCreateScreen() {
         employee_name: (user?.name ?? "").trim(),
       }));
 
+      // ✅ This sends the correct format: { expenses: [...] }
       await createExpenses(payload);
+
+      // Invalidate cache so list refetches
+      await queryClient.invalidateQueries({ queryKey: ["expenses"] });
+
       router.back();
     } catch (err: any) {
       setSaveError(err?.message || "Failed to save expenses. Please try again.");
@@ -268,7 +278,7 @@ export default function ExpenseCreateScreen() {
         )}
       </ScrollView>
 
-              <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.md }]}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.md }]}>
         <View style={styles.footerTotalRow}>
           <Text style={styles.totalLabel}>Total Expense Amount</Text>
           <Text style={styles.totalValue}>₹{totalAmount.toFixed(2)}</Text>
@@ -362,7 +372,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   headerSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
 
-   scrollContent: { padding: spacing.md, paddingBottom: 180 },
+  scrollContent: { padding: spacing.md, paddingBottom: 180 },
 
   rowCard: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
   rowCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
@@ -399,7 +409,7 @@ const styles = StyleSheet.create({
   footer: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border, padding: spacing.md },
   footerTotalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   totalLabel: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.textSecondary },
-totalValue: { fontSize: 20, fontFamily: typography.bold, color: colors.primary },
+  totalValue: { fontSize: 20, fontFamily: typography.bold, color: colors.primary },
   footerBtnRow: { flexDirection: "row", gap: spacing.sm },
   cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center" },
   cancelBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
