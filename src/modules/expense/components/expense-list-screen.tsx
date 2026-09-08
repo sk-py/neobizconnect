@@ -5,9 +5,9 @@ import { SkeletonList } from "@/components/custom/skeleton";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { LegendList } from "@legendapp/list/react-native";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { BackHandler, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const formatCurrency = (val: number) =>
@@ -29,6 +29,18 @@ const getStatusStyle = (status: string) => {
 
 export default function ExpenseListScreen() {
   const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.push("/sales-manager-modules");
+        return true;
+      };
+      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => subscription.remove();
+    }, [router]),
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data, isLoading, isError, error, isRefetching, refetch } = useQuery({

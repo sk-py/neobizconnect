@@ -5,8 +5,9 @@ import { SkeletonList } from "@/components/custom/skeleton";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { LegendList } from "@legendapp/list/react-native";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { BackHandler, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const BRANDS: { label: string; value: ItemMasterBrand }[] = [
@@ -17,6 +18,19 @@ const BRANDS: { label: string; value: ItemMasterBrand }[] = [
 const PAGE_SIZE = 20;
 
 export default function ItemMasterScreen() {
+  const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.push("/sales-manager-modules");
+        return true;
+      };
+      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => subscription.remove();
+    }, [router]),
+  );
+
   const [brand, setBrand] = useState<ItemMasterBrand>("NEO");
   const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,8 +100,16 @@ export default function ItemMasterScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Item Master</Text>
+            <View style={styles.header}>
+        <View style={styles.titleRow2}>
+          <TouchableOpacity
+            onPress={() => router.push("/sales-manager-modules")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Item Master</Text>
+        </View>
 
         <View style={styles.controlsRow}>
           <View style={styles.brandRow}>
@@ -178,7 +200,7 @@ const styles = StyleSheet.create({
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
   title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginBottom: 6 },
-
+  titleRow2: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 },
   controlsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   brandRow: { flexDirection: "row", gap: 6 },
   brandPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
