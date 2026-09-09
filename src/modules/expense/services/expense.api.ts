@@ -3,10 +3,10 @@ import { ExpenseListItem } from "../types";
 
 export const fetchExpenses = async (): Promise<ExpenseListItem[]> => {
   const res = await expenseApi.get<any>(`/api/dynamic-expense`);
-  
+
   // Handle both formats: { expenses: [...] } or [...]
   const data = res.data;
-  
+
   if (Array.isArray(data)) {
     console.log("LIST IDS (direct array):", data.map((e) => e.id));
     return data;
@@ -14,7 +14,7 @@ export const fetchExpenses = async (): Promise<ExpenseListItem[]> => {
     console.log("LIST IDS (wrapped):", data.expenses.map((e: any) => e.id));
     return data.expenses;
   }
-  
+
   console.log("LIST IDS (empty/fallback):", []);
   return [];
 };
@@ -36,24 +36,18 @@ export type CreateExpensePayload = {
 };
 
 export const createExpense = async (payload: CreateExpensePayload): Promise<void> => {
-  console.log("═══════════════════════════════════════");
-  console.log("📦 PAYLOAD TO SEND:");
-  console.log(JSON.stringify({ expenses: [payload] }, null, 2));
-  console.log("═══════════════════════════════════════");
-  
-  await expenseApi.post("/api/dynamic-expense", { 
-    expenses: [payload] 
+  console.log("PAYLOAD TO SEND:", JSON.stringify({ expenses: [payload] }, null, 2));
+
+  await expenseApi.post("/api/dynamic-expense", {
+    expenses: [payload]
   });
 };
 
 export const createExpenses = async (payloads: CreateExpensePayload[]): Promise<void> => {
-  console.log("═══════════════════════════════════════");
-  console.log("📦 PAYLOADS TO SEND:");
-  console.log(JSON.stringify({ expenses: payloads }, null, 2));
-  console.log("═══════════════════════════════════════");
-  
-  await expenseApi.post("/api/dynamic-expense", { 
-    expenses: payloads 
+  console.log("PAYLOADS TO SEND:", JSON.stringify({ expenses: payloads }, null, 2));
+
+  await expenseApi.post("/api/dynamic-expense", {
+    expenses: payloads
   });
 };
 
