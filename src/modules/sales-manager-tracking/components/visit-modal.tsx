@@ -4,7 +4,6 @@ import { Feather } from "@react-native-vector-icons/feather/static";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-  FlatList,
   Modal,
   Platform,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { LegendList } from "@legendapp/list/react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 import { ActiveVisit, Dealer } from "../types";
@@ -89,10 +89,12 @@ export const VisitModal = ({ visible, onClose, onStartVisit }: Props) => {
                 <Feather name="plus" size={18} color={colors.white} />
               </TouchableOpacity>
             </View>
-            <FlatList
+                        <LegendList
               data={filteredDealers}
               keyExtractor={(item) => item.id}
               contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }}
+              estimatedItemSize={80}
+              recycleItems
               renderItem={({ item }) => (
                 <View style={styles.dealerCard}>
                   <View style={{ flex: 1, paddingRight: 8 }}>

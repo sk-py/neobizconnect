@@ -7,4 +7,3 @@ const TrackerRoute = () => {
 }
 
 export default TrackerRoute
-

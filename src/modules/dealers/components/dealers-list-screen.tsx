@@ -1,15 +1,29 @@
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
 import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { Dealer } from "@/modules/dealers/types";
+import { SkeletonList } from "@/components/custom/skeleton";
 import { Feather } from "@react-native-vector-icons/feather/static";
+import { LegendList } from "@legendapp/list/react-native";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { FlatList, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { BackHandler, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function DealersListScreen() {
   const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.push("/sales-manager-modules");
+        return true;
+      };
+      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => subscription.remove();
+    }, [router]),
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data, isLoading, isError, error, isRefetching, refetch } = useQuery({
@@ -87,8 +101,15 @@ export default function DealersListScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <View style={styles.header}>
+      
+            <View style={styles.header}>
         <View style={styles.titleRow}>
+          <TouchableOpacity
+            onPress={() => router.push("/sales-manager-modules")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+          </TouchableOpacity>
           <Text style={styles.title}>Dealers</Text>
         </View>
         <View style={styles.searchContainer}>
@@ -109,9 +130,7 @@ export default function DealersListScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Loading...</Text>
-        </View>
+        <SkeletonList count={7} />
       ) : isError ? (
         <View style={styles.emptyBox}>
           <Feather name="alert-triangle" size={32} color={colors.error} />
@@ -127,13 +146,15 @@ export default function DealersListScreen() {
           <Text style={styles.emptyText}>No dealers found</Text>
         </View>
       ) : (
-        <FlatList
+        <LegendList
           data={filteredData}
           keyExtractor={(item: Dealer) => item.cardCode}
           renderItem={renderRow}
           contentContainerStyle={styles.listContent}
           onRefresh={refetch}
           refreshing={isRefetching}
+          estimatedItemSize={90}
+          recycleItems
         />
       )}
     </SafeAreaView>
@@ -145,11 +166,11 @@ const styles = StyleSheet.create({
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: 6 },
-  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
+  title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
 
   searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 34 },
   searchIcon: { marginRight: 6 },
-  searchInput: { flex: 1, fontSize: 12, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
+  searchInput: { flex: 1, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 2 },
 
   listContent: { paddingBottom: spacing.md },
@@ -157,20 +178,20 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.sm },
   rowMain: { flex: 1, gap: 4 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  dealerName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
+  dealerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusDotActive: { backgroundColor: colors.success },
   statusDotInactive: { backgroundColor: colors.muted },
-  dealerCode: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 4 },
+  dealerCode: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 4 },
 
   contactGroup: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   contactChip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.surface, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 4 },
-  contactChipText: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary },
+  contactChipText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
-  emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
-  errorTitle: { fontSize: 13, fontFamily: typography.bold, color: colors.error },
-  errorSubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, textAlign: "center" },
+  emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
+  errorTitle: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.error },
+  errorSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, textAlign: "center" },
   retryBtn: { marginTop: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radius.sm },
-  retryBtnText: { fontSize: 13, fontFamily: typography.bold, color: colors.white },
+  retryBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.white },
 });

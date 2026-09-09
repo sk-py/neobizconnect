@@ -1,15 +1,22 @@
-import { ExpenseListItem } from "../types";
 import { expenseApi } from "./expense-api-client";
+import { ExpenseListItem } from "../types";
 
 export const fetchExpenses = async (): Promise<ExpenseListItem[]> => {
-  try {
-    const res = await expenseApi.get<ExpenseListItem[]>("/api/dynamic-expense");
-    console.log("EXPENSE LIST IDS:", res.data.map((e) => e.id));
-    return res.data;
-  } catch (err: any) {
-    console.log("EXPENSE LIST ERROR:", err?.response?.status, JSON.stringify(err?.response?.data));
-    throw err;
+  const res = await expenseApi.get<any>(`/api/dynamic-expense`);
+
+  // Handle both formats: { expenses: [...] } or [...]
+  const data = res.data;
+
+  if (Array.isArray(data)) {
+    console.log("LIST IDS (direct array):", data.map((e) => e.id));
+    return data;
+  } else if (data && Array.isArray(data.expenses)) {
+    console.log("LIST IDS (wrapped):", data.expenses.map((e: any) => e.id));
+    return data.expenses;
   }
+
+  console.log("LIST IDS (empty/fallback):", []);
+  return [];
 };
 
 export type CreateExpensePayload = {
@@ -28,29 +35,28 @@ export type CreateExpensePayload = {
   employee_name: string;
 };
 
-// Server expects a single object {...}, NOT an array [...]
 export const createExpense = async (payload: CreateExpensePayload): Promise<void> => {
-  try {
-    console.log("CREATE EXPENSE PAYLOAD:", JSON.stringify(payload));
-    const res = await expenseApi.post("/api/dynamic-expense", payload);
-    console.log("CREATE EXPENSE RESPONSE STATUS:", res.status);
-    console.log("CREATE EXPENSE RESPONSE BODY:", JSON.stringify(res.data));
-  } catch (err: any) {
-    console.log("CREATE EXPENSE ERROR STATUS:", err?.response?.status);
-    console.log("CREATE EXPENSE ERROR BODY:", JSON.stringify(err?.response?.data));
-    throw err;
-  }
+  console.log("PAYLOAD TO SEND:", JSON.stringify({ expenses: [payload] }, null, 2));
+
+  await expenseApi.post("/api/dynamic-expense", {
+    expenses: [payload]
+  });
 };
 
-// If multiple rows are added on the Create screen, loop and send one at a time
 export const createExpenses = async (payloads: CreateExpensePayload[]): Promise<void> => {
-  for (const p of payloads) {
-    await createExpense(p);
-  }
+  console.log("PAYLOADS TO SEND:", JSON.stringify({ expenses: payloads }, null, 2));
+
+  await expenseApi.post("/api/dynamic-expense", {
+    expenses: payloads
+  });
 };
 
 export type UpdateExpensePayload = Omit<CreateExpensePayload, "isDeleting">;
 
 export const updateExpense = async (id: number, payload: UpdateExpensePayload): Promise<void> => {
-  await expenseApi.put(`/api/dynamic-expense/${id}`, payload);
+  await expenseApi.put(`/api/dynamic-expense/${id}`, { expenses: [payload] });
+};
+
+export const deleteExpense = async (id: number): Promise<void> => {
+  await expenseApi.delete(`/api/dynamic-expense/${id}`);
 };

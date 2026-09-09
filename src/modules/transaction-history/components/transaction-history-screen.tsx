@@ -1,10 +1,13 @@
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
 import { fetchTransactionHistory } from "@/modules/transaction-history/services/transaction-history.api";
 import { Transaction } from "@/modules/transaction-history/types";
+import { SkeletonList } from "@/components/custom/skeleton";
 import { Feather } from "@react-native-vector-icons/feather/static";
+import { LegendList } from "@legendapp/list/react-native";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { BackHandler, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const getStatusStyle = (status: string) => {
@@ -41,6 +44,19 @@ const formatCurrency = (val: number) =>
   val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function TransactionHistoryScreen() {
+  const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.push("/sales-manager-modules");
+        return true;
+      };
+      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => subscription.remove();
+    }, [router]),
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
@@ -81,72 +97,85 @@ export default function TransactionHistoryScreen() {
     const stock = getWarehouse(item.documentLines);
     const isExpanded = expandedIds.has(item.id);
 
-        return (
+    return (
       <View style={styles.card}>
-          <View style={styles.cardTop}>
-            <View style={styles.soBadge}>
-              <Feather name="hash" size={11} color={colors.white} />
-              <Text style={styles.soNo}>SO-{item.series}</Text>
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-              <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>
-                {item.u_DealerStatus || "Pending"}
-              </Text>
-            </View>
+        <View style={styles.cardTop}>
+          <View style={styles.soBadge}>
+            <Feather name="hash" size={11} color={colors.text} />
+            <Text style={styles.soNo}>SO-{item.series}</Text>
           </View>
-
-          <Text style={styles.dealerName} numberOfLines={1}>
-            {item.card_name}
-          </Text>
-          <Text style={styles.dealerCode}>{item.cardCode}</Text>
-
-          <View style={styles.divider} />
-
-          <View style={styles.statsGrid}>
-            <View style={styles.statBlock}>
-              <Text style={styles.statLabel}>Date</Text>
-              <Text style={styles.statValue}>{formatDate(item.docDate)}</Text>
-            </View>
-            <View style={styles.statBlock}>
-              <Text style={styles.statLabel}>Stock</Text>
-              <Text style={styles.statValue}>{stock}</Text>
-            </View>
-            <View style={styles.statBlock}>
-              <Text style={styles.statLabel}>Qty</Text>
-              <Text style={styles.statValue}>{qty}</Text>
-            </View>
-            <View style={styles.statBlock}>
-              <Text style={styles.statLabel}>Amount</Text>
-              <Text style={styles.amountValue}>Rs. {formatCurrency(amount)}</Text>
-            </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+            <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>
+              {item.u_DealerStatus || "Pending"}
+            </Text>
           </View>
-
-          <TouchableOpacity style={styles.actionRow} onPress={() => toggleExpand(item.id)}>
-            <Text style={styles.actionText}>{isExpanded ? "Hide items" : "View items"}</Text>
-            <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={colors.primary} />
-          </TouchableOpacity>
-
-          {isExpanded && (
-            <View style={styles.expandedBox}>
-              {item.documentLines?.map((line, idx) => (
-                <View key={idx} style={styles.lineItem}>
-                  <Text style={styles.lineItemCode} numberOfLines={1}>
-                    {line.ItemCode}
-                  </Text>
-                  <Text style={styles.lineItemQty}>
-                    {line.Quantity} x Rs.{line.UnitPrice}
-                  </Text>
-                </View>
-              ))}
-            </View>
-                   )}
         </View>
+
+        <Text style={styles.dealerName} numberOfLines={1}>
+          {item.card_name}
+        </Text>
+        <Text style={styles.dealerCode}>{item.cardCode}</Text>
+
+        <View style={styles.divider} />
+
+        <View style={styles.statsGrid}>
+          <View style={styles.statBlock}>
+            <Text style={styles.statLabel}>Date</Text>
+            <Text style={styles.statValue}>{formatDate(item.docDate)}</Text>
+          </View>
+          <View style={styles.statBlock}>
+            <Text style={styles.statLabel}>Stock</Text>
+            <Text style={styles.statValue}>{stock}</Text>
+          </View>
+          <View style={styles.statBlock}>
+            <Text style={styles.statLabel}>Qty</Text>
+            <Text style={styles.statValue}>{qty}</Text>
+          </View>
+          <View style={styles.statBlock}>
+            <Text style={styles.statLabel}>Amount</Text>
+            <Text style={styles.amountValue}>Rs. {formatCurrency(amount)}</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => {
+            console.log("DOCUMENT LINES:", JSON.stringify(item.documentLines));
+            toggleExpand(item.id);
+          }}
+        >
+          <Text style={styles.actionText}>{isExpanded ? "Hide items" : "View items"}</Text>
+          <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        {isExpanded && (
+          <View style={styles.expandedBox}>
+            {item.documentLines?.map((line, idx) => (
+              <View key={idx} style={styles.lineItem}>
+                <Text style={styles.lineItemCode} numberOfLines={1}>
+                  {line.ItemCode}
+                </Text>
+                <Text style={styles.lineItemQty}>
+                  {line.Quantity} x Rs.{line.UnitPrice}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
     );
   };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
+          <TouchableOpacity
+            onPress={() => router.push("/sales-manager-modules")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+          </TouchableOpacity>
           <Text style={styles.title}>Transaction History</Text>
         </View>
         <View style={styles.searchContainer}>
@@ -167,22 +196,22 @@ export default function TransactionHistoryScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Loading...</Text>
-        </View>
+        <SkeletonList count={6} />
       ) : filteredData.length === 0 ? (
-                <View style={styles.emptyBox}>
+        <View style={styles.emptyBox}>
           <View style={styles.emptyIconCircle}>
             <Feather name="inbox" size={28} color={colors.muted} />
           </View>
           <Text style={styles.emptyText}>No transactions found</Text>
         </View>
       ) : (
-        <FlatList
+                        <LegendList
           data={filteredData}
           keyExtractor={(item: Transaction) => String(item.id)}
           renderItem={renderRow}
           contentContainerStyle={styles.listContent}
+          estimatedItemSize={220}
+          extraData={expandedIds}
         />
       )}
     </SafeAreaView>
@@ -194,44 +223,43 @@ const styles = StyleSheet.create({
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  titleIconCircle: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
+  title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
 
   searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 34 },
   searchIcon: { marginRight: 6 },
-  searchInput: { flex: 1, fontSize: 12, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
+  searchInput: { flex: 1, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 2 },
 
   listContent: { padding: spacing.md, gap: spacing.sm },
 
-   card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.sm },
+  card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.sm },
 
   cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
-  soBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm },
-  soNo: { fontSize: 11, fontFamily: typography.bold, color: colors.white },
+  soBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border },
+  soNo: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.text },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm },
-  statusBadgeText: { fontSize: 10, fontFamily: typography.semibold },
+  statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.semibold },
 
-  dealerName: { fontSize: 14, fontFamily: typography.bold, color: colors.text },
-  dealerCode: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 1 },
+  dealerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
+  dealerCode: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 1 },
 
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 10 },
 
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   statBlock: { minWidth: "45%" },
-  statLabel: { fontSize: 10, fontFamily: typography.medium, color: colors.muted, marginBottom: 2 },
-  statValue: { fontSize: 12, fontFamily: typography.semibold, color: colors.text },
-  amountValue: { fontSize: 13, fontFamily: typography.bold, color: colors.primary },
+  statLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted, marginBottom: 2 },
+  statValue: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text },
+  amountValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
 
   actionRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  actionText: { fontSize: 11, fontFamily: typography.semibold, color: colors.primary },
+  actionText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
 
   expandedBox: { marginTop: 8, backgroundColor: colors.surface, borderRadius: radius.sm, padding: spacing.sm, gap: 6 },
   lineItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  lineItemCode: { fontSize: 11, fontFamily: typography.medium, color: colors.text, flex: 1 },
-  lineItemQty: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary },
+  lineItemCode: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text, flex: 1 },
+  lineItemQty: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
-    emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
-  emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
+  emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
 });
