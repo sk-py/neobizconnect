@@ -50,9 +50,7 @@ export default function DealerLeadQueryScreen() {
     queryFn: fetchLeadQueries,
   });
 
-  // "Assigned To" employee list — real API, keyed by the logged-in user's
-  // groupid (confirmed via captured request: id=7 matched groupid:7, not
-  // authority_id which was 6).
+  // "Assigned To" employee list — needed for Edit form
   const { data: employees, isLoading: employeesLoading } = useQuery({
     queryKey: ["employees-by-authority", user?.groupid],
     queryFn: () => fetchAssignedToOptions(user!.groupid),
@@ -278,10 +276,7 @@ export default function DealerLeadQueryScreen() {
         />
       )}
 
-      {/* Edit modal — mirrors the web "Lead / Query Assignment" form:
-          Customer Details, Lead Source & Vehicle, Query Details.
-          Customer Remarks / Remark 2 are intentionally NOT editable here —
-          only shown/edited elsewhere. */}
+      {/* Edit modal */}
       <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
         <Pressable style={styles.modalOverlay} onPress={closeEditModal}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
@@ -297,6 +292,8 @@ export default function DealerLeadQueryScreen() {
 
             {editForm && (
               <ScrollView style={styles.modalBody}>
+                
+                {/* Section 1: Customer Details */}
                 <View style={styles.modalSection}>
                   <View style={styles.modalSectionHeader}>
                     <View style={styles.modalStepBadge}>
@@ -347,6 +344,7 @@ export default function DealerLeadQueryScreen() {
                   />
                 </View>
 
+                {/* Section 2: Lead Source & Vehicle */}
                 <View style={styles.modalSection}>
                   <View style={styles.modalSectionHeader}>
                     <View style={styles.modalStepBadge}>
@@ -395,6 +393,7 @@ export default function DealerLeadQueryScreen() {
                   />
                 </View>
 
+                {/* Section 3: Query Details — ✅ FIX #4: Remarks removed, Status/AssignedTo kept */}
                 <View style={styles.modalSection}>
                   <View style={styles.modalSectionHeader}>
                     <View style={styles.modalStepBadge}>
@@ -402,7 +401,7 @@ export default function DealerLeadQueryScreen() {
                     </View>
                     <View>
                       <Text style={styles.modalSectionTitle}>Query Details</Text>
-                      <Text style={styles.modalSectionSubtitle}>Query information and assignment</Text>
+                      <Text style={styles.modalSectionSubtitle}>Assignment and status</Text>
                     </View>
                   </View>
 
@@ -444,6 +443,11 @@ export default function DealerLeadQueryScreen() {
                     searchable
                     placeholder="Select status"
                   />
+
+                  {/* ✅ FIX #4: REMOVED "Customer Remarks" field */}
+                  
+                  {/* ✅ FIX #4: REMOVED "Remark 2" field */}
+                  
                 </View>
 
                 {saveError && (
@@ -539,6 +543,8 @@ const styles = StyleSheet.create({
 
   fieldLabel: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 6, marginTop: spacing.sm },
   textInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 10, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text },
+
+  remarksInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, fontSize: 13, fontFamily: typography.medium, color: colors.text, minHeight: 90 },
 
   saveErrorBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: "#FEF2F2", borderRadius: radius.sm, padding: spacing.sm },
   saveErrorText: { fontSize: 11, fontFamily: typography.medium, color: colors.error, flex: 1 },

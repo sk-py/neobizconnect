@@ -1,7 +1,11 @@
 import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
-import { createLeadQuery } from "@/modules/dealer-lead-query/services/dealer-lead-query.api";
+import {
+  createLeadQuery,
+  fetchAssignedToOptions,
+} from "@/modules/dealer-lead-query/services/dealer-lead-query.api";
 import {
   BRAND_INTEREST_OPTIONS,
+  EmployeeOption,
   INDIAN_STATES,
   LEAD_PRIORITY_OPTIONS,
   LEAD_SOURCE_OPTIONS,
@@ -11,8 +15,9 @@ import {
 import { FieldSelect } from "@/components/custom/field-select";
 import { useAuthStore } from "@/store/auth.store";
 import { Feather } from "@react-native-vector-icons/feather/static";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -25,9 +30,6 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Assigned To / Status are intentionally NOT part of this form — a lead
-// has no owner or status until after it's created; those are set from the
-// Edit modal on the list screen instead.
 const EMPTY_FORM: LeadFormData = {
   city: "",
   state: "",
@@ -56,8 +58,28 @@ export default function DealerLeadQueryCreateScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { data: employees, isLoading: employeesLoading } = useQuery({
+    queryKey: ["employees-create", user?.groupid],
+    queryFn: () => fetchAssignedToOptions(user!.groupid),
+    enabled: !!user?.groupid,
+  });
+
+  const employeeNames = useMemo(
+    () => (employees || []).map((e: EmployeeOption) => e.name),
+    [employees]
+  );
+
   const updateField = (key: keyof LeadFormData, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleAssignedToChange = (name: string) => {
+    const match = employees?.find((e: EmployeeOption) => e.name === name);
+    setForm((prev) => ({
+      ...prev,
+      account_owner: name,
+      account_owner_id: match ? String(match.id) : prev.account_owner_id,
+    }));
   };
 
   const handleSubmit = async () => {
@@ -65,22 +87,17 @@ export default function DealerLeadQueryCreateScreen() {
       setError("Customer Name and Mobile Number are required.");
       return;
     }
-
     if (!user?.companyid) {
-      setError("Missing company ID for the logged-in user — cannot submit.");
+      setError("Missing company ID.");
       return;
     }
-
     setSaving(true);
     setError(null);
     try {
       await createLeadQuery(form, user.companyid);
       router.back();
     } catch (err: any) {
-      setError(
-        err?.message ||
-          "Failed to create — this endpoint hasn't been fully confirmed yet, check with TL.",
-      );
+      setError(err?.message || "Failed to create");
     } finally {
       setSaving(false);
     }
@@ -88,65 +105,82 @@ export default function DealerLeadQueryCreateScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      
+      {/* HEADER BAR */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Feather name="arrow-left" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Create Lead / Query</Text>
+        <Text style={styles.headerTitle}>Create Lead / Query</Text>
+        <View style={{ width: 20 }} />
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
-          <View style={styles.introBlock}>
-            <Text style={styles.introTitle}>Lead / Query Assignment Form</Text>
-            <Text style={styles.introSubtitle}>
-              Capture customer enquiries, assign leads and track follow-ups.
-            </Text>
-          </View>
+      {/* INTRO HEADER BLOCK */}
+      <View style={styles.introBox}>
+        <Text style={styles.introTitle}>Lead / Query Assignment Form</Text>
+        <Text style={styles.introSubtitle}>
+          Capture customer enquiries, assign leads and track follow-ups.
+        </Text>
+      </View>
 
-          <View style={styles.modalSection}>
-            <View style={styles.modalSectionHeader}>
-              <View style={styles.modalStepBadge}>
-                <Text style={styles.modalStepBadgeText}>1</Text>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView 
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ 
+            padding: spacing.md, 
+            paddingBottom: 100 
+          }}
+        >
+          
+          {/* SECTION 1: CUSTOMER DETAILS */}
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <View style={styles.stepNum}>
+                <Text style={styles.stepNumTxt}>1</Text>
               </View>
               <View>
-                <Text style={styles.modalSectionTitle}>Customer Details</Text>
-                <Text style={styles.modalSectionSubtitle}>Customer basic information</Text>
+                <Text style={styles.sectionTitle}>Customer Details</Text>
+                <Text style={styles.sectionSub}>Basic information</Text>
               </View>
             </View>
 
-            <Text style={styles.fieldLabel}>Customer Name *</Text>
+            <Text style={styles.label}>Customer Name *</Text>
             <TextInput
-              style={styles.textInput}
+              style={styles.input}
               placeholder="Enter customer name"
               placeholderTextColor={colors.muted}
               value={form.customer_name}
               onChangeText={(v) => updateField("customer_name", v)}
             />
 
-            <Text style={styles.fieldLabel}>Mobile Number *</Text>
+            <Text style={styles.label}>Mobile Number *</Text>
             <TextInput
-              style={styles.textInput}
+              style={styles.input}
               placeholder="+91XXXXXXXXXX"
               placeholderTextColor={colors.muted}
               value={form.phone_1}
               onChangeText={(v) => updateField("phone_1", v)}
               keyboardType="phone-pad"
+              maxLength={10}
             />
 
-            <Text style={styles.fieldLabel}>City</Text>
+            <Text style={styles.label}>City</Text>
             <TextInput
-              style={styles.textInput}
+              style={styles.input}
               placeholder="Enter city"
               placeholderTextColor={colors.muted}
               value={form.city}
               onChangeText={(v) => updateField("city", v)}
             />
 
-            <Text style={styles.fieldLabel}>State</Text>
+            <Text style={styles.label}>State</Text>
             <FieldSelect
               label="State"
               value={form.state}
@@ -157,18 +191,19 @@ export default function DealerLeadQueryCreateScreen() {
             />
           </View>
 
-          <View style={styles.modalSection}>
-            <View style={styles.modalSectionHeader}>
-              <View style={styles.modalStepBadge}>
-                <Text style={styles.modalStepBadgeText}>2</Text>
+          {/* SECTION 2: SOURCE & VEHICLE */}
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <View style={styles.stepNum}>
+                <Text style={styles.stepNumTxt}>2</Text>
               </View>
               <View>
-                <Text style={styles.modalSectionTitle}>Lead Source & Vehicle</Text>
-                <Text style={styles.modalSectionSubtitle}>Source and product details</Text>
+                <Text style={styles.sectionTitle}>Lead Source & Vehicle</Text>
+                <Text style={styles.sectionSub}>Source and product details</Text>
               </View>
             </View>
 
-            <Text style={styles.fieldLabel}>Source</Text>
+            <Text style={styles.label}>Source</Text>
             <FieldSelect
               label="Source"
               value={form.source}
@@ -177,7 +212,7 @@ export default function DealerLeadQueryCreateScreen() {
               placeholder="Select source"
             />
 
-            <Text style={styles.fieldLabel}>Brand Interest</Text>
+            <Text style={styles.label}>Brand Interest</Text>
             <FieldSelect
               label="Brand Interest"
               value={form.brand_interest}
@@ -186,18 +221,18 @@ export default function DealerLeadQueryCreateScreen() {
               placeholder="Select brand interest"
             />
 
-            <Text style={styles.fieldLabel}>Car Model</Text>
+            <Text style={styles.label}>Car Model</Text>
             <TextInput
-              style={styles.textInput}
+              style={styles.input}
               placeholder="Enter car model"
               placeholderTextColor={colors.muted}
               value={form.car_model}
               onChangeText={(v) => updateField("car_model", v)}
             />
 
-            <Text style={styles.fieldLabel}>Alloys</Text>
+            <Text style={styles.label}>Alloys</Text>
             <TextInput
-              style={styles.textInput}
+              style={styles.input}
               placeholder="Enter alloy details"
               placeholderTextColor={colors.muted}
               value={form.alloys}
@@ -205,56 +240,71 @@ export default function DealerLeadQueryCreateScreen() {
             />
           </View>
 
-          <View style={styles.modalSection}>
-            <View style={styles.modalSectionHeader}>
-              <View style={styles.modalStepBadge}>
-                <Text style={styles.modalStepBadgeText}>3</Text>
+          {/* SECTION 3: QUERY DETAILS */}
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <View style={styles.stepNum}>
+                <Text style={styles.stepNumTxt}>3</Text>
               </View>
               <View>
-                <Text style={styles.modalSectionTitle}>Query Details</Text>
-                <Text style={styles.modalSectionSubtitle}>Query information</Text>
+                <Text style={styles.sectionTitle}>Query Details</Text>
+                <Text style={styles.sectionSub}>Classification & assignment</Text>
               </View>
             </View>
 
-            <Text style={styles.fieldLabel}>Type of Query</Text>
+            {/* TYPE OF QUERY - DROPDOWN (not text input) */}
+            <Text style={styles.label}>Type of Query</Text>
             <FieldSelect
               label="Type of Query"
               value={form.type_of_query}
-              options={TYPE_OF_QUERY_OPTIONS}
-              onChange={(v) => updateField("type_of_query", v)}
+              options={[...TYPE_OF_QUERY_OPTIONS]}
+              onChange={(val) => updateField("type_of_query", val)}
               placeholder="Select type of query"
             />
 
-            <Text style={styles.fieldLabel}>Lead Priority</Text>
+            <Text style={styles.label}>Lead Priority</Text>
             <FieldSelect
-              label="Lead Priority"
+              label="Priority"
               value={form.lead_priority}
               options={LEAD_PRIORITY_OPTIONS}
               onChange={(v) => updateField("lead_priority", v)}
               placeholder="Select priority"
             />
 
-            <Text style={styles.fieldLabel}>Customer Remarks</Text>
+            <Text style={styles.label}>Assigned To</Text>
+            <FieldSelect
+              label="Assigned To"
+              value={form.account_owner}
+              options={employeeNames}
+              onChange={handleAssignedToChange}
+              searchable
+              placeholder="Select employee"
+              loading={employeesLoading}
+            />
+
+            {/* STATUS REMOVED FROM CREATE FORM */}
+
+            <Text style={styles.label}>Customer Remarks</Text>
             <TextInput
-              style={styles.remarksInput}
+              style={[styles.input, styles.textArea]}
               placeholder="Enter remarks regarding the lead..."
               placeholderTextColor={colors.muted}
               value={form.remarks}
               onChangeText={(v) => updateField("remarks", v)}
               multiline
-              numberOfLines={4}
+              numberOfLines={3}
               textAlignVertical="top"
             />
 
-            <Text style={styles.fieldLabel}>Remark 2</Text>
+            <Text style={styles.label}>Remark 2</Text>
             <TextInput
-              style={styles.remarksInput}
+              style={[styles.input, styles.textArea]}
               placeholder="Enter additional remarks..."
               placeholderTextColor={colors.muted}
               value={form.remarks2}
               onChangeText={(v) => updateField("remarks2", v)}
               multiline
-              numberOfLines={4}
+              numberOfLines={3}
               textAlignVertical="top"
             />
           </View>
@@ -268,13 +318,20 @@ export default function DealerLeadQueryCreateScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+      {/* FOOTER BUTTON */}
+      <View style={[
+        styles.footer, 
+        { paddingBottom: Math.max(insets.bottom, 16) + 12 }
+      ]}>
         <TouchableOpacity
           style={[styles.submitBtn, saving && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={saving}
+          activeOpacity={0.8}
         >
-          <Text style={styles.submitBtnText}>{saving ? "Saving..." : "Create Lead"}</Text>
+          <Text style={styles.submitBtnText}>
+            {saving ? "Creating..." : "Create Lead"}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -282,34 +339,151 @@ export default function DealerLeadQueryCreateScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.white },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerTitle: {
+    fontSize: 15,
+    fontFamily: typography.bold,
+    color: colors.text,
+  },
 
-  header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
-  title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
+  introBox: {
+    backgroundColor: colors.white,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  introTitle: {
+    fontSize: 19,
+    fontFamily: typography.bold,
+    color: colors.text,
+    marginBottom: 8,
+  },
+  introSubtitle: {
+    fontSize: 13,
+    fontFamily: typography.medium,
+    color: colors.textSecondary,
+    lineHeight: 19,
+  },
 
-  modalBody: { padding: spacing.md },
+  section: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+  },
+  stepNum: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepNumTxt: {
+    fontSize: 12,
+    fontFamily: typography.bold,
+    color: colors.white,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontFamily: typography.bold,
+    color: colors.text,
+  },
+  sectionSub: {
+    fontSize: 11,
+    fontFamily: typography.medium,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
 
-  introBlock: { marginBottom: spacing.md },
-  introTitle: { fontSize: 17, fontFamily: typography.bold, color: colors.text, marginBottom: 4 },
-  introSubtitle: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
+  label: {
+    fontSize: 11,
+    fontFamily: typography.semibold,
+    color: colors.textSecondary,
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  input: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 13,
+    fontFamily: typography.medium,
+    color: colors.text,
+  },
+  textArea: {
+    minHeight: 70,
+    textAlignVertical: "top",
+  },
 
-  modalSection: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md },
-  modalSectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: spacing.sm },
-  modalStepBadge: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
-  modalStepBadgeText: { fontSize: 11, fontFamily: typography.bold, color: colors.white },
-  modalSectionTitle: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
-  modalSectionSubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  errorText: {
+    fontSize: 12,
+    fontFamily: typography.medium,
+    color: colors.error,
+    flex: 1,
+  },
 
-  fieldLabel: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 6, marginTop: spacing.sm },
-  textInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 10, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text },
-
-  remarksInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, fontSize: 13, fontFamily: typography.medium, color: colors.text, minHeight: 90 },
-
-  errorBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: "#FEF2F2", borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
-  errorText: { fontSize: 11, fontFamily: typography.medium, color: colors.error, flex: 1 },
-
-  footer: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.white },
-  submitBtn: { backgroundColor: colors.primary, borderRadius: radius.sm, paddingVertical: 13, alignItems: "center" },
-  submitBtnDisabled: { opacity: 0.6 },
-  submitBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.white },
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  submitBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  submitBtnDisabled: {
+    opacity: 0.5,
+  },
+  submitBtnText: {
+    fontSize: 14,
+    fontFamily: typography.bold,
+    color: colors.white,
+  },
 });
