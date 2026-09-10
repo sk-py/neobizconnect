@@ -16,6 +16,8 @@ import {
   TYPE_OF_QUERY_OPTIONS,
 } from "@/modules/dealer-lead-query/types";
 import { FieldSelect } from "@/components/custom/field-select";
+import { CountryCodeSelect } from "@/components/custom/country-code-select";
+import { COUNTRY_CODES, splitPhoneNumber } from "@/constants/country-codes";
 import { useAuthStore } from "@/store/auth.store";
 import { useRouter } from "expo-router";
 import { Feather } from "@react-native-vector-icons/feather/static";
@@ -42,6 +44,8 @@ export default function DealerLeadQueryScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingLead, setEditingLead] = useState<LeadQuery | null>(null);
   const [editForm, setEditForm] = useState<LeadFormData | null>(null);
+  const [editCountryCode, setEditCountryCode] = useState("+91");
+  const [editLocalPhone, setEditLocalPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -50,7 +54,6 @@ export default function DealerLeadQueryScreen() {
     queryFn: fetchLeadQueries,
   });
 
-  // "Assigned To" employee list — needed for Edit form
   const { data: employees, isLoading: employeesLoading } = useQuery({
     queryKey: ["employees-by-authority", user?.groupid],
     queryFn: () => fetchAssignedToOptions(user!.groupid),
@@ -79,6 +82,9 @@ export default function DealerLeadQueryScreen() {
     const form = lead.formJson?.[0];
     setEditingLead(lead);
     setEditForm(form ? { ...form } : null);
+    const { dial, local } = splitPhoneNumber(form?.phone_1 || "");
+    setEditCountryCode(dial);
+    setEditLocalPhone(local);
     setSaveError(null);
   };
 
@@ -113,7 +119,12 @@ export default function DealerLeadQueryScreen() {
       const originalForm = editingLead.formJson?.[0];
       if (!originalForm) throw new Error("Original lead data missing — cannot update.");
 
-      await updateLeadQuery(editingLead.id, editingLead.companyid, originalForm, editForm);
+      const finalForm: LeadFormData = {
+        ...editForm,
+        phone_1: `${editCountryCode}${editLocalPhone.trim()}`,
+      };
+
+      await updateLeadQuery(editingLead.id, editingLead.companyid, originalForm, finalForm);
       closeEditModal();
       refetch();
     } catch (err: any) {
@@ -276,7 +287,10 @@ export default function DealerLeadQueryScreen() {
         />
       )}
 
-      {/* Edit modal */}
+      {/* Edit modal — mirrors the web "Lead / Query Assignment" form:
+          Customer Details, Lead Source & Vehicle, Query Details.
+          NOTE: Customer Remarks and Remark 2 are intentionally NOT here
+          per latest requirement (removed from Edit). */}
       <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
         <Pressable style={styles.modalOverlay} onPress={closeEditModal}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
@@ -292,8 +306,6 @@ export default function DealerLeadQueryScreen() {
 
             {editForm && (
               <ScrollView style={styles.modalBody}>
-                
-                {/* Section 1: Customer Details */}
                 <View style={styles.modalSection}>
                   <View style={styles.modalSectionHeader}>
                     <View style={styles.modalStepBadge}>
@@ -315,14 +327,21 @@ export default function DealerLeadQueryScreen() {
                   />
 
                   <Text style={styles.fieldLabel}>Mobile Number</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="+91XXXXXXXXXX"
-                    placeholderTextColor={colors.muted}
-                    value={editForm.phone_1}
-                    onChangeText={(v) => updateField("phone_1", v)}
-                    keyboardType="phone-pad"
-                  />
+                  <View style={styles.phoneRow}>
+                    <CountryCodeSelect
+                      countries={COUNTRY_CODES}
+                      value={editCountryCode}
+                      onChange={setEditCountryCode}
+                    />
+                    <TextInput
+                      style={[styles.textInput, styles.phoneInput]}
+                      placeholder="XXXXXXXXXX"
+                      placeholderTextColor={colors.muted}
+                      value={editLocalPhone}
+                      onChangeText={setEditLocalPhone}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
 
                   <Text style={styles.fieldLabel}>City</Text>
                   <TextInput
@@ -344,7 +363,6 @@ export default function DealerLeadQueryScreen() {
                   />
                 </View>
 
-                {/* Section 2: Lead Source & Vehicle */}
                 <View style={styles.modalSection}>
                   <View style={styles.modalSectionHeader}>
                     <View style={styles.modalStepBadge}>
@@ -393,7 +411,6 @@ export default function DealerLeadQueryScreen() {
                   />
                 </View>
 
-                {/* Section 3: Query Details — ✅ FIX #4: Remarks removed, Status/AssignedTo kept */}
                 <View style={styles.modalSection}>
                   <View style={styles.modalSectionHeader}>
                     <View style={styles.modalStepBadge}>
@@ -401,7 +418,7 @@ export default function DealerLeadQueryScreen() {
                     </View>
                     <View>
                       <Text style={styles.modalSectionTitle}>Query Details</Text>
-                      <Text style={styles.modalSectionSubtitle}>Assignment and status</Text>
+                      <Text style={styles.modalSectionSubtitle}>Query information and assignment</Text>
                     </View>
                   </View>
 
@@ -443,11 +460,6 @@ export default function DealerLeadQueryScreen() {
                     searchable
                     placeholder="Select status"
                   />
-
-                  {/* ✅ FIX #4: REMOVED "Customer Remarks" field */}
-                  
-                  {/* ✅ FIX #4: REMOVED "Remark 2" field */}
-                  
                 </View>
 
                 {saveError && (
@@ -543,8 +555,8 @@ const styles = StyleSheet.create({
 
   fieldLabel: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 6, marginTop: spacing.sm },
   textInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 10, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text },
-
-  remarksInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, fontSize: 13, fontFamily: typography.medium, color: colors.text, minHeight: 90 },
+  phoneRow: { flexDirection: "row", gap: spacing.sm },
+  phoneInput: { flex: 1 },
 
   saveErrorBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: "#FEF2F2", borderRadius: radius.sm, padding: spacing.sm },
   saveErrorText: { fontSize: 11, fontFamily: typography.medium, color: colors.error, flex: 1 },

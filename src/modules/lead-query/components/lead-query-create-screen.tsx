@@ -13,6 +13,8 @@ import {
   TYPE_OF_QUERY_OPTIONS,
 } from "@/modules/lead-query/types";
 import { FieldSelect } from "@/components/custom/field-select";
+import { CountryCodeSelect } from "@/components/custom/country-code-select";
+import { COUNTRY_CODES } from "@/constants/country-codes";
 import { useAuthStore } from "@/store/auth.store";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
@@ -55,6 +57,8 @@ export default function LeadQueryCreateScreen() {
   const user = useAuthStore((state) => state.user);
 
   const [form, setForm] = useState<LeadFormData>(EMPTY_FORM);
+  const [countryCode, setCountryCode] = useState("+91");
+  const [localPhone, setLocalPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,7 +87,7 @@ export default function LeadQueryCreateScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!form.customer_name.trim() || !form.phone_1.trim()) {
+    if (!form.customer_name.trim() || !localPhone.trim()) {
       setError("Customer Name and Mobile Number are required.");
       return;
     }
@@ -94,7 +98,8 @@ export default function LeadQueryCreateScreen() {
     setSaving(true);
     setError(null);
     try {
-      await createLeadQuery(form, user.companyid);
+      const payload: LeadFormData = { ...form, phone_1: `${countryCode}${localPhone.trim()}` };
+      await createLeadQuery(payload, user.companyid);
       router.back();
     } catch (err: any) {
       setError(err?.message || "Failed to create");
@@ -163,15 +168,21 @@ export default function LeadQueryCreateScreen() {
             />
 
             <Text style={styles.label}>Mobile Number *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="+91XXXXXXXXXX"
-              placeholderTextColor={colors.muted}
-              value={form.phone_1}
-              onChangeText={(v) => updateField("phone_1", v)}
-              keyboardType="phone-pad"
-              maxLength={10}
-            />
+            <View style={styles.phoneRow}>
+              <CountryCodeSelect
+                countries={COUNTRY_CODES}
+                value={countryCode}
+                onChange={setCountryCode}
+              />
+              <TextInput
+                style={[styles.input, styles.phoneInput]}
+                placeholder="XXXXXXXXXX"
+                placeholderTextColor={colors.muted}
+                value={localPhone}
+                onChangeText={setLocalPhone}
+                keyboardType="phone-pad"
+              />
+            </View>
 
             <Text style={styles.label}>City</Text>
             <TextInput
@@ -440,6 +451,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.medium,
     color: colors.text,
   },
+  phoneRow: { flexDirection: "row", gap: 8 },
+  phoneInput: { flex: 1 },
   textArea: {
     minHeight: 70,
     textAlignVertical: "top",

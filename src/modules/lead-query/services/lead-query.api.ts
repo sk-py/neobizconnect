@@ -50,6 +50,15 @@ export const fetchAssignedToOptions = async (groupId: number): Promise<EmployeeO
 //
 // NOTE: the URL has a real double slash ("crm-uat//Crm") — confirmed
 // working, not a typo.
+//
+// DEFENSIVE FIX: leads that came through the Online Lead → Lead/Query
+// "Transfer" flow have account_owner_id stored as a NUMBER (a confirmed
+// backend bug in the Transfer endpoint — reported to TL), while every
+// normal record has it as a STRING. Sending a number here causes a 500
+// (java.lang.Integer cannot be cast to java.lang.String). Force it to a
+// string on every update so our app doesn't crash on these "poisoned"
+// records while waiting for the backend fix. Safe to remove once TL
+// confirms the Transfer endpoint is fixed.
 export const updateLeadQuery = async (
   leadId: number,
   companyId: number,
@@ -59,6 +68,7 @@ export const updateLeadQuery = async (
   const mergedForm = {
     ...originalFormData,
     ...updates,
+    account_owner_id: String(updates.account_owner_id ?? originalFormData.account_owner_id),
   };
 
   await dealerApi.post(

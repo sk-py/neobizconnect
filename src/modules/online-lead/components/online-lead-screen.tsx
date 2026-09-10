@@ -17,6 +17,7 @@ import {
 } from "@/modules/online-lead/types";
 import { FieldSelect } from "@/components/custom/field-select";
 import { useAuthStore } from "@/store/auth.store";
+import { useRouter } from "expo-router";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { LegendList } from "@legendapp/list/react-native";
@@ -35,6 +36,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function OnlineLeadScreen() {
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -163,18 +165,18 @@ export default function OnlineLeadScreen() {
               </View>
             )}
             <TouchableOpacity
-              style={styles.iconBtn}
+              style={styles.editIconBtn}
               onPress={() => openEditModal(item)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Feather name="edit-2" size={14} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.iconBtn}
+              style={styles.transferIconBtn}
               onPress={() => openTransferModal(item)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Feather name="arrow-right-circle" size={16} color={colors.primary} />
+              <Feather name="arrow-right-circle" size={16} color="#16A34A" />
             </TouchableOpacity>
           </View>
         </View>
@@ -226,7 +228,17 @@ export default function OnlineLeadScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Online Lead</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Online Lead</Text>
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity
+            style={styles.createBtn}
+            onPress={() => router.push("/online-lead-create")}
+          >
+            <Feather name="plus" size={14} color={colors.white} />
+            <Text style={styles.createBtnText}>Create</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.searchContainer}>
           <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
@@ -403,18 +415,6 @@ export default function OnlineLeadScreen() {
                     searchable
                     placeholder="Select Status"
                   />
-
-                  <Text style={styles.fieldLabel}>Remark</Text>
-                  <TextInput
-                    style={styles.remarksInput}
-                    placeholder="Enter remark..."
-                    placeholderTextColor={colors.muted}
-                    value={editForm.remark}
-                    onChangeText={(v) => updateField("remark", v)}
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
-                  />
                 </View>
 
                 {saveError && (
@@ -509,7 +509,10 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
-  title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginBottom: 8 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+  title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
+  createBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm },
+  createBtnText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.white },
 
   searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 34 },
   searchIcon: { marginRight: 6 },
@@ -526,7 +529,8 @@ const styles = StyleSheet.create({
   statusBadge: { maxWidth: 110, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, backgroundColor: "#FEF2F2" },
   statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.primary },
 
-  iconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
+  editIconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FCA5A5" },
+  transferIconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#86EFAC" },
 
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: spacing.sm },
   metaText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flexShrink: 1 },

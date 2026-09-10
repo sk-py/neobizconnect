@@ -72,9 +72,13 @@ export const createLeadQuery = async (
 // since we don't want to guess whether the backend treats // vs / as
 // equivalent everywhere.
 //
-// account_owner_id: unlike the Sales Manager Lead Query module, this
-// endpoint's GET response already returns account_owner_id as a string
-// (not a number), so no forced String() cast is needed here.
+// account_owner_id: normal Lead/Query records already return this as a
+// string from GET. HOWEVER, records created via the Online Lead →
+// Lead/Query "Transfer" flow have it stored as a NUMBER (a confirmed
+// backend bug in the Transfer endpoint — reported to TL), which causes a
+// 500 on update (java.lang.Integer cannot be cast to java.lang.String).
+// Force String() defensively so this module doesn't crash on those
+// "poisoned" records either, regardless of which type slips through.
 export const updateLeadQuery = async (
   leadId: number,
   companyId: number,
@@ -84,6 +88,7 @@ export const updateLeadQuery = async (
   const mergedForm = {
     ...originalFormData,
     ...updates,
+    account_owner_id: String(updates.account_owner_id ?? originalFormData.account_owner_id),
   };
 
   await dealerApi.post(

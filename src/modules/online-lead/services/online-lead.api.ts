@@ -37,38 +37,71 @@ export const fetchAssignedToOptions = async (groupId: number): Promise<EmployeeO
   return res.data;
 };
 
-// NOT CONFIRMED — no network capture done yet for the "Update Query"
-// button on the Online Lead edit form. This is a placeholder mirroring
-// the Lead/Query pattern (same host, POST with formJson) as a best guess.
-// DO NOT treat as working until verified — replace once captured.
+// CONFIRMED shape — this matches the actual payload given directly
+// (formJson: [...], id: 0, companyid), same double-slash URL pattern
+// confirmed working for Lead/Query's update.
+// CONFIRMED shape — this matches the actual payload given directly
+// (formJson: [...], id: 0, companyid), same double-slash URL pattern
+// confirmed working for Lead/Query's update.
+export const createOnlineLead = async (
+  formData: OnlineLeadFormData,
+  companyId: number,
+): Promise<void> => {
+  await dealerApi.post(
+    "https://dealer-uat.actifyzone.com/crm-uat//Crm/Portal/Neo/Online/Lead/Query",
+    {
+      formJson: [formData],
+      id: 0,
+      companyid: companyId,
+    },
+  );
+};
+
+// CONFIRMED via DevTools Network capture (201 Created response). Payload
+// shape: { companyid, formJson: [...], id } — matches exactly the
+// best-guess pattern that was already here, now verified.
+//
+// DEFENSIVE FIX: account_owner_id isn't editable in this module's UI, but
+// it's present on real fetched records and gets carried through the
+// update merge as-is. Confirmed (via Hoppscotch test on this exact
+// endpoint) that sending it as a NUMBER causes a 500 error — same bug
+// reported to TL for Lead/Query. Force it to a string here too, if
+// present, so this module doesn't hit the same crash.
 export const updateOnlineLead = async (
   leadId: number,
   companyId: number,
   originalFormData: OnlineLeadFormData,
   updates: Partial<OnlineLeadFormData>,
 ): Promise<void> => {
-  throw new Error(
-    "Update endpoint not confirmed yet — capture the real request via DevTools before this can work.",
+  const mergedForm = { ...originalFormData, ...updates };
+  if (mergedForm.account_owner_id !== undefined) {
+    mergedForm.account_owner_id = String(mergedForm.account_owner_id);
+  }
+
+  await dealerApi.post(
+    "https://dealer-uat.actifyzone.com/crm-uat//Crm/Portal/Neo/Online/Lead/Query",
+    {
+      formJson: [mergedForm],
+      id: leadId,
+      companyid: companyId,
+    },
   );
-  // Best-guess shape, unused until confirmed:
-  // const mergedForm = { ...originalFormData, ...updates };
-  // await dealerApi.post(`/Neo/Online/Lead/Query`, {
-  //   formJson: [mergedForm],
-  //   id: leadId,
-  //   companyid: companyId,
-  // });
 };
 
-// NOT CONFIRMED — no network capture done yet for the "Transfer" button
-// (arrow icon → select employee → Transfer). We don't even know the
-// endpoint path for this yet — it's a distinct action from Update, likely
-// moves/copies the record into Lead/Query with the chosen employee as
-// account_owner. DO NOT call this until the real endpoint is captured.
+// CONFIRMED via DevTools Network capture (201 Created response). A
+// completely different, much simpler endpoint than Update — note this one
+// has a SINGLE slash ("crm-uat/Crm"), unlike the double-slash pattern used
+// by List/Update. Moves the online lead into Lead/Query, assigning the
+// given employee as account_owner. Payload is just { id, employee_id }.
 export const transferOnlineLead = async (
-  _leadId: number,
-  _employeeId: number,
+  leadId: number,
+  employeeId: number,
 ): Promise<void> => {
-  throw new Error(
-    "Transfer endpoint not confirmed yet — capture the real request via DevTools before this can work.",
+  await dealerApi.post(
+    "https://dealer-uat.actifyzone.com/crm-uat/Crm/Portal/Neo/Online/Lead/Transfer/To/Lead/Query",
+    {
+      id: leadId,
+      employee_id: employeeId,
+    },
   );
 };
