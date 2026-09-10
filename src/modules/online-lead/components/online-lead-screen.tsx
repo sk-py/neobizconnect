@@ -16,7 +16,7 @@ import {
   TYPE_OF_QUERY_OPTIONS,
 } from "@/modules/online-lead/types";
 import { FieldSelect } from "@/components/custom/field-select";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "expo-router";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
@@ -37,7 +37,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function OnlineLeadScreen() {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
 

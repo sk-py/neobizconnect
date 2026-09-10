@@ -10,3 +10,6 @@ const ENVIRONMENT: Environment = "uat";
 
 export const BASE_URL = BASE_URLS[ENVIRONMENT];
 
+
+export const DEALER_BASE_URL = "https://dealer-uat.actifyzone.com/crm-uat/Crm/Portal";
+export const DEALER_BASE_URL_POST = "https://dealer-uat.actifyzone.com/crm-uat//Crm/Portal";

@@ -18,7 +18,7 @@ import {
 import { FieldSelect } from "@/components/custom/field-select";
 import { CountryCodeSelect } from "@/components/custom/country-code-select";
 import { COUNTRY_CODES, splitPhoneNumber } from "@/constants/country-codes";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "expo-router";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
@@ -39,7 +39,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function DealerLeadQueryScreen() {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [editingLead, setEditingLead] = useState<LeadQuery | null>(null);

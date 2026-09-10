@@ -12,7 +12,7 @@ import {
 } from "@/modules/online-lead/types";
 import { FieldSelect } from "@/components/custom/field-select";
 import { CountryCodeSelect } from "@/components/custom/country-code-select";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuth } from "@/hooks/use-auth";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -32,7 +32,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 export default function OnlineLeadCreateScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const [form, setForm] = useState<OnlineLeadFormData>(EMPTY_ONLINE_LEAD_FORM);

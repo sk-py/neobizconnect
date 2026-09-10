@@ -9,7 +9,7 @@ import {
   LeadQuery,
 } from "@/modules/lead-query/types";
 import { FieldSelect } from "@/components/custom/field-select";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuth } from "@/hooks/use-auth";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
@@ -31,7 +31,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LeadQueryScreen() {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth();
 
   useFocusEffect(
     useCallback(() => {

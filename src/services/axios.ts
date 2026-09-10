@@ -1,4 +1,4 @@
-import { BASE_URL } from "@/constants/config";
+import { BASE_URL, DEALER_BASE_URL } from "@/constants/config";
 import { useAuthStore } from "@/store/auth.store";
 import axios from "axios";
 
@@ -25,3 +25,20 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+export const dealerApi = axios.create({
+  baseURL: DEALER_BASE_URL,
+  timeout: 15000,
+  headers: { "Content-Type": "application/json" },
+});
+
+dealerApi.interceptors.request.use((config) => {
+  let token = (useAuthStore.getState().accessToken || "").trim();
+  token = token.replace(/^Bearer\s+/i, "").trim();
+
+  if (token) {
+    const safeToken = token.includes("+") ? token.replace(/\+/g, "%2B") : token;
+    config.headers.Authorization = `Bearer ${safeToken}`;
+  }
+  return config;
+});

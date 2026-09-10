@@ -15,7 +15,7 @@ import {
 import { FieldSelect } from "@/components/custom/field-select";
 import { CountryCodeSelect } from "@/components/custom/country-code-select";
 import { COUNTRY_CODES } from "@/constants/country-codes";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuth } from "@/hooks/use-auth";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -54,7 +54,7 @@ const EMPTY_FORM: LeadFormData = {
 export default function DealerLeadQueryCreateScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth();
 
   const [form, setForm] = useState<LeadFormData>(EMPTY_FORM);
   const [countryCode, setCountryCode] = useState("+91");
@@ -110,9 +110,6 @@ export default function DealerLeadQueryCreateScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      
-      {/* HEADER BAR — matches the plain left-aligned header pattern used
-          across the rest of the app (back arrow + title, no centering) */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -125,7 +122,6 @@ export default function DealerLeadQueryCreateScreen() {
         </Text>
       </View>
 
-      {/* INTRO HEADER BLOCK */}
       <View style={styles.introBox}>
         <Text style={styles.introTitle}>Lead / Query Assignment Form</Text>
         <Text style={styles.introSubtitle}>
@@ -146,7 +142,6 @@ export default function DealerLeadQueryCreateScreen() {
           }}
         >
           
-          {/* SECTION 1: CUSTOMER DETAILS */}
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <View style={styles.stepNum}>
@@ -204,7 +199,6 @@ export default function DealerLeadQueryCreateScreen() {
             />
           </View>
 
-          {/* SECTION 2: SOURCE & VEHICLE */}
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <View style={styles.stepNum}>
@@ -253,7 +247,6 @@ export default function DealerLeadQueryCreateScreen() {
             />
           </View>
 
-          {/* SECTION 3: QUERY DETAILS */}
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <View style={styles.stepNum}>
@@ -265,7 +258,6 @@ export default function DealerLeadQueryCreateScreen() {
               </View>
             </View>
 
-            {/* TYPE OF QUERY - DROPDOWN (not text input) */}
             <Text style={styles.label}>Type of Query</Text>
             <FieldSelect
               label="Type of Query"
@@ -294,8 +286,6 @@ export default function DealerLeadQueryCreateScreen() {
               placeholder="Select employee"
               loading={employeesLoading}
             />
-
-            {/* STATUS REMOVED FROM CREATE FORM */}
 
             <Text style={styles.label}>Customer Remarks</Text>
             <TextInput
@@ -331,7 +321,6 @@ export default function DealerLeadQueryCreateScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* FOOTER BUTTON */}
       <View style={[
         styles.footer,
         { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.md }
