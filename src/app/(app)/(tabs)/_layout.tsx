@@ -163,8 +163,17 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-
-                        
+                                <Tabs.Protected guard={user?.authority === "Query Manager"} >
+                    <Tabs.Screen
+                        name='online-lead'
+                        options={{
+                            title: "Online Lead",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='inbox' size={size} color={color} />
+                            )
+                        }}
+                    />
+                </Tabs.Protected>
 
                 <Tabs.Protected guard={user?.authority === "Sales Manager"} >
                     <Tabs.Screen

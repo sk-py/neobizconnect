@@ -1,10 +1,19 @@
-import { colors, radius, spacing, typography } from "@/constants/theme";
-import { fetchLeadQueries, updateLeadQuery } from "@/modules/lead-query/services/lead-query.api";
-import { LEAD_STATUS_OPTIONS, LeadQuery } from "@/modules/lead-query/types";
+import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
+import {
+  fetchLeadQueries,
+  updateLeadQuery,
+} from "@/modules/lead-query/services/lead-query.api";
+import {
+  LEAD_STATUS_OPTIONS,
+  LeadFormData,
+  LeadQuery,
+} from "@/modules/lead-query/types";
+import { FieldSelect } from "@/components/custom/field-select";
+import { useAuthStore } from "@/store/auth.store";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { LegendList } from "@legendapp/list/react-native";
-import { useFocusEffect, useRouter } from "expo-router";
 import { SkeletonList } from "@/components/custom/skeleton";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -20,93 +29,85 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const getBrandAccent = () => {
-  return { badgeBg: "#FEF2F2", badgeText: colors.primary };
-};
-
-const BRAND_FILTERS = ["All", "Neo", "Zetta"] as const;
-type BrandFilter = (typeof BRAND_FILTERS)[number];
-
 export default function LeadQueryScreen() {
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
 
+  // Unlike Query Manager's version, this is a HIDDEN tab (href: null),
+  // reached via the Sales Manager modules menu — so back needs to return
+  // there, matching the convention used by other Sales Manager sub-screens
+  // (Expense, etc.)
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
         router.push("/sales-manager-modules");
-        return true; // tells Android "we handled this, don't do default behavior"
+        return true;
       };
-
       const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
       return () => subscription.remove();
     }, [router]),
   );
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [brandFilter, setBrandFilter] = useState<BrandFilter>("All");
   const [editingLead, setEditingLead] = useState<LeadQuery | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
-  const [remarksText, setRemarksText] = useState("");
+  const [editForm, setEditForm] = useState<LeadFormData | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const { data, isLoading, isError, error, isRefetching, refetch } = useQuery({
-    queryKey: ["lead-queries"],
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["sales-manager-lead-queries"],
     queryFn: fetchLeadQueries,
   });
 
   const filteredData = useMemo(() => {
     if (!data) return [];
-    let result = data;
+    if (!searchQuery.trim()) return data;
 
-    if (brandFilter !== "All") {
-      result = result.filter((item) => {
-        const brand = item.formJson?.[0]?.brand_interest || "";
-        return brand.toLowerCase() === brandFilter.toLowerCase();
-      });
-    }
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter((item) => {
-        const form = item.formJson?.[0];
-        return (
-          form?.customer_name?.toLowerCase().includes(query) ||
-          form?.phone_1?.toLowerCase().includes(query) ||
-          form?.city?.toLowerCase().includes(query) ||
-          form?.car_model?.toLowerCase().includes(query)
-        );
-      });
-    }
-
-    return result;
-  }, [data, searchQuery, brandFilter]);
+    const query = searchQuery.toLowerCase();
+    return data.filter((item) => {
+      const form = item.formJson?.[0];
+      return (
+        form?.customer_name?.toLowerCase().includes(query) ||
+        form?.phone_1?.toLowerCase().includes(query) ||
+        form?.city?.toLowerCase().includes(query) ||
+        form?.car_model?.toLowerCase().includes(query)
+      );
+    });
+  }, [data, searchQuery]);
 
   const openEditModal = (lead: LeadQuery) => {
     const form = lead.formJson?.[0];
     setEditingLead(lead);
-    setSelectedStatus(form?.status || "");
-    setRemarksText(form?.sales_manager_remarks || "");
+    setEditForm(form ? { ...form } : null);
     setSaveError(null);
   };
 
   const closeEditModal = () => {
     setEditingLead(null);
-    setSelectedStatus("");
-    setRemarksText("");
+    setEditForm(null);
     setSaveError(null);
   };
 
+  const updateField = (key: keyof LeadFormData, value: string) => {
+    setEditForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
   const handleUpdate = async () => {
-    if (!editingLead) return;
+    if (!editingLead || !editForm) return;
     setSaving(true);
     setSaveError(null);
     try {
-      await updateLeadQuery(editingLead.id, selectedStatus, remarksText);
+      const originalForm = editingLead.formJson?.[0];
+      if (!originalForm) throw new Error("Original lead data missing — cannot update.");
+
+      await updateLeadQuery(editingLead.id, editingLead.companyid, originalForm, editForm);
       closeEditModal();
       refetch();
     } catch (err: any) {
-      setSaveError(err?.message || "Failed to update. Please try again.");
+      setSaveError(
+        err?.message ||
+          "Failed to update — this endpoint hasn't been fully confirmed yet, check with TL.",
+      );
     } finally {
       setSaving(false);
     }
@@ -115,7 +116,6 @@ export default function LeadQueryScreen() {
   const renderRow = ({ item }: { item: LeadQuery }) => {
     const form = item.formJson?.[0];
     const latestRemark = item.remarks_list?.[item.remarks_list.length - 1];
-    const accent = getBrandAccent();
 
     return (
       <View style={styles.card}>
@@ -155,10 +155,8 @@ export default function LeadQueryScreen() {
           </View>
           <View style={styles.infoBlock}>
             <Text style={styles.infoLabel}>Brand Interest</Text>
-            <View style={[styles.brandBadge, { backgroundColor: accent.badgeBg }]}>
-              <Text style={[styles.brandBadgeText, { color: accent.badgeText }]}>
-                {form?.brand_interest || "-"}
-              </Text>
+            <View style={styles.brandBadge}>
+              <Text style={styles.brandBadgeText}>{form?.brand_interest || "-"}</Text>
             </View>
           </View>
         </View>
@@ -171,6 +169,17 @@ export default function LeadQueryScreen() {
           <View style={styles.infoBlock}>
             <Text style={styles.infoLabel}>Source</Text>
             <Text style={styles.infoValue}>{form?.source || "-"}</Text>
+          </View>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Priority</Text>
+            <Text style={styles.infoValue}>{form?.lead_priority || "-"}</Text>
+          </View>
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Assigned To</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{form?.account_owner || "-"}</Text>
           </View>
         </View>
 
@@ -197,7 +206,7 @@ export default function LeadQueryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-            <View style={styles.header}>
+      <View style={styles.header}>
         <View style={styles.titleRow}>
           <TouchableOpacity
             onPress={() => router.push("/sales-manager-modules")}
@@ -206,23 +215,14 @@ export default function LeadQueryScreen() {
             <Feather name="arrow-left" size={20} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>Lead / Query</Text>
-        </View>
-
-        <View style={styles.brandFilterRow}>
-          {BRAND_FILTERS.map((brand) => {
-            const active = brandFilter === brand;
-            return (
-              <TouchableOpacity
-                key={brand}
-                style={[styles.brandFilterPill, active && styles.brandFilterPillActive]}
-                onPress={() => setBrandFilter(brand)}
-              >
-                <Text style={[styles.brandFilterText, active && styles.brandFilterTextActive]}>
-                  {brand}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity
+            style={styles.createBtn}
+            onPress={() => router.push("/lead-query-create")}
+          >
+            <Feather name="plus" size={14} color={colors.white} />
+            <Text style={styles.createBtnText}>Create</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.searchContainer}>
@@ -242,7 +242,7 @@ export default function LeadQueryScreen() {
         </View>
       </View>
 
-            {isLoading ? (
+      {isLoading ? (
         <SkeletonList count={6} />
       ) : isError ? (
         <View style={styles.emptyBox}>
@@ -258,19 +258,24 @@ export default function LeadQueryScreen() {
           <Feather name="help-circle" size={32} color={colors.muted} />
           <Text style={styles.emptyText}>No queries found</Text>
         </View>
-            ) : (
+      ) : (
         <LegendList
           data={filteredData}
           keyExtractor={(item: LeadQuery) => String(item.id)}
           renderItem={renderRow}
           contentContainerStyle={styles.listContent}
-          estimatedItemSize={200}
+          estimatedItemSize={220}
           recycleItems
         />
       )}
 
-      {/* Edit Lead/Query Modal */}
-      <Modal visible={!!editingLead} transparent animationType="fade" onRequestClose={closeEditModal}>
+      {/* Edit modal — matches the REAL Sales Manager web portal
+          (neobizconnect.com/lead/query), which only lets a Sales Manager
+          edit Status and their own remarks. Customer Details / Lead
+          Source & Vehicle / Assigned To / etc. are view-only for this
+          role (shown on the card, not editable here) — this is
+          deliberately simpler than the Query Manager's edit form. */}
+      <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
         <Pressable style={styles.modalOverlay} onPress={closeEditModal}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
@@ -283,68 +288,62 @@ export default function LeadQueryScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
-              <View style={styles.modalSection}>
-                <View style={styles.modalSectionHeader}>
-                  <View style={styles.modalStepBadge}>
-                    <Text style={styles.modalStepBadgeText}>1</Text>
+            {editForm && (
+              <ScrollView style={styles.modalBody}>
+                <View style={styles.modalSection}>
+                  <View style={styles.modalSectionHeader}>
+                    <View style={styles.modalStepBadge}>
+                      <Text style={styles.modalStepBadgeText}>1</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.modalSectionTitle}>Lead Status</Text>
+                      <Text style={styles.modalSectionSubtitle}>Update current lead status</Text>
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.modalSectionTitle}>Lead Status</Text>
-                    <Text style={styles.modalSectionSubtitle}>Update current lead status</Text>
-                  </View>
+
+                  <Text style={styles.fieldLabel}>Status</Text>
+                  <FieldSelect
+                    label="Status"
+                    value={editForm.status}
+                    options={LEAD_STATUS_OPTIONS}
+                    onChange={(v) => updateField("status", v)}
+                    searchable
+                    placeholder="Select Status"
+                  />
                 </View>
 
-                <Text style={styles.fieldLabel}>Status</Text>
-                <View style={styles.statusOptionsRow}>
-                  {LEAD_STATUS_OPTIONS.map((status) => {
-                    const active = selectedStatus === status;
-                    return (
-                      <TouchableOpacity
-                        key={status}
-                        style={[styles.statusPill, active && styles.statusPillActive]}
-                        onPress={() => setSelectedStatus(status)}
-                      >
-                        <Text style={[styles.statusPillText, active && styles.statusPillTextActive]}>
-                          {status}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.modalSection}>
-                <View style={styles.modalSectionHeader}>
-                  <View style={styles.modalStepBadge}>
-                    <Text style={styles.modalStepBadgeText}>2</Text>
+                <View style={styles.modalSection}>
+                  <View style={styles.modalSectionHeader}>
+                    <View style={styles.modalStepBadge}>
+                      <Text style={styles.modalStepBadgeText}>2</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.modalSectionTitle}>Sales Manager Remarks</Text>
+                      <Text style={styles.modalSectionSubtitle}>Internal notes regarding this lead.</Text>
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.modalSectionTitle}>Sales Manager Remarks</Text>
-                    <Text style={styles.modalSectionSubtitle}>Internal notes regarding this lead.</Text>
+
+                  <Text style={styles.fieldLabel}>Sales Manager Remarks</Text>
+                  <TextInput
+                    style={styles.remarksInput}
+                    placeholder="Enter remarks regarding the lead..."
+                    placeholderTextColor={colors.muted}
+                    value={editForm.sales_manager_remarks}
+                    onChangeText={(v) => updateField("sales_manager_remarks", v)}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                  />
+                </View>
+
+                {saveError && (
+                  <View style={styles.saveErrorBox}>
+                    <Feather name="alert-triangle" size={14} color={colors.error} />
+                    <Text style={styles.saveErrorText}>{saveError}</Text>
                   </View>
-                </View>
-
-                <Text style={styles.fieldLabel}>Sales Manager Remarks</Text>
-                <TextInput
-                  style={styles.remarksInput}
-                  placeholder="Enter remarks regarding the lead..."
-                  placeholderTextColor={colors.muted}
-                  value={remarksText}
-                  onChangeText={setRemarksText}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-              </View>
-
-              {saveError && (
-                <View style={styles.saveErrorBox}>
-                  <Feather name="alert-triangle" size={14} color={colors.error} />
-                  <Text style={styles.saveErrorText}>{saveError}</Text>
-                </View>
-              )}
-            </ScrollView>
+                )}
+              </ScrollView>
+            )}
 
             <View style={styles.modalFooter}>
               <TouchableOpacity style={styles.cancelBtn} onPress={closeEditModal}>
@@ -369,14 +368,11 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
-  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
 
-  brandFilterRow: { flexDirection: "row", gap: 6, marginBottom: 8 },
-  brandFilterPill: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  brandFilterPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  brandFilterText: { fontSize: 12, fontFamily: typography.semibold, color: colors.textSecondary },
-  brandFilterTextActive: { color: colors.white },
+  createBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm },
+  createBtnText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.white },
 
   searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 34 },
   searchIcon: { marginRight: 6 },
@@ -404,8 +400,8 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginBottom: 3 },
   infoValue: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
 
-  brandBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.sm },
-  brandBadgeText: { fontSize: 12, fontFamily: typography.bold },
+  brandBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#FEF2F2" },
+  brandBadgeText: { fontSize: 12, fontFamily: typography.bold, color: colors.primary },
 
   remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   remarkText: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, flex: 1, lineHeight: 16 },
@@ -418,7 +414,7 @@ const styles = StyleSheet.create({
   retryBtnText: { fontSize: 13, fontFamily: typography.bold, color: colors.white },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: spacing.md },
-  modalCard: { backgroundColor: colors.white, borderRadius: radius.lg, maxHeight: "85%", overflow: "hidden" },
+  modalCard: { backgroundColor: colors.white, borderRadius: radius.lg, maxHeight: "88%", overflow: "hidden" },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: 16, fontFamily: typography.bold, color: colors.text },
   modalSubtitle: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
@@ -431,13 +427,8 @@ const styles = StyleSheet.create({
   modalSectionTitle: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
   modalSectionSubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary },
 
-  fieldLabel: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 6 },
-  statusOptionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  statusPill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.xl, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
-  statusPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  statusPillText: { fontSize: 12, fontFamily: typography.semibold, color: colors.textSecondary },
-  statusPillTextActive: { color: colors.white },
-
+  fieldLabel: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 6, marginTop: spacing.sm },
+  textInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 10, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text },
   remarksInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, fontSize: 13, fontFamily: typography.medium, color: colors.text, minHeight: 90 },
 
   saveErrorBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: "#FEF2F2", borderRadius: radius.sm, padding: spacing.sm },

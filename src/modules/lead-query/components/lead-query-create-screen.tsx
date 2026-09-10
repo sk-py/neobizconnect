@@ -2,7 +2,7 @@ import { colors, radius, spacing, typography, txtSize } from "@/constants/theme"
 import {
   createLeadQuery,
   fetchAssignedToOptions,
-} from "@/modules/dealer-lead-query/services/dealer-lead-query.api";
+} from "@/modules/lead-query/services/lead-query.api";
 import {
   BRAND_INTEREST_OPTIONS,
   EmployeeOption,
@@ -11,7 +11,7 @@ import {
   LEAD_SOURCE_OPTIONS,
   LeadFormData,
   TYPE_OF_QUERY_OPTIONS,
-} from "@/modules/dealer-lead-query/types";
+} from "@/modules/lead-query/types";
 import { FieldSelect } from "@/components/custom/field-select";
 import { useAuthStore } from "@/store/auth.store";
 import { Feather } from "@react-native-vector-icons/feather/static";
@@ -49,7 +49,7 @@ const EMPTY_FORM: LeadFormData = {
   sales_manager_remarks: "",
 };
 
-export default function DealerLeadQueryCreateScreen() {
+export default function LeadQueryCreateScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
@@ -59,7 +59,7 @@ export default function DealerLeadQueryCreateScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const { data: employees, isLoading: employeesLoading } = useQuery({
-    queryKey: ["employees-create", user?.groupid],
+    queryKey: ["employees-create-sm", user?.groupid],
     queryFn: () => fetchAssignedToOptions(user!.groupid),
     enabled: !!user?.groupid,
   });
