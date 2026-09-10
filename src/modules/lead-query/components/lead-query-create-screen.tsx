@@ -111,8 +111,6 @@ export default function LeadQueryCreateScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       
-      {/* HEADER BAR — matches the plain left-aligned header pattern used
-          across the rest of the app (back arrow + title, no centering) */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}

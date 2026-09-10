@@ -152,7 +152,7 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-                                <Tabs.Protected guard={user?.authority === "Query Manager"} >
+                            <Tabs.Protected guard={user?.authority === "Query Manager"} >
                     <Tabs.Screen
                         name='dealer-lead-query'
                         options={{
@@ -163,7 +163,7 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-                                <Tabs.Protected guard={user?.authority === "Query Manager"} >
+                        <Tabs.Protected guard={user?.authority === "Query Manager"} >
                     <Tabs.Screen
                         name='online-lead'
                         options={{

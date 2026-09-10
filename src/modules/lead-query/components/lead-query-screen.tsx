@@ -33,10 +33,6 @@ export default function LeadQueryScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
 
-  // Unlike Query Manager's version, this is a HIDDEN tab (href: null),
-  // reached via the Sales Manager modules menu — so back needs to return
-  // there, matching the convention used by other Sales Manager sub-screens
-  // (Expense, etc.)
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
@@ -269,12 +265,6 @@ export default function LeadQueryScreen() {
         />
       )}
 
-      {/* Edit modal — matches the REAL Sales Manager web portal
-          (neobizconnect.com/lead/query), which only lets a Sales Manager
-          edit Status and their own remarks. Customer Details / Lead
-          Source & Vehicle / Assigned To / etc. are view-only for this
-          role (shown on the card, not editable here) — this is
-          deliberately simpler than the Query Manager's edit form. */}
       <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
         <Pressable style={styles.modalOverlay} onPress={closeEditModal}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>

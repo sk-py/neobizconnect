@@ -287,10 +287,6 @@ export default function DealerLeadQueryScreen() {
         />
       )}
 
-      {/* Edit modal — mirrors the web "Lead / Query Assignment" form:
-          Customer Details, Lead Source & Vehicle, Query Details.
-          NOTE: Customer Remarks and Remark 2 are intentionally NOT here
-          per latest requirement (removed from Edit). */}
       <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
         <Pressable style={styles.modalOverlay} onPress={closeEditModal}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>

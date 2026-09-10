@@ -4,9 +4,6 @@ export type CountryCode = {
   flag: string;
 };
 
-// Common countries with dial codes, India first/default. Not an
-// exhaustive 240-country list, but covers the vast majority of real
-// usage — extend if a specific country is missing.
 export const COUNTRY_CODES: CountryCode[] = [
   { name: "India", dial: "+91", flag: "🇮🇳" },
   { name: "United States", dial: "+1", flag: "🇺🇸" },
@@ -86,13 +83,6 @@ export const COUNTRY_CODES: CountryCode[] = [
   { name: "Vietnam", dial: "+84", flag: "🇻🇳" },
 ];
 
-
-// Given a full phone number that may already include a country dial code
-// (e.g. "+918691913622"), splits it into { dial, local }. Matches the
-// LONGEST matching dial code first (since some codes are prefixes of
-// others, e.g. +1 vs +91 — checking longest-first avoids mismatches).
-// Falls back to India (+91) with the full input as the local part if no
-// dial code matches (e.g. a plain "9876543210" or unrecognized prefix).
 export function splitPhoneNumber(full: string): { dial: string; local: string } {
   const trimmed = (full || "").trim();
   if (!trimmed.startsWith("+")) {
