@@ -1,21 +1,16 @@
-import { expenseApi } from "./expense-api-client";
+import { api } from "@/services/axios";
 import { ExpenseListItem } from "../types";
 
 export const fetchExpenses = async (): Promise<ExpenseListItem[]> => {
-  const res = await expenseApi.get<any>(`/api/dynamic-expense`);
-
-  // Handle both formats: { expenses: [...] } or [...]
+  const res = await api.get<any>("/api/dynamic-expense");
   const data = res.data;
 
   if (Array.isArray(data)) {
-    console.log("LIST IDS (direct array):", data.map((e) => e.id));
     return data;
   } else if (data && Array.isArray(data.expenses)) {
-    console.log("LIST IDS (wrapped):", data.expenses.map((e: any) => e.id));
     return data.expenses;
   }
 
-  console.log("LIST IDS (empty/fallback):", []);
   return [];
 };
 
@@ -36,27 +31,23 @@ export type CreateExpensePayload = {
 };
 
 export const createExpense = async (payload: CreateExpensePayload): Promise<void> => {
-  console.log("PAYLOAD TO SEND:", JSON.stringify({ expenses: [payload] }, null, 2));
-
-  await expenseApi.post("/api/dynamic-expense", {
-    expenses: [payload]
+  await api.post("/api/dynamic-expense", {
+    expenses: [payload],
   });
 };
 
 export const createExpenses = async (payloads: CreateExpensePayload[]): Promise<void> => {
-  console.log("PAYLOADS TO SEND:", JSON.stringify({ expenses: payloads }, null, 2));
-
-  await expenseApi.post("/api/dynamic-expense", {
-    expenses: payloads
+  await api.post("/api/dynamic-expense", {
+    expenses: payloads,
   });
 };
 
 export type UpdateExpensePayload = Omit<CreateExpensePayload, "isDeleting">;
 
 export const updateExpense = async (id: number, payload: UpdateExpensePayload): Promise<void> => {
-  await expenseApi.put(`/api/dynamic-expense/${id}`, { expenses: [payload] });
+  await api.put(`/api/dynamic-expense/${id}`, { expenses: [payload] });
 };
 
 export const deleteExpense = async (id: number): Promise<void> => {
-  await expenseApi.delete(`/api/dynamic-expense/${id}`);
+  await api.delete(`/api/dynamic-expense/${id}`);
 };

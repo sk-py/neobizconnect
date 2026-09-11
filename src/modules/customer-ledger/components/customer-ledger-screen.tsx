@@ -72,8 +72,7 @@ export default function CustomerLedgerScreen() {
     queryFn: async () => {
       if (!isDealer) {
         if (!selectedDealer) return null;
-        // Ideally, dates should be passed if the new API supports them.
-        // Keeping signature based on provided API payload.
+        
         return fetchDealerAccountBalance(selectedDealer.card_code);
       }
       return fetchCustomerLedger(groupCompanyName, appliedFromDate, appliedToDate);

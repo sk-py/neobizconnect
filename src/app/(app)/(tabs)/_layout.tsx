@@ -152,6 +152,28 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
+                            <Tabs.Protected guard={user?.authority === "Query Manager"} >
+                    <Tabs.Screen
+                        name='dealer-lead-query'
+                        options={{
+                            title: "Lead / Query",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='bar-chart-2' size={size} color={color} />
+                            )
+                        }}
+                    />
+                </Tabs.Protected>
+                        <Tabs.Protected guard={user?.authority === "Query Manager"} >
+                    <Tabs.Screen
+                        name='online-lead'
+                        options={{
+                            title: "Online Lead",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='inbox' size={size} color={color} />
+                            )
+                        }}
+                    />
+                </Tabs.Protected>
 
                 <Tabs.Protected guard={user?.authority === "Sales Manager"} >
                     <Tabs.Screen

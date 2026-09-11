@@ -1,3 +1,6 @@
+import { useAuthStore } from "@/store/auth.store";
+import axios from "axios";
+
 type Environment = "production" | "uat" | "test";
 
 const BASE_URLS: Record<Environment, string> = {
@@ -9,4 +12,3 @@ const BASE_URLS: Record<Environment, string> = {
 const ENVIRONMENT: Environment = "uat";
 
 export const BASE_URL = BASE_URLS[ENVIRONMENT];
-

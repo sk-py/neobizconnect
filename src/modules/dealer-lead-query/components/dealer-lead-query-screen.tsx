@@ -1,23 +1,31 @@
 import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
 import {
+  fetchAssignedToOptions,
   fetchLeadQueries,
   updateLeadQuery,
-} from "@/modules/lead-query/services/lead-query.api";
+} from "@/modules/dealer-lead-query/services/dealer-lead-query.api";
 import {
+  BRAND_INTEREST_OPTIONS,
+  EmployeeOption,
+  INDIAN_STATES,
+  LEAD_PRIORITY_OPTIONS,
+  LEAD_SOURCE_OPTIONS,
   LEAD_STATUS_OPTIONS,
   LeadFormData,
   LeadQuery,
-} from "@/modules/lead-query/types";
+  TYPE_OF_QUERY_OPTIONS,
+} from "@/modules/dealer-lead-query/types";
 import { FieldSelect } from "@/components/custom/field-select";
+import { CountryCodeSelect } from "@/components/custom/country-code-select";
+import { COUNTRY_CODES, splitPhoneNumber } from "@/constants/country-codes";
 import { useAuth } from "@/hooks/use-auth";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { LegendList } from "@legendapp/list/react-native";
 import { SkeletonList } from "@/components/custom/skeleton";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  BackHandler,
   Modal,
   Pressable,
   ScrollView,
@@ -29,31 +37,30 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function LeadQueryScreen() {
+export default function DealerLeadQueryScreen() {
   const router = useRouter();
   const { user } = useAuth();
-
-  useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => {
-        router.push("/sales-manager-modules");
-        return true;
-      };
-      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-      return () => subscription.remove();
-    }, [router]),
-  );
 
   const [searchQuery, setSearchQuery] = useState("");
   const [editingLead, setEditingLead] = useState<LeadQuery | null>(null);
   const [editForm, setEditForm] = useState<LeadFormData | null>(null);
+  const [editCountryCode, setEditCountryCode] = useState("+91");
+  const [editLocalPhone, setEditLocalPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["sales-manager-lead-queries"],
+    queryKey: ["dealer-lead-queries"],
     queryFn: fetchLeadQueries,
   });
+
+  const { data: employees, isLoading: employeesLoading } = useQuery({
+    queryKey: ["employees-by-authority", user?.groupid],
+    queryFn: () => fetchAssignedToOptions(user!.groupid),
+    enabled: !!user?.groupid,
+  });
+
+  const employeeNames = useMemo(() => (employees || []).map((e: EmployeeOption) => e.name), [employees]);
 
   const filteredData = useMemo(() => {
     if (!data) return [];
@@ -75,6 +82,9 @@ export default function LeadQueryScreen() {
     const form = lead.formJson?.[0];
     setEditingLead(lead);
     setEditForm(form ? { ...form } : null);
+    const { dial, local } = splitPhoneNumber(form?.phone_1 || "");
+    setEditCountryCode(dial);
+    setEditLocalPhone(local);
     setSaveError(null);
   };
 
@@ -88,6 +98,19 @@ export default function LeadQueryScreen() {
     setEditForm((prev) => (prev ? { ...prev, [key]: value } : prev));
   };
 
+  const handleAssignedToChange = (name: string) => {
+    const match = employees?.find((e: EmployeeOption) => e.name === name);
+    setEditForm((prev) =>
+      prev
+        ? {
+            ...prev,
+            account_owner: name,
+            account_owner_id: match ? String(match.id) : prev.account_owner_id,
+          }
+        : prev,
+    );
+  };
+
   const handleUpdate = async () => {
     if (!editingLead || !editForm) return;
     setSaving(true);
@@ -96,7 +119,12 @@ export default function LeadQueryScreen() {
       const originalForm = editingLead.formJson?.[0];
       if (!originalForm) throw new Error("Original lead data missing — cannot update.");
 
-      await updateLeadQuery(editingLead.id, editingLead.companyid, originalForm, editForm);
+      const finalForm: LeadFormData = {
+        ...editForm,
+        phone_1: `${editCountryCode}${editLocalPhone.trim()}`,
+      };
+
+      await updateLeadQuery(editingLead.id, editingLead.companyid, originalForm, finalForm);
       closeEditModal();
       refetch();
     } catch (err: any) {
@@ -204,17 +232,11 @@ export default function LeadQueryScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <TouchableOpacity
-            onPress={() => router.push("/sales-manager-modules")}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Feather name="arrow-left" size={20} color={colors.text} />
-          </TouchableOpacity>
           <Text style={styles.title}>Lead / Query</Text>
           <View style={{ flex: 1 }} />
           <TouchableOpacity
             style={styles.createBtn}
-            onPress={() => router.push("/lead-query-create")}
+            onPress={() => router.push("/dealer-lead-query-create")}
           >
             <Feather name="plus" size={14} color={colors.white} />
             <Text style={styles.createBtnText}>Create</Text>
@@ -270,8 +292,8 @@ export default function LeadQueryScreen() {
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>Update Lead / Query</Text>
-                <Text style={styles.modalSubtitle}>Update lead status and remarks.</Text>
+                <Text style={styles.modalTitle}>Lead / Query Assignment</Text>
+                <Text style={styles.modalSubtitle}>Update customer enquiry details.</Text>
               </View>
               <TouchableOpacity onPress={closeEditModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="x" size={20} color={colors.text} />
@@ -286,19 +308,54 @@ export default function LeadQueryScreen() {
                       <Text style={styles.modalStepBadgeText}>1</Text>
                     </View>
                     <View>
-                      <Text style={styles.modalSectionTitle}>Lead Status</Text>
-                      <Text style={styles.modalSectionSubtitle}>Update current lead status</Text>
+                      <Text style={styles.modalSectionTitle}>Customer Details</Text>
+                      <Text style={styles.modalSectionSubtitle}>Customer basic information</Text>
                     </View>
                   </View>
 
-                  <Text style={styles.fieldLabel}>Status</Text>
+                  <Text style={styles.fieldLabel}>Customer Name</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter customer name"
+                    placeholderTextColor={colors.muted}
+                    value={editForm.customer_name}
+                    onChangeText={(v) => updateField("customer_name", v)}
+                  />
+
+                  <Text style={styles.fieldLabel}>Mobile Number</Text>
+                  <View style={styles.phoneRow}>
+                    <CountryCodeSelect
+                      countries={COUNTRY_CODES}
+                      value={editCountryCode}
+                      onChange={setEditCountryCode}
+                    />
+                    <TextInput
+                      style={[styles.textInput, styles.phoneInput]}
+                      placeholder="XXXXXXXXXX"
+                      placeholderTextColor={colors.muted}
+                      value={editLocalPhone}
+                      onChangeText={setEditLocalPhone}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+
+                  <Text style={styles.fieldLabel}>City</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter city"
+                    placeholderTextColor={colors.muted}
+                    value={editForm.city}
+                    onChangeText={(v) => updateField("city", v)}
+                  />
+
+                  <Text style={styles.fieldLabel}>State</Text>
                   <FieldSelect
-                    label="Status"
-                    value={editForm.status}
-                    options={LEAD_STATUS_OPTIONS}
-                    onChange={(v) => updateField("status", v)}
+                    label="State"
+                    value={editForm.state}
+                    options={INDIAN_STATES}
+                    onChange={(v) => updateField("state", v)}
                     searchable
-                    placeholder="Select Status"
+                    placeholder="Select state"
                   />
                 </View>
 
@@ -308,21 +365,96 @@ export default function LeadQueryScreen() {
                       <Text style={styles.modalStepBadgeText}>2</Text>
                     </View>
                     <View>
-                      <Text style={styles.modalSectionTitle}>Sales Manager Remarks</Text>
-                      <Text style={styles.modalSectionSubtitle}>Internal notes regarding this lead.</Text>
+                      <Text style={styles.modalSectionTitle}>Lead Source & Vehicle</Text>
+                      <Text style={styles.modalSectionSubtitle}>Source and product details</Text>
                     </View>
                   </View>
 
-                  <Text style={styles.fieldLabel}>Sales Manager Remarks</Text>
+                  <Text style={styles.fieldLabel}>Source</Text>
+                  <FieldSelect
+                    label="Source"
+                    value={editForm.source}
+                    options={LEAD_SOURCE_OPTIONS}
+                    onChange={(v) => updateField("source", v)}
+                    placeholder="Select source"
+                  />
+
+                  <Text style={styles.fieldLabel}>Brand Interest</Text>
+                  <FieldSelect
+                    label="Brand Interest"
+                    value={editForm.brand_interest}
+                    options={BRAND_INTEREST_OPTIONS}
+                    onChange={(v) => updateField("brand_interest", v)}
+                    placeholder="Select brand interest"
+                  />
+
+                  <Text style={styles.fieldLabel}>Car Model</Text>
                   <TextInput
-                    style={styles.remarksInput}
-                    placeholder="Enter remarks regarding the lead..."
+                    style={styles.textInput}
+                    placeholder="Enter car model"
                     placeholderTextColor={colors.muted}
-                    value={editForm.sales_manager_remarks}
-                    onChangeText={(v) => updateField("sales_manager_remarks", v)}
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
+                    value={editForm.car_model}
+                    onChangeText={(v) => updateField("car_model", v)}
+                  />
+
+                  <Text style={styles.fieldLabel}>Alloys</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter alloy details"
+                    placeholderTextColor={colors.muted}
+                    value={editForm.alloys}
+                    onChangeText={(v) => updateField("alloys", v)}
+                  />
+                </View>
+
+                <View style={styles.modalSection}>
+                  <View style={styles.modalSectionHeader}>
+                    <View style={styles.modalStepBadge}>
+                      <Text style={styles.modalStepBadgeText}>3</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.modalSectionTitle}>Query Details</Text>
+                      <Text style={styles.modalSectionSubtitle}>Query information and assignment</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.fieldLabel}>Type of Query</Text>
+                  <FieldSelect
+                    label="Type of Query"
+                    value={editForm.type_of_query}
+                    options={TYPE_OF_QUERY_OPTIONS}
+                    onChange={(v) => updateField("type_of_query", v)}
+                    placeholder="Select type of query"
+                  />
+
+                  <Text style={styles.fieldLabel}>Lead Priority</Text>
+                  <FieldSelect
+                    label="Lead Priority"
+                    value={editForm.lead_priority}
+                    options={LEAD_PRIORITY_OPTIONS}
+                    onChange={(v) => updateField("lead_priority", v)}
+                    placeholder="Select priority"
+                  />
+
+                  <Text style={styles.fieldLabel}>Assigned To</Text>
+                  <FieldSelect
+                    label="Assigned To"
+                    value={editForm.account_owner}
+                    options={employeeNames}
+                    onChange={handleAssignedToChange}
+                    searchable
+                    placeholder="Select employee"
+                    loading={employeesLoading}
+                  />
+
+                  <Text style={styles.fieldLabel}>Status</Text>
+                  <FieldSelect
+                    label="Status"
+                    value={editForm.status}
+                    options={LEAD_STATUS_OPTIONS}
+                    onChange={(v) => updateField("status", v)}
+                    searchable
+                    placeholder="Select status"
                   />
                 </View>
 
@@ -419,7 +551,8 @@ const styles = StyleSheet.create({
 
   fieldLabel: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 6, marginTop: spacing.sm },
   textInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 10, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text },
-  remarksInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, fontSize: 13, fontFamily: typography.medium, color: colors.text, minHeight: 90 },
+  phoneRow: { flexDirection: "row", gap: spacing.sm },
+  phoneInput: { flex: 1 },
 
   saveErrorBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: "#FEF2F2", borderRadius: radius.sm, padding: spacing.sm },
   saveErrorText: { fontSize: 11, fontFamily: typography.medium, color: colors.error, flex: 1 },

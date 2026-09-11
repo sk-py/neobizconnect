@@ -1,3 +1,5 @@
+import { INDIAN_STATES } from "@/constants/indian-states";
+
 export type LeadFormData = {
   id?: number;
   city: string;
@@ -68,7 +70,9 @@ export const TYPE_OF_QUERY_OPTIONS = [
   "Exchange with Current Wheels",
   "Warranty Claims",
 ] as const;
+
 export const LEAD_SOURCE_OPTIONS = ["Website", "Call", "WhatsApp", "Instagram", "Email"] as const;
 export const LEAD_PRIORITY_OPTIONS = ["Hot", "Warm", "Cold"] as const;
 export const BRAND_INTEREST_OPTIONS = ["Neo Wheels", "Zetta Alloys", "Other"] as const;
-export { INDIAN_STATES } from "@/constants/indian-states";
+
+export { INDIAN_STATES };
