@@ -1,3 +1,7 @@
+import { COUNTRY_CODES, splitPhoneNumber } from "@/constants/country-codes";
+import type { CountryCode } from "@/constants/country-codes";
+import { INDIAN_STATES } from "@/constants/indian-states";
+
 export type OnlineLeadFormData = {
   id?: number;
   customer_name: string;
@@ -40,6 +44,7 @@ export const EMPTY_ONLINE_LEAD_FORM: OnlineLeadFormData = {
   lead_status: "",
   remark: "",
 };
+
 export const TYPE_OF_QUERY_OPTIONS = [
   "New Alloy Set",
   "Single Wheel",
@@ -47,6 +52,7 @@ export const TYPE_OF_QUERY_OPTIONS = [
   "Dealership",
   "Warranty Claim",
 ] as const;
+
 export const BRAND_INTEREST_OPTIONS = ["Neo", "Zetta", "Other"] as const;
 export const LEAD_SOURCE_OPTIONS = ["Website", "Call", "WhatsApp", "Instagram", "Email"] as const;
 export const LEAD_STATUS_OPTIONS = [
@@ -62,6 +68,6 @@ export const LEAD_STATUS_OPTIONS = [
   "Price Too High",
   "Price Enquiry",
 ] as const;
-export { COUNTRY_CODES, splitPhoneNumber } from "@/constants/country-codes";
-export type { CountryCode } from "@/constants/country-codes";
-export { INDIAN_STATES } from "@/constants/indian-states";
+
+export { COUNTRY_CODES, splitPhoneNumber, INDIAN_STATES };
+export type { CountryCode };

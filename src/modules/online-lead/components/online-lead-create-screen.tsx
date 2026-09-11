@@ -32,7 +32,9 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 export default function OnlineLeadCreateScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  
   const { user } = useAuth();
+  
   const queryClient = useQueryClient();
 
   const [form, setForm] = useState<OnlineLeadFormData>(EMPTY_ONLINE_LEAD_FORM);
