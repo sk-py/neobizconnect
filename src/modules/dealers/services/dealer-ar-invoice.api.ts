@@ -1,14 +1,41 @@
 import { api } from "@/services/axios";
+const extractInvoiceList = (raw: any): any[] => {
+  if (Array.isArray(raw)) return raw;
+
+  const candidateKeys = [
+    "data",
+    "Data",
+    "items",
+    "Items",
+    "records",
+    "Records",
+    "result",
+    "Result",
+    "results",
+    "Results",
+    "list",
+    "List",
+    "rows",
+    "Rows",
+    "invoices",
+    "Invoices",
+    "content",
+    "Content",
+  ];
+
+  for (const key of candidateKeys) {
+    if (Array.isArray(raw?.[key])) {
+      return raw[key];
+    }
+  }
+
+  return [];
+};
 
 export const fetchDealerArInvoices = async (cardCode: string) => {
-  try {
-    const res = await api.get(`/Neo/Invoice/List/Pagenation`, {
-      params: { user_code: cardCode },
-    });
-    console.log("AR INVOICE SUCCESS:", JSON.stringify(res.data));
-    return res.data;
-  } catch (err: any) {
-    console.log("AR INVOICE ERROR:", err?.response?.status, err?.message);
-    throw err;
-  }
+  const res = await api.get(`/Neo/Invoice/List/Pagenation`, {
+    params: { user_code: cardCode },
+  });
+
+  return extractInvoiceList(res.data);
 };
