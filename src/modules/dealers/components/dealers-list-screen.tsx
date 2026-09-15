@@ -6,6 +6,7 @@ import {
   txtSize,
 } from "@/constants/theme";
 import { SkeletonList } from "@/components/custom/skeleton";
+import { DealerQuickViewModal } from "@/modules/dealers/components/dealer-quick-view-modal";
 import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { Dealer } from "@/modules/dealers/types";
 import { Feather } from "@react-native-vector-icons/feather/static";
@@ -31,6 +32,8 @@ export default function DealersListScreen() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
+  const [quickViewDealer, setQuickViewDealer] =
+    useState<Dealer | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -126,12 +129,20 @@ export default function DealersListScreen() {
       >
         <View style={styles.rowMain}>
           <View style={styles.nameRow}>
-            <Text
-              style={styles.dealerName}
-              numberOfLines={1}
+            <TouchableOpacity
+              onPress={(event) => {
+                event.stopPropagation();
+                setQuickViewDealer(item);
+              }}
+              hitSlop={{ top: 6, bottom: 6, left: 0, right: 6 }}
             >
-              {item.cardName || "-"}
-            </Text>
+              <Text
+                style={styles.dealerName}
+                numberOfLines={1}
+              >
+                {item.cardName || "-"}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.dealerCode}>
@@ -416,6 +427,12 @@ export default function DealersListScreen() {
           </View>
         </>
       )}
+
+      <DealerQuickViewModal
+        dealer={quickViewDealer}
+        visible={quickViewDealer !== null}
+        onClose={() => setQuickViewDealer(null)}
+      />
     </SafeAreaView>
   );
 }

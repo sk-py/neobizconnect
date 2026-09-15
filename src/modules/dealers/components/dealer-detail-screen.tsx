@@ -23,8 +23,16 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-const formatCurrency = (val: number) =>
-  (val || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Accepts number | string | null | undefined because several API fields
+// (e.g. DebitLC, CreditLC, CumulativeBalanceLC, creditLimit) come back from
+// the backend as numeric strings, not numbers. Number(val) normalizes both.
+const formatCurrency = (val: number | string | null | undefined) => {
+  const num = Number(val);
+  return (isNaN(num) ? 0 : num).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
 
 const formatDate = (isoDate: string) => {
   if (!isoDate) return "-";
@@ -346,7 +354,7 @@ export default function DealerDetailScreen() {
             </Text>
           </View>
           {entries.map((entry, idx) => {
-            const isDebit = entry.DebitLC > 0;
+            const isDebit = Number(entry.DebitLC) > 0;
             return (
               <View key={idx} style={styles.ledgerCard}>
                 <View style={styles.ledgerCardTop}>
@@ -472,18 +480,33 @@ export default function DealerDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.statsGrid}>
-          {STAT_CARDS.map((stat) => (
-            <View key={stat.key} style={styles.statCard}>
-              <View style={[styles.statIconCircle, { backgroundColor: stat.bg }]}>
-                <Feather name={stat.icon as any} size={14} color={stat.iconColor} />
-              </View>
-              <Text style={styles.statValue}>
-                {stat.value === null ? (summaryLoading ? "..." : "--") : stat.value}
-              </Text>
-              <Text style={styles.statLabel} numberOfLines={1}>{stat.label}</Text>
-            </View>
-          ))}
+                        <View style={styles.statsGrid}>
+          {STAT_CARDS.map((stat) => {
+            const tabKeyForStat: TabKey | null =
+              stat.key === "pendingOrders" ? "pendingOrders" :
+              stat.key === "proformaInvoices" ? "proformaInvoice" :
+              stat.key === "arInvoices" ? "arInvoice" :
+              stat.key === "arCreditMemos" ? "arCreditMemo" :
+              null;
+
+            const CardWrapper = tabKeyForStat ? TouchableOpacity : View;
+
+            return (
+              <CardWrapper
+                key={stat.key}
+                style={styles.statCard}
+                {...(tabKeyForStat ? { onPress: () => setActiveTab(tabKeyForStat), activeOpacity: 0.7 } : {})}
+              >
+                <View style={[styles.statIconCircle, { backgroundColor: stat.bg }]}>
+                  <Feather name={stat.icon as any} size={14} color={stat.iconColor} />
+                </View>
+                <Text style={styles.statValue}>
+                  {stat.value === null ? (summaryLoading ? "..." : "--") : stat.value}
+                </Text>
+                <Text style={styles.statLabel} numberOfLines={1}>{stat.label}</Text>
+              </CardWrapper>
+            );
+          })}
         </View>
 
         <ScrollView
