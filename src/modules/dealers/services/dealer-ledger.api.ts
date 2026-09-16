@@ -1,11 +1,13 @@
 import { api } from "@/services/axios";
-import { CustomerLedgerResponse } from "@/modules/customer-ledger/types";
-
 export const fetchDealerLedger = async (
   cardCode: string,
-): Promise<CustomerLedgerResponse> => {
-  const res = await api.get(`/Neo/SAP/GetAccountBalance/Dealer`, {
-    params: { user_code: cardCode },
-  });
+  fromDate?: string,
+  toDate?: string,
+) => {
+  const params: Record<string, string> = { user_code: cardCode };
+  if (fromDate) params.fromDate = fromDate;
+  if (toDate) params.toDate = toDate;
+
+  const res = await api.get(`/Neo/SAP/GetAccountBalance/Dealer`, { params });
   return res.data;
 };

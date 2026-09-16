@@ -87,7 +87,6 @@
         }
       ],
       "@react-native-vector-icons/feather",
-      "expo-sharing",
       "@react-native-community/datetimepicker",
       [
         "expo-image-picker",
@@ -103,13 +102,6 @@
               "cropToolbarColor": "#000000"
             }
           }
-        }
-      ],
-      [
-        "expo-file-system",
-        {
-          "supportsOpeningDocumentsInPlace": true,
-          "enableFileSharing": true
         }
       ],
       "expo-background-task"
