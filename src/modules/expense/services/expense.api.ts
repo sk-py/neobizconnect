@@ -1,27 +1,5 @@
-import axios from "axios";
-import { BASE_URL } from "@/constants/config";
-import { useAuthStore } from "@/store/auth.store";
+import { api } from "@/services/axios";
 import { ExpenseListItem } from "../types";
-
-const DEALER_BASE_URL = BASE_URL.replace(
-  "crm-uat.actifyzone.com",
-  "dealer-uat.actifyzone.com"
-);
-
-const dealerHeaders = () => {
-  const raw = (useAuthStore.getState().accessToken || "")
-    .replace(/^Bearer\s+/i, "")
-    .trim();
-
-  const safe = raw.includes("+")
-    ? raw.replace(/\+/g, "%2B")
-    : raw;
-
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${safe}`,
-  };
-};
 
 export type CreateExpensePayload = {
   title: string;
@@ -39,75 +17,38 @@ export type CreateExpensePayload = {
   employee_name: string;
 };
 
-export type UpdateExpensePayload = Omit<
-  CreateExpensePayload,
-  "isDeleting"
->;
+export type UpdateExpensePayload = Omit<CreateExpensePayload, "isDeleting">;
 
-export const fetchExpenses = async (): Promise<
-  ExpenseListItem[]
-> => {
-  const res = await axios.get<
-    ExpenseListItem[] | { expenses: ExpenseListItem[] }
-  >(`${DEALER_BASE_URL}/api/dynamic-expense`, {
-    headers: dealerHeaders(),
-  });
-
+export const fetchExpenses = async (): Promise<ExpenseListItem[]> => {
+  const res = await api.get<ExpenseListItem[] | { expenses: ExpenseListItem[] }>(
+    "/api/dynamic-expense",
+  );
   const data = res.data;
 
-  if (Array.isArray(data)) {
-    return data;
-  }
-
-  if (data && Array.isArray(data.expenses)) {
-    return data.expenses;
-  }
-
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.expenses)) return data.expenses;
   return [];
 };
 
 export const createExpenses = async (
-  payloads: CreateExpensePayload[]
+  payloads: CreateExpensePayload[],
 ): Promise<void> => {
-  await axios.post(
-    `${DEALER_BASE_URL}/api/dynamic-expense`,
-    {
-      expenses: payloads,
-    },
-    {
-      headers: dealerHeaders(),
-    }
-  );
+  await api.post("/api/dynamic-expense", { expenses: payloads });
 };
 
 export const createExpense = async (
-  payload: CreateExpensePayload
+  payload: CreateExpensePayload,
 ): Promise<void> => {
   await createExpenses([payload]);
 };
 
 export const updateExpense = async (
   id: number,
-  payload: UpdateExpensePayload
+  payload: UpdateExpensePayload,
 ): Promise<void> => {
-  await axios.put(
-    `${DEALER_BASE_URL}/api/dynamic-expense/${id}`,
-    {
-      expenses: [payload],
-    },
-    {
-      headers: dealerHeaders(),
-    }
-  );
+  await api.put(`/api/dynamic-expense/${id}`, { expenses: [payload] });
 };
 
-export const deleteExpense = async (
-  id: number
-): Promise<void> => {
-  await axios.delete(
-    `${DEALER_BASE_URL}/api/dynamic-expense/${id}`,
-    {
-      headers: dealerHeaders(),
-    }
-  );
+export const deleteExpense = async (id: number): Promise<void> => {
+  await api.delete(`/api/dynamic-expense/${id}`);
 };

@@ -40,6 +40,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-sharing",
       "expo-image",
       [
         "expo-font",
@@ -76,6 +77,7 @@
           "icon": "./assets/images/ic_stat_react_logo.png",
           "color": "#ffffff",
           "defaultChannel": "default",
+          // "sounds": ["./assets/sounds/notifications_sound.wav"],
           "enableBackgroundRemoteNotifications": false
         }
       ],
@@ -89,6 +91,7 @@
       "@react-native-community/datetimepicker",
       [
         "expo-image-picker",
+        
         {
           "photosPermission": "Allow NeoBizConnect to access your photos for vehicle meter submissions.",
           "cameraPermission": "Allow NeoBizConnect to access your camera for vehicle meter submissions.",
@@ -101,6 +104,13 @@
               "cropToolbarColor": "#000000"
             }
           }
+        }
+      ],
+      [
+        "expo-file-system",
+        {
+          "supportsOpeningDocumentsInPlace": true,
+          "enableFileSharing": true
         }
       ],
       "expo-background-task"
