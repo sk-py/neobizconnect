@@ -25,7 +25,6 @@ export type ExpenseCategory = {
   subCategories: string[];
 };
 
-// Placeholder categories until we get the real list from the API/TL
 export const MOCK_CATEGORIES: ExpenseCategory[] = [
   { id: 1, name: "Travelling Allowance", subCategories: ["Auto", "Train", "Flight"] },
   { id: 2, name: "Accommodation Allowance", subCategories: ["Single", "Double", "Suite"] },

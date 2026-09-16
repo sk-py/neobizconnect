@@ -29,6 +29,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// createdDate comes back as a plain "YYYY-MM-DD" string (no time component).
+const formatDate = (isoDate: string) => {
+  if (!isoDate) return "-";
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+};
+
 export default function LeadQueryScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -120,7 +128,7 @@ export default function LeadQueryScreen() {
             {form?.customer_name || "-"}
           </Text>
           <View style={styles.cardTopRight}>
-            <Text style={styles.ageText}>{item.age}</Text>
+            <Text style={styles.ageText}>{formatDate(item.createdDate)}</Text>
             <TouchableOpacity
               style={styles.editBtn}
               onPress={() => openEditModal(item)}
