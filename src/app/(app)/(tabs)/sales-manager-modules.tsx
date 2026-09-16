@@ -8,15 +8,15 @@ export const SalesManagerIndexScreen = () => {
     const router = useRouter();
 
     const MENU_OPTIONS = [
-        {
-            id: "dealers",
-            title: "Dealers",
-            description: "Manage and view your primary dealer network.",
-            icon: "briefcase",
-            route: "/dealers",
-            iconColor: "#3B82F6",
-            iconBg: "#EFF6FF"
-        },
+        // {
+        //     id: "dealers",
+        //     title: "Dealers",
+        //     description: "Manage and view your primary dealer network.",
+        //     icon: "briefcase",
+        //     route: "/dealers",
+        //     iconColor: "#3B82F6",
+        //     iconBg: "#EFF6FF"
+        // },
         // {
         //     id: "sub-dealers",
         //     title: "Sub Dealers",
@@ -26,12 +26,30 @@ export const SalesManagerIndexScreen = () => {
         //     iconColor: "#8B5CF6",
         //     iconBg: "#F5F3FF"
         // },
+        // {
+        //     id: "item-master",
+        //     title: "Item Master",
+        //     description: "View product catalog, stock, and pricing.",
+        //     icon: "package",
+        //     route: "/item-master",
+        //     iconColor: "#F59E0B",
+        //     iconBg: "#FFFBEB"
+        // },
         {
-            id: "item-master",
-            title: "Item Master",
-            description: "View product catalog, stock, and pricing.",
-            icon: "package",
-            route: "/item-master",
+            id: "order-history",
+            title: "Order History",
+            description: "View your sales and financial records.",
+            icon: "clock",
+            route: "/order-history",
+            iconColor: "#2563EB",
+            iconBg: "#EFF6FF"
+        },
+        {
+            id: "customer-ledger",
+            title: "Customer Ledger",
+            description: "Here is a list of customers ledgers",
+            icon: "book",
+            route: "/customer-ledger",
             iconColor: "#F59E0B",
             iconBg: "#FFFBEB"
         },
@@ -53,15 +71,15 @@ export const SalesManagerIndexScreen = () => {
             iconColor: "#EF4444",
             iconBg: "#FEF2F2"
         },
-        {
-            id: "lead-query",
-            title: "Lead Query",
-            description: "Manage new leads and customer inquiries.",
-            icon: "message-square",
-            route: "/lead-query",
-            iconColor: "#10B981",
-            iconBg: "#ECFDF5"
-        }
+        // {
+        //     id: "lead-query",
+        //     title: "Lead Query",
+        //     description: "Manage new leads and customer inquiries.",
+        //     icon: "message-square",
+        //     route: "/lead-query",
+        //     iconColor: "#10B981",
+        //     iconBg: "#ECFDF5"
+        // }
     ];
 
     return (
@@ -82,12 +100,12 @@ export const SalesManagerIndexScreen = () => {
                         <View style={[styles.iconContainer, { backgroundColor: option.iconBg }]}>
                             <Feather name={option.icon as any} size={22} color={option.iconColor} />
                         </View>
-                        
+
                         <View style={styles.textContainer}>
                             <Text style={styles.cardTitle}>{option.title}</Text>
                             <Text style={styles.cardDesc}>{option.description}</Text>
                         </View>
-                        
+
                         <Feather name="chevron-right" size={20} color={colors.muted} />
                     </TouchableOpacity>
                 ))}
@@ -97,36 +115,36 @@ export const SalesManagerIndexScreen = () => {
 };
 
 const styles = StyleSheet.create({
-    safeArea: { 
-        flex: 1, 
-        backgroundColor: colors.surface 
+    safeArea: {
+        flex: 1,
+        backgroundColor: colors.surface
     },
-    header: { 
-        padding: spacing.md, 
+    header: {
+        padding: spacing.md,
     },
-    headerTitle: { 
-        fontSize: 20, 
-        fontFamily: typography.bold, 
-        color: colors.text 
+    headerTitle: {
+        fontSize: 20,
+        fontFamily: typography.bold,
+        color: colors.text
     },
-    headerSubtitle: { 
-        fontSize: txtSize.small, 
-        fontFamily: typography.medium, 
-        color: colors.textSecondary, 
+    headerSubtitle: {
+        fontSize: txtSize.small,
+        fontFamily: typography.medium,
+        color: colors.textSecondary,
         marginTop: 2
     },
-    content: { 
-        padding: spacing.md, 
-        gap: spacing.md 
+    content: {
+        padding: spacing.md,
+        gap: spacing.md
     },
-    card: { 
-        flexDirection: "row", 
-        alignItems: "center", 
-        backgroundColor: colors.white, 
-        padding: spacing.md, 
-        borderRadius: radius.md, 
-        borderWidth: 1, 
-        borderColor: colors.border 
+    card: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.white,
+        padding: spacing.md,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.border
     },
     iconContainer: {
         width: 48,
@@ -136,21 +154,21 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginRight: spacing.md
     },
-    textContainer: { 
-        flex: 1, 
-        paddingRight: spacing.sm 
+    textContainer: {
+        flex: 1,
+        paddingRight: spacing.sm
     },
-    cardTitle: { 
-        fontSize: 16, 
-        fontFamily: typography.bold, 
-        color: colors.text, 
-        marginBottom: 4 
+    cardTitle: {
+        fontSize: 16,
+        fontFamily: typography.bold,
+        color: colors.text,
+        marginBottom: 4
     },
-    cardDesc: { 
-        fontSize: 13, 
-        fontFamily: typography.medium, 
-        color: colors.textSecondary, 
-        lineHeight: 18 
+    cardDesc: {
+        fontSize: 13,
+        fontFamily: typography.medium,
+        color: colors.textSecondary,
+        lineHeight: 18
     }
 });
 

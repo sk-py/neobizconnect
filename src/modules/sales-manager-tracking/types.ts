@@ -44,3 +44,58 @@ export type LiveLocationPayload = {
     activeVisitId?: string | null;
   }>;
 };
+
+export interface ExistingDistributor {
+  shop_name: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  gstin?: string;
+}
+
+export interface NearbyDistributorItem {
+  visit_location: {
+    id: number;
+    shop_name: string;
+    shop_type: string;
+    latitude: string;
+    longitude: string;
+    address: string;
+    city: string;
+    state: string;
+    pincode: string;
+    gstin: string;
+    created_at?: string;
+    updated_at?: string;
+    update_user_id?: number;
+  };
+  distance: string;
+}
+
+export interface AddDistributorLocationPayload {
+  latitude: string;
+  longitude: string;
+  shop_name: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  gstin?: string;
+}
+
+export interface AddDistributorLocationResponse {
+  id: number;
+  shop_name: string;
+  shop_type: string;
+  latitude: string;
+  longitude: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  gstin: string;
+  created_at: string;
+  updated_at: string;
+  update_user_id: number;
+}

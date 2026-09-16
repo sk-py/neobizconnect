@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
+import '@/modules/sales-manager-tracking/services/tracking-task';
 import { queryClient } from "@/services/query-client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";

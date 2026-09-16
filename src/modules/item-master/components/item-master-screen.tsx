@@ -1,13 +1,13 @@
-import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
+import { SkeletonList } from "@/components/custom/skeleton";
+import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { fetchItemMasterList } from "@/modules/item-master/services/item-master.api";
 import { ItemMasterBrand, ItemMasterEntry } from "@/modules/item-master/types";
-import { SkeletonList } from "@/components/custom/skeleton";
-import { Feather } from "@react-native-vector-icons/feather/static";
 import { LegendList } from "@legendapp/list/react-native";
+import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
-import { BackHandler, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const BRANDS: { label: string; value: ItemMasterBrand }[] = [
@@ -20,16 +20,16 @@ const PAGE_SIZE = 20;
 export default function ItemMasterScreen() {
   const router = useRouter();
 
-  useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => {
-        router.push("/sales-manager-modules");
-        return true;
-      };
-      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-      return () => subscription.remove();
-    }, [router]),
-  );
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     const onBackPress = () => {
+  //       router.push("/sales-manager-modules");
+  //       return true;
+  //     };
+  //     const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+  //     return () => subscription.remove();
+  //   }, [router]),
+  // );
 
   const [brand, setBrand] = useState<ItemMasterBrand>("NEO");
   const [page, setPage] = useState(0);
@@ -100,15 +100,16 @@ export default function ItemMasterScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-            <View style={styles.header}>
+      <View style={styles.header}>
         <View style={styles.titleRow2}>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={() => router.push("/sales-manager-modules")}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Feather name="arrow-left" size={20} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Item Master</Text>
+          </TouchableOpacity> */}
+          <Text style={styles.headerTitle}>Inventory</Text>
+          <Text style={styles.headerSubtitle}>View your stock levels and inventory details</Text>
         </View>
 
         <View style={styles.controlsRow}>
@@ -198,9 +199,19 @@ export default function ItemMasterScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.white },
 
-  header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
-  title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginBottom: 6 },
-  titleRow2: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 },
+  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
+   headerTitle: { 
+        fontSize: 20, 
+        fontFamily: typography.bold, 
+        color: colors.text 
+    },
+  headerSubtitle: {
+    fontSize: txtSize.small,
+    fontFamily: typography.medium,
+    color: colors.textSecondary,
+    marginTop: 2
+  },
+  titleRow2: { flexDirection: "column", alignItems: "flex-start", marginBottom: 8 },
   controlsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   brandRow: { flexDirection: "row", gap: 6 },
   brandPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },

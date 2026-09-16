@@ -1,12 +1,13 @@
 import { LiveClock } from "@/components/custom/live-clock";
 import { PulseDot } from "@/components/custom/pulse-dot";
-import { colors, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
 import { getGreeting } from "@/utils/greeting";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -21,23 +22,21 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
+  checkTrackingPermissions,
   requestTrackingPermissions,
   startLiveTracking,
   stopLiveTracking,
 } from "../services/tracking-task";
 import { useTrackingStore } from "../store/tracking.store";
 import { EndVisitModal } from "./end-visit-modal";
+import { LocationDisclosureModal } from "./location-disclosure-modal";
 import { PunchOutModal } from "./punch-out-modal";
 import { TransportModal } from "./transport-modal";
 import { VisitModal } from "./visit-modal";
 
 const INK = "#0F172A";
 const MUTED = "#64748B";
-const FAINT = "#94A3B8";
-const HAIRLINE = "#E2E8F0";
 const ACCENT = colors.primary;
-
-
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -69,9 +68,10 @@ export const SalesManagerHomeScreen = () => {
   const {
     isPunchedIn,
     punchInTime,
+    punchOutTime,
     currentTransport,
     activeVisit,
-    completedVisits,
+    totalVisitsToday,
     initializeStore,
     punchIn,
     punchOut,
@@ -80,52 +80,85 @@ export const SalesManagerHomeScreen = () => {
     endVisit,
   } = useTrackingStore();
 
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isStarting, setIsStarting] = useState(false);
+  const [disclosureVisible, setDisclosureVisible] = useState(false);
   const [transportModalVisible, setTransportModalVisible] = useState(false);
   const [visitModalVisible, setVisitModalVisible] = useState(false);
   const [endVisitModalVisible, setEndVisitModalVisible] = useState(false);
   const [punchOutModalVisible, setPunchOutModalVisible] = useState(false);
   const [currentGreeting, setCurrentGreeting] = useState(getGreeting());
 
-  const { user } = useAuth()
-  const { navigate } = useRouter()
+  const { user } = useAuth();
+  const { navigate } = useRouter();
+  const heroOpacity = useSharedValue(0);
 
   useEffect(() => {
-    initializeStore();
-    // Optional: Refresh greeting every minute in case they leave the app open across boundaries
+    const loadState = async () => {
+      await initializeStore();
+      setIsInitializing(false);
+      heroOpacity.value = withTiming(1, { duration: 300 });
+    };
+    loadState();
+    
     const greetingInterval = setInterval(() => setCurrentGreeting(getGreeting()), 60000);
     return () => clearInterval(greetingInterval);
   }, []);
 
-  const heroOpacity = useSharedValue(0);
-  useEffect(() => {
-    heroOpacity.value = withTiming(1, { duration: 300 });
-  }, []);
   const heroAnimatedStyle = useAnimatedStyle(() => ({ opacity: heroOpacity.value }));
 
-  const handlePunchIn = async () => {
+  const handlePunchInClick = async () => {
+    const isGranted = await checkTrackingPermissions();
+    if (isGranted) {
+      await proceedWithPunchIn();
+    } else {
+      setDisclosureVisible(true);
+    }
+  };
+
+  const handleDisclosureAccept = async () => {
+    setDisclosureVisible(false);
     const granted = await requestTrackingPermissions();
     if (!granted) {
-      Alert.alert(
-        "Permission Denied",
-        "Background location is required to track your sales route. Enable 'Allow all the time' in Settings."
-      );
+      Alert.alert("Permission Denied", "Background location is required. Enable 'Allow all the time' in Settings.");
       return;
     }
-    await punchIn("Walking");
-    await startLiveTracking();
+    await proceedWithPunchIn();
   };
 
-  const handlePunchOutConfirm = async (data?: any) => {
-    if (data) console.log("[SalesManagerHome] Closing Odometer Data:", data);
-    await stopLiveTracking();
-    await punchOut();
+  const proceedWithPunchIn = async () => {
+    if (isStarting) return;
+    setIsStarting(true);
+    try {
+      await punchIn("Walking");
+      await startLiveTracking();
+      // Removed syncAttendanceDetails() to prevent race condition override
+    } catch (error: any) {
+      Alert.alert("Unable to Start", error.message || "Failed to punch in.");
+    } finally {
+      setIsStarting(false);
+    }
   };
 
-  const navigateToProfile = () => {
-    navigate("/profile")
-  }
+  const handlePunchOutConfirm = async () => {
+    try {
+      await stopLiveTracking();
+      await punchOut();
+      // Removed syncAttendanceDetails() to prevent race condition override
+    } catch (error: any) {
+      Alert.alert("Checkout Failed", error.message || "Failed to punch out.");
+    }
+  };
 
   const todayString = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+
+  if (isInitializing) {
+    return (
+      <View style={[styles.safeArea, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -134,15 +167,14 @@ export const SalesManagerHomeScreen = () => {
           <Text numberOfLines={1} style={styles.greeting}>{currentGreeting}, {user?.name?.trim()}</Text>
           <Text style={styles.date}>{todayString}</Text>
         </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={navigateToProfile} style={styles.profileBtn}>
-            <Feather name="user" size={18} color={INK} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={() => navigate("/profile")} style={styles.profileBtn}>
+          <Feather name="user" size={18} color={INK} />
+        </TouchableOpacity>
       </View>
       <View style={styles.headerRule} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        
         {/* 1. STATE SECTION */}
         {activeVisit ? (
           <Animated.View style={[styles.activeVisitCard, heroAnimatedStyle]}>
@@ -195,61 +227,79 @@ export const SalesManagerHomeScreen = () => {
             {/* BLOCK B: Field Operations */}
             <View style={[styles.section, { borderBottomWidth: 0, paddingBottom: 0 }]}>
               <Text style={styles.sectionLabel}>FIELD OPERATIONS</Text>
-              <PrimaryButton title="Start Dealer Visit" icon="map-pin" onPress={() => setVisitModalVisible(true)} />
+              <PrimaryButton title="Start Distributor Visit" icon="map-pin" onPress={() => setVisitModalVisible(true)} />
             </View>
           </Animated.View>
         ) : (
           <Animated.View style={[styles.section, styles.offDutySection, heroAnimatedStyle]}>
             <LiveClock />
-            <Text style={styles.offDutySubtitle}>You are currently not on duty</Text>
-            <PrimaryButton title="Punch In & Start Your Day" icon="power" onPress={handlePunchIn} />
+            <Text style={styles.offDutySubtitle}>
+              {punchOutTime ? `Punched out at ${punchOutTime}` : "You are currently not on duty"}
+            </Text>
+            <PrimaryButton 
+              title={isStarting ? "Starting..." : "Punch In & Start Your Day"} 
+              icon="power" 
+              onPress={handlePunchInClick} 
+            />
           </Animated.View>
         )}
 
         <View style={{ height: spacing.xl }} />
 
-        {/* 2. TODAY'S VISITS */}
+        {/* 2. TODAY'S VISITS SUMMARY */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionLabel}>TODAY'S VISITS</Text>
-            <Text style={styles.sectionCount}>{completedVisits.length}</Text>
+            <Text style={styles.sectionCount}>{totalVisitsToday}</Text>
           </View>
 
-          {completedVisits.length === 0 ? (
-            <Text style={styles.emptyVisits}>No visits completed yet today.</Text>
-          ) : (
-            completedVisits.map((item, i) => (
-              <View key={item.id} style={[styles.historyRow, i === 0 && styles.historyRowFirst]}>
-                <View style={styles.historyRowHeader}>
-                  <Text style={styles.historyName}>{item.dealerName}</Text>
-                  <Text style={styles.historyDuration}>
-                    {item.startTime} – {item.endTime}
-                  </Text>
-                </View>
-                <Text style={styles.historyConclusion} numberOfLines={2}>
-                  {item.conclusion}
-                </Text>
-              </View>
-            ))
-          )}
+          <Text style={styles.emptyVisits}>
+            {totalVisitsToday === 0 
+              ? "No visits completed yet today." 
+              : `You have successfully completed ${totalVisitsToday} visit${totalVisitsToday > 1 ? 's' : ''} today.`}
+          </Text>
         </View>
       </ScrollView>
+
+      <LocationDisclosureModal 
+        visible={disclosureVisible} 
+        onAccept={handleDisclosureAccept} 
+        onDecline={() => setDisclosureVisible(false)} 
+      />
 
       <TransportModal
         visible={transportModalVisible}
         currentMode={currentTransport}
         onClose={() => setTransportModalVisible(false)}
-        onSelectMode={(mode, photo) => setTransportMode(mode, photo)}
+        onSelectMode={async (mode, photo) => {
+          try {
+            await setTransportMode(mode, photo);
+          } catch (error: any) {
+            Alert.alert("Change Failed", error.message || "Could not update transport mode.");
+          }
+        }}
       />
-      <VisitModal visible={visitModalVisible} onClose={() => setVisitModalVisible(false)} onStartVisit={(visit) => startVisit(visit)} />
+      
+      <VisitModal 
+        visible={visitModalVisible} 
+        onClose={() => setVisitModalVisible(false)} 
+        onStartVisit={async (id, name, address) => {
+          await startVisit(id, name, address);
+        }} 
+      />
+      
       {activeVisit && (
         <EndVisitModal
           visible={endVisitModalVisible}
           dealerName={activeVisit.dealerName}
           onClose={() => setEndVisitModalVisible(false)}
-          onSubmit={(conclusion) => endVisit(conclusion)}
+          onSubmit={async (data) => {
+            await endVisit(data);
+            // Removed syncAttendanceDetails() to prevent race condition override
+          }}
         />
       )}
+      
       <PunchOutModal
         visible={punchOutModalVisible}
         activeTransport={currentTransport}
@@ -261,69 +311,50 @@ export const SalesManagerHomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.white },
-
-  // Header
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
-  greeting: { fontSize: 20, fontFamily: typography.bold, color: INK, letterSpacing: -0.7 },
-  date: { fontSize: 12, fontFamily: typography.medium, color: MUTED, marginTop: 2 },
-  headerRight: { alignItems: "flex-end", gap: 6, justifyContent: "center" },
-  profileBtn: { width: 32, height: 32, borderRadius: 16, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: HAIRLINE },
-  headerRule: { height: 1, backgroundColor: HAIRLINE, marginHorizontal: spacing.lg },
-
-  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxl },
-
-  // Sections
-  section: { paddingBottom: spacing.xl, marginBottom: spacing.xl, borderBottomWidth: 1, borderBottomColor: HAIRLINE },
-  sectionLabel: { fontSize: 11, fontFamily: typography.bold, color: MUTED, letterSpacing: 0.8, marginBottom: spacing.sm },
-  sectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md },
-  sectionCount: { fontSize: 11, fontFamily: typography.bold, color: FAINT },
-
-  // Tracking Row Layout
+  safeArea: { flex: 1, backgroundColor: colors.surface },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md, backgroundColor: colors.white },
+  greeting: { fontSize: 20, fontFamily: typography.bold, color: INK },
+  date: { fontSize: 13, fontFamily: typography.medium, color: MUTED, marginTop: 4 },
+  profileBtn: { padding: 8, backgroundColor: colors.surface, borderRadius: 20 },
+  headerRule: { height: 1, backgroundColor: colors.border },
+  content: { padding: spacing.md },
+  
+  section: { backgroundColor: colors.white, borderRadius: radius.sm, padding: spacing.md, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  sectionLabel: { fontSize: 11, fontFamily: typography.bold, color: MUTED, marginBottom: spacing.sm, letterSpacing: 0.5 },
+  
   trackingHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  onDutyContainer: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
-  dealerName: { fontSize: 22, fontFamily: typography.bold, color: INK, letterSpacing: -0.3 },
-  dealerAddress: { fontSize: 13, fontFamily: typography.regular, color: MUTED, marginBottom: 6 },
-  metaLine: { fontSize: 12, fontFamily: typography.medium, color: FAINT },
-
-  divider: { height: 1, backgroundColor: HAIRLINE, marginVertical: spacing.lg },
-
-  // Active Visit Dark Card
-  activeVisitCard: { backgroundColor: "#1E293B", padding: spacing.xl, borderRadius: 12, marginBottom: spacing.xl },
-  activeVisitHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg },
-  pulseTag: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(239, 68, 68, 0.15)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
-  pulseText: { color: "#FCA5A5", fontSize: 10, fontFamily: typography.bold, letterSpacing: 0.5 },
-  timeStarted: { color: "#94A3B8", fontSize: 11, fontFamily: typography.medium },
-  activeDealerName: { fontSize: 20, fontFamily: typography.bold, color: colors.white, marginBottom: 4 },
-  activeDealerAddress: { fontSize: 13, fontFamily: typography.regular, color: "#94A3B8", marginBottom: spacing.xl, lineHeight: 20 },
-  endVisitBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#059669", paddingVertical: 14, borderRadius: 6 },
-  endVisitBtnText: { color: colors.white, fontSize: 14, fontFamily: typography.bold },
-
-  // Off-duty state
-  offDutySection: { alignItems: "center", paddingTop: spacing.md, borderBottomWidth: 0, marginBottom: 0 },
-  offDutySubtitle: { fontSize: 13, fontFamily: typography.medium, color: MUTED, marginBottom: spacing.xl },
-
-  // Buttons & Actions
-  primaryBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", width: "100%", paddingVertical: 15, borderRadius: 6, backgroundColor: ACCENT },
-  primaryBtnText: { fontSize: 14, fontFamily: typography.bold, color: colors.white, letterSpacing: 0.2 },
-  textAction: { paddingVertical: 2 },
-  textActionLabel: { fontSize: 13, fontFamily: typography.bold, color: ACCENT },
-
-  punchOutBox: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#FEF2F2", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 },
+  onDutyContainer: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 },
+  dealerName: { fontSize: 18, fontFamily: typography.bold, color: INK },
+  metaLine: { fontSize: 13, fontFamily: typography.medium, color: MUTED, marginTop: 4 },
+  
+  punchOutBox: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#FEF2F2", paddingVertical: 6, paddingHorizontal: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.error },
   punchOutBoxText: { fontSize: 12, fontFamily: typography.bold, color: colors.error },
-
-  // Transport row
+  
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
   transportRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   transportInfo: { flexDirection: "row", alignItems: "center", gap: 8 },
   transportText: { fontSize: 13, fontFamily: typography.medium, color: MUTED },
   transportValue: { fontFamily: typography.bold, color: INK },
+  
+  textAction: { paddingHorizontal: 8, paddingVertical: 4 },
+  textActionLabel: { fontSize: 13, fontFamily: typography.bold, color: MUTED },
+  
+  activeVisitCard: { backgroundColor: INK, padding: spacing.lg, borderRadius: radius.sm, marginBottom: spacing.lg },
+  activeVisitHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md },
+  pulseTag: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  pulseText: { fontSize: 10, fontFamily: typography.bold, color: colors.success, letterSpacing: 0.5 },
+  timeStarted: { fontSize: 12, fontFamily: typography.medium, color: colors.surface },
+  activeDealerName: { fontSize: 22, fontFamily: typography.bold, color: colors.white, marginBottom: 4 },
+  activeDealerAddress: { fontSize: 13, fontFamily: typography.medium, color: colors.surface, opacity: 0.8 },
+  endVisitBtn: { backgroundColor: colors.white, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center", marginTop: spacing.xl },
+  endVisitBtnText: { color: INK, fontSize: 14, fontFamily: typography.bold },
 
-  // Today's visits
-  emptyVisits: { fontSize: 13, fontFamily: typography.medium, color: FAINT, paddingVertical: spacing.xs },
-  historyRow: { paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: HAIRLINE },
-  historyRowFirst: { borderTopWidth: 0, paddingTop: 0 },
-  historyRowHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  historyName: { fontSize: 13, fontFamily: typography.bold, color: INK },
-  historyDuration: { fontSize: 11, fontFamily: typography.medium, color: FAINT },
-  historyConclusion: { fontSize: 12, fontFamily: typography.regular, color: MUTED, marginTop: 2 },
+  offDutySection: { alignItems: "center", paddingVertical: spacing.xxl, borderWidth: 0, backgroundColor: "transparent" },
+  offDutySubtitle: { fontSize: 14, fontFamily: typography.medium, color: MUTED, marginBottom: spacing.xl },
+  primaryBtn: { backgroundColor: ACCENT, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 14, borderRadius: radius.sm, paddingHorizontal: spacing.lg },
+  primaryBtnText: { color: colors.white, fontSize: 15, fontFamily: typography.bold },
+  
+  sectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
+  sectionCount: { backgroundColor: colors.surface, color: INK, fontSize: 12, fontFamily: typography.bold, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, overflow: "hidden" },
+  emptyVisits: { fontSize: 13, fontFamily: typography.medium, color: MUTED, marginTop: spacing.sm },
 });

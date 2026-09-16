@@ -65,11 +65,15 @@ export const OrderDocumentTemplate = ({
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View>
-            <Text style={styles.docNo}>{documentNumberLabel} #{item.salesorderno}</Text>
-            <Text style={styles.docDate}>{formatDate(item.document_date)}</Text>
+            <Text style={styles.docNo}>{item.customer_name}</Text>
+            <Text style={styles.docDate}>{documentNumberLabel} #{item.salesorderno}</Text>
           </View>
+          <View>
+
           <View style={styles.statusBadge}>
             <Text style={styles.statusBadgeText}>{item.portal_status}</Text>
+          </View>
+            <Text style={[styles.docDate, {textAlign:"right"}]}>{formatDate(item.document_date)}</Text>
           </View>
         </View>
 

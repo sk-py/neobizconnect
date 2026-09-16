@@ -1,8 +1,10 @@
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
 import { Feather } from "@react-native-vector-icons/feather/static";
-import { Href, useRouter } from "expo-router";
-import React from "react";
+import { Href, useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback } from "react";
 import {
+  BackHandler,
   ScrollView,
   StyleSheet,
   Text,
@@ -63,6 +65,22 @@ const ORDER_MODULES: HistoryModuleItem[] = [
 export const OrderHistoryIndexScreen = () => {
   const router = useRouter();
 
+  const { user } = useAuth()
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+
+        if (user?.authority !== "Sales Manager") return;
+
+        router.push("/sales-manager-modules");
+        return true;
+      };
+      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => subscription.remove();
+    }, [router]),
+  );
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <ScrollView
@@ -121,7 +139,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: typography.bold,
     color: colors.text,
-    paddingBottom:2
+    paddingBottom: 2
   },
   headerSubtitle: {
     fontSize: txtSize.small,

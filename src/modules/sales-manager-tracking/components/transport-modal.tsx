@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,12 +22,12 @@ type Props = {
   visible: boolean;
   currentMode: TransportMode;
   onClose: () => void;
-  onSelectMode: (mode: TransportMode, photoUri?: string) => void;
+  onSelectMode: (mode: TransportMode, photoUris?: string[]) => void;
 };
 
 export const TransportModal = ({ visible, currentMode, onClose, onSelectMode }: Props) => {
   const [selectedMode, setSelectedMode] = useState<TransportMode>(currentMode);
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
@@ -40,22 +41,41 @@ export const TransportModal = ({ visible, currentMode, onClose, onSelectMode }: 
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true, aspect: [4, 3] });
+    // Capture image without cropping or aspect ratio restrictions
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.8,
+      allowsEditing: false,
+    });
+
     if (!result.canceled && result.assets[0]) {
       setIsProcessing(true);
-      const manipResult = await ImageManipulator.manipulateAsync(result.assets[0].uri, [{ resize: { width: 1080 } }], { compress: 0.6 });
-      setPhotoUri(manipResult.uri);
-      setIsProcessing(false);
+      try {
+        // Compress lightly without cropping
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 1280 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        setPhotoUris((prev) => [...prev, manipResult.uri]);
+      } catch (err) {
+        setErrorBanner("Failed to process image. Try again.");
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
+  const handleRemovePhoto = (index: number) => {
+    setPhotoUris((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleConfirm = () => {
-    if (isPersonalVehicle(selectedMode) && !photoUri) {
-      setErrorBanner("Odometer photo is required before starting a personal vehicle trip.");
+    if (isPersonalVehicle(selectedMode) && photoUris.length === 0) {
+      setErrorBanner("At least one odometer reading photo is required.");
       return;
     }
     setErrorBanner(null);
-    onSelectMode(selectedMode, photoUri || undefined);
+    onSelectMode(selectedMode, isPersonalVehicle(selectedMode) ? photoUris : []);
     onClose();
   };
 
@@ -64,10 +84,12 @@ export const TransportModal = ({ visible, currentMode, onClose, onSelectMode }: 
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Mode of Transport</Text>
-          <TouchableOpacity onPress={onClose}><Feather name="x" size={24} color={colors.text} /></TouchableOpacity>
+          <TouchableOpacity onPress={onClose}>
+            <Feather name="x" size={24} color={colors.text} />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.body}>
+        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
           {errorBanner && (
             <View style={styles.errorBanner}>
               <Feather name="alert-circle" size={16} color={colors.error} />
@@ -83,7 +105,11 @@ export const TransportModal = ({ visible, currentMode, onClose, onSelectMode }: 
                 <TouchableOpacity
                   key={mode}
                   style={[styles.modeChip, active && styles.modeChipActive]}
-                  onPress={() => { setSelectedMode(mode); setErrorBanner(null); if (!isPersonalVehicle(mode)) setPhotoUri(null); }}
+                  onPress={() => {
+                    setSelectedMode(mode);
+                    setErrorBanner(null);
+                    if (!isPersonalVehicle(mode)) setPhotoUris([]);
+                  }}
                 >
                   <Text style={[styles.modeText, active && styles.modeTextActive]}>{mode}</Text>
                   {active && <Feather name="check" size={16} color={colors.white} />}
@@ -94,28 +120,40 @@ export const TransportModal = ({ visible, currentMode, onClose, onSelectMode }: 
 
           {isPersonalVehicle(selectedMode) && (
             <View style={styles.odometerSection}>
-              <Text style={styles.odometerTitle}>Odometer Reading (Mandatory)</Text>
-              {photoUri ? (
-                <View style={styles.imagePreviewWrapper}>
-                  <Image source={{ uri: photoUri }} style={styles.previewImage} />
-                  <TouchableOpacity style={styles.retakeBtn} onPress={handleCaptureOdometer}>
-                    <Feather name="camera" size={14} color={colors.white} />
-                    <Text style={styles.retakeBtnText}>Retake</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity style={[styles.cameraBox, errorBanner && styles.cameraBoxError]} onPress={handleCaptureOdometer} disabled={isProcessing}>
-                  {isProcessing ? <ActivityIndicator color={colors.primary} /> : (
-                    <>
-                      <Feather name="camera" size={32} color={colors.muted} />
-                      <Text style={styles.cameraBoxText}>Take Meter Photo</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+              <Text style={styles.odometerTitle}>Odometer Reading Photos ({photoUris.length})</Text>
+
+              {photoUris.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnailList}>
+                  {photoUris.map((uri, index) => (
+                    <View key={index} style={styles.imageThumbnailWrapper}>
+                      <Image source={{ uri }} style={styles.previewThumbnail} />
+                      <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemovePhoto(index)}>
+                        <Feather name="x" size={12} color={colors.white} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
               )}
+
+              <TouchableOpacity
+                style={[styles.cameraBox, errorBanner && styles.cameraBoxError]}
+                onPress={handleCaptureOdometer}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <ActivityIndicator color={colors.primary} />
+                ) : (
+                  <>
+                    <Feather name="camera" size={28} color={colors.muted} />
+                    <Text style={styles.cameraBoxText}>
+                      {photoUris.length > 0 ? "Add Another Photo" : "Take Meter Photo"}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           )}
-        </View>
+        </ScrollView>
 
         <View style={styles.footer}>
           <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm}>
@@ -131,7 +169,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.white },
   title: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
-  body: { padding: spacing.md, flex: 1 },
+  body: { padding: spacing.md },
   errorBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FEF2F2", padding: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.error, marginBottom: spacing.md },
   errorBannerText: { flex: 1, color: colors.error, fontSize: 12, fontFamily: typography.medium },
   subtitle: { fontSize: 13, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: spacing.md },
@@ -142,13 +180,13 @@ const styles = StyleSheet.create({
   modeTextActive: { color: colors.white, fontFamily: typography.bold },
   odometerSection: { marginTop: spacing.xl, padding: spacing.md, backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border },
   odometerTitle: { fontSize: 14, fontFamily: typography.bold, color: colors.text, marginBottom: spacing.sm },
-  cameraBox: { height: 120, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, borderStyle: "dashed", justifyContent: "center", alignItems: "center", backgroundColor: colors.surface },
+  thumbnailList: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
+  imageThumbnailWrapper: { position: "relative" },
+  previewThumbnail: { width: 90, height: 90, borderRadius: radius.sm },
+  removeBtn: { position: "absolute", top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" },
+  cameraBox: { height: 90, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, borderStyle: "dashed", justifyContent: "center", alignItems: "center", backgroundColor: colors.surface },
   cameraBoxError: { borderColor: colors.error, backgroundColor: "#FEF2F2" },
-  cameraBoxText: { marginTop: 6, fontSize: 13, fontFamily: typography.medium, color: colors.muted },
-  imagePreviewWrapper: { alignItems: "center", position: "relative" },
-  previewImage: { width: "100%", height: 150, borderRadius: radius.sm },
-  retakeBtn: { position: "absolute", bottom: 8, right: 8, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.7)", paddingVertical: 6, paddingHorizontal: 12, borderRadius: radius.xl },
-  retakeBtnText: { color: colors.white, fontSize: 12, fontFamily: typography.medium },
+  cameraBoxText: { marginTop: 4, fontSize: 12, fontFamily: typography.medium, color: colors.muted },
   footer: { padding: spacing.md, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
   confirmBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center" },
   confirmBtnText: { color: colors.white, fontSize: 15, fontFamily: typography.bold },

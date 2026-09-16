@@ -1,4 +1,6 @@
-import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
+import { FieldSelect } from "@/components/custom/field-select";
+import { SkeletonList } from "@/components/custom/skeleton";
+import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import {
   fetchLeadQueries,
   updateLeadQuery,
@@ -8,16 +10,12 @@ import {
   LeadFormData,
   LeadQuery,
 } from "@/modules/lead-query/types";
-import { FieldSelect } from "@/components/custom/field-select";
-import { useAuth } from "@/hooks/use-auth";
-import { useFocusEffect, useRouter } from "expo-router";
+import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
-import { LegendList } from "@legendapp/list/react-native";
-import { SkeletonList } from "@/components/custom/skeleton";
-import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
 import {
-  BackHandler,
   Modal,
   Pressable,
   ScrollView,
@@ -25,7 +23,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -39,18 +37,6 @@ const formatDate = (isoDate: string) => {
 
 export default function LeadQueryScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-
-  useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => {
-        router.push("/sales-manager-modules");
-        return true;
-      };
-      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-      return () => subscription.remove();
-    }, [router]),
-  );
 
   const [searchQuery, setSearchQuery] = useState("");
   const [editingLead, setEditingLead] = useState<LeadQuery | null>(null);
@@ -110,7 +96,7 @@ export default function LeadQueryScreen() {
     } catch (err: any) {
       setSaveError(
         err?.message ||
-          "Failed to update — this endpoint hasn't been fully confirmed yet, check with TL.",
+        "Failed to update — this endpoint hasn't been fully confirmed yet, check with TL.",
       );
     } finally {
       setSaving(false);
@@ -212,13 +198,16 @@ export default function LeadQueryScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={() => router.push("/sales-manager-modules")}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Feather name="arrow-left" size={20} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Lead / Query</Text>
+          </TouchableOpacity> */}
+          <View>
+            <Text style={styles.headerTitle}>Leads & Queries</Text>
+            <Text style={styles.headerSubtitle}>Manage new leads and customer inquiries</Text>
+          </View>
           <View style={{ flex: 1 }} />
           <TouchableOpacity
             style={styles.createBtn}
@@ -365,9 +354,19 @@ export default function LeadQueryScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
 
-  header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
-  title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: typography.bold,
+    color: colors.text
+  },
+  headerSubtitle: {
+    fontSize: txtSize.xs,
+    fontFamily: typography.medium,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
 
   createBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm },
   createBtnText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.white },

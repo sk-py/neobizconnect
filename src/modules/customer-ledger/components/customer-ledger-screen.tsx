@@ -12,10 +12,11 @@ import { LegendList } from "@legendapp/list/react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
   Modal,
   Platform,
   StyleSheet,
@@ -65,6 +66,20 @@ export default function CustomerLedgerScreen() {
     queryFn: () => fetchDealersList(),
     enabled: Boolean(groupCompanyName) && !isDealer,
   });
+
+    useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+  
+          if (user?.authority !== "Sales Manager") return;
+  
+          router.push("/sales-manager-modules");
+          return true;
+        };
+        const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+        return () => subscription.remove();
+      }, [router]),
+    );
 
   // Query: Fetch Ledger Data (Dynamic based on role)
   const { data, isLoading, isRefetching, refetch } = useQuery({

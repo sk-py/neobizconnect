@@ -114,10 +114,10 @@ export const DealerProductsScreen = () => {
                             <View style={styles.sizeBadge}>
                                 <Text style={styles.sizeBadgeText}>{item.wheelSize}</Text>
                             </View>
-                            <View style={styles.stockBadge}>
-                                <View style={styles.stockDot} />
-                                <Text style={styles.stockBadgeText}>
-                                    {item.inStockQty} in stock
+                            <View style={item.inStockQty > 4 ? styles.stockBadge : styles.outOfStockBadge}>
+                                <View style={[styles.stockDot, { backgroundColor: item?.inStockQty > 4 ? colors.success : colors.error }]} />
+                                <Text style={[styles.stockBadgeText, { color: item?.inStockQty > 4 ? colors.success : colors.error }]}>
+                                    {item.inStockQty > 4 ? `${item.inStockQty} in stock` : "Out of stock"}
                                 </Text>
                             </View>
                         </View>
@@ -173,9 +173,10 @@ export const DealerProductsScreen = () => {
                 </Text>
                 <Text style={styles.gridProductCode}>{item.itemCode}</Text>
 
-                <View style={[styles.stockBadge, styles.gridStockBadge]}>
-                    <View style={styles.stockDot} />
-                    <Text style={styles.stockBadgeText}>{item.inStockQty} in stock</Text>
+                <View style={[item.inStockQty > 4 ? styles.stockBadge : styles.outOfStockBadge, styles.gridStockBadge]}>
+                    <View style={[styles.stockDot, { backgroundColor: item?.inStockQty > 4 ? colors.success : colors.error }]} />
+                    <Text style={[styles.stockBadgeText, { color: item?.inStockQty > 4 ? colors.success : colors.error }]}>
+                        {item.inStockQty > 4 ? `${item.inStockQty} in stock` : "Out of stock"}</Text>
                 </View>
 
                 <Text style={styles.gridPriceText}>₹{item.price.toLocaleString("en-IN")}</Text>
@@ -734,6 +735,15 @@ const styles = StyleSheet.create({
         borderRadius: radius.xl,
         gap: 4,
     },
+    outOfStockBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        backgroundColor: "#fcdcdc",
+        borderRadius: radius.xl,
+        gap: 4,
+    },
     stockDot: {
         width: 6,
         height: 6,
@@ -743,7 +753,7 @@ const styles = StyleSheet.create({
     stockBadgeText: {
         fontSize: 10,
         fontFamily: typography.medium,
-        color: colors.success,
+        // color: colors.success,
     },
     actionButton: {
         paddingHorizontal: 16,

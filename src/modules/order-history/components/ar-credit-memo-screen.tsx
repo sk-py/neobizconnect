@@ -7,13 +7,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -43,13 +43,17 @@ export default function ArCreditMemoScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View>
-            <Text style={styles.docNo}>Credit Memo #{item.arcreditmemono}</Text>
-            <Text style={styles.docDate}>{formatDate(item.posting_date)}</Text>
+            <Text numberOfLines={1} style={styles.docNo}>{item.customer_name}</Text>
+            <Text style={styles.docDate}>Credit Memo #{item.arcreditmemono}</Text>
           </View>
+          <View>
+
           <View style={[styles.statusBadge, item.status === "Closed" && styles.statusClosed]}>
             <Text style={[styles.statusBadgeText, item.status === "Closed" && styles.statusTextClosed]}>
               {item.status}
             </Text>
+          </View>
+            <Text style={styles.docDate}>{item.posting_date}</Text>
           </View>
         </View>
 
@@ -270,7 +274,7 @@ const styles = StyleSheet.create({
   docDate: { fontSize: 12, fontFamily: typography.regular, color: colors.muted, marginTop: 2 },
   statusBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl },
   statusClosed: { backgroundColor: "#E0E7FF" },
-  statusBadgeText: { fontSize: 10, fontFamily: typography.bold, color: "#1D4ED8" },
+  statusBadgeText: { fontSize: 10, fontFamily: typography.bold, color: "#1D4ED8", textAlign:"center" },
   statusTextClosed: { color: "#374151" },
   cardBody: { flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.md },
   infoCol: { flex: 1 },
