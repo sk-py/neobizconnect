@@ -30,9 +30,6 @@ export type Dealer = {
   bpaddresses: DealerAddress[];
 };
 
-// Confirmed against the real /Neo/Invoice/List/Pagenation response
-// (DevTools Network tab, 2026-09-15). The endpoint wraps its array in
-// { content: [...] } along with pagination metadata.
 export type ArInvoiceLineItem = {
   HSN: string;
   ItemNo: string;
@@ -79,13 +76,10 @@ export type ArInvoice = {
   lrno: string;
   lr_date: string;
   transport_name: string;
-  // Confirmed via DevTools: this is the DocEntry value the
-  // POST /Neo/SAP/InvoicePDF endpoint expects as { DocEntry: string }.
   invoice_doc_entry: string;
   items: ArInvoiceLineItem[];
 };
 
-// Wraps the raw /Pagenation response so the screen can drive page controls.
 export type ArInvoicePage = {
   content: ArInvoice[];
   currentPage: number;
@@ -95,10 +89,6 @@ export type ArInvoicePage = {
   size: number;
 };
 
-// Confirmed against the real /Neo/SalesOrder/List response
-// (console log, 2026-09-16). Note: doc_status and portal_status can
-// disagree (e.g. doc_status "Open" vs portal_status "Pending") - the web
-// UI displays portal_status, so that's the one to prefer for the badge.
 export type PendingOrderLineItem = {
   HSN: string;
   Price: number;
@@ -139,17 +129,8 @@ export type PendingOrder = {
   items: PendingOrderLineItem[];
 };
 
-// Confirmed via console log, 2026-09-16: /Neo/PerformaInvoice/List returns
-// records structurally identical to PendingOrder (same field names, same
-// item shape). The only functional difference is portal_status is a fixed
-// document-type label here ("PI(Performa Invoice)"), not a workflow state.
 export type ProformaInvoice = PendingOrder;
 
-// Confirmed via console log, 2026-09-16: /Neo/ARCreditMemo/List returns
-// records structurally identical to ArInvoice (same field names, same
-// item shape), except the status field is a plain top-level "status" key
-// rather than "invoice_status", and there's no invoice_doc_entry (no PDF
-// endpoint confirmed for credit memos).
 export type ArCreditMemo = {
   id: number;
   customer_name: string;
@@ -185,4 +166,32 @@ export type ArCreditMemo = {
   update_dt: string;
   items: ArInvoiceLineItem[];
   status: string;
+};
+
+export type LedgerEntry = {
+  Origin: string;
+  OriginDocEntry: string;
+  Ref3: string;
+  OriginNo: string;
+  CreditLC: number;
+  OffsetAccount: string;
+  Details: string;
+  DebitLC: number;
+  PostingDate: string;
+  CumulativeBalanceLC: number;
+  Branch: string;
+  Ref1: string;
+  Ref2: string;
+  BalanceDueLC: number;
+};
+
+export type LedgerResponse = {
+  TotalDebitLC: number;
+  CardName: string;
+  TotalCumulativeBalanceLC: number;
+  AccountBalance: LedgerEntry[];
+  CardCode: string;
+  AccBalance: string;
+  TotalBalanceDueLC: number;
+  TotalCreditLC: number;
 };

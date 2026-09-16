@@ -1,5 +1,5 @@
 import { api } from "@/services/axios";
-import { ArInvoice, ArInvoicePage } from "@/modules/dealers/types";
+import type { ArInvoicePage } from "@/modules/dealers/types";
 
 export const fetchDealerArInvoices = async (
   cardCode: string,
@@ -11,7 +11,6 @@ export const fetchDealerArInvoices = async (
   });
 
   const raw = res.data;
-
 
   if (Array.isArray(raw)) {
     return {

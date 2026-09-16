@@ -59,10 +59,6 @@ export function ProformaInvoiceDetailModal({
     return null;
   }
 
-  // portal_status here is a fixed document-type label (e.g.
-  // "PI(Performa Invoice)"), not a workflow state like Open/Closed -
-  // confirmed via real data - so it always gets the same neutral badge
-  // style rather than the open/closed/cancelled color logic used elsewhere.
   const items = proforma.items ?? [];
   const totalQty = items.reduce((sum, item) => sum + (Number(item.Quantity) || 0), 0);
 

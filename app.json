@@ -76,7 +76,6 @@
           "icon": "./assets/images/ic_stat_react_logo.png",
           "color": "#ffffff",
           "defaultChannel": "default",
-          // "sounds": ["./assets/sounds/notifications_sound.wav"],
           "enableBackgroundRemoteNotifications": false
         }
       ],

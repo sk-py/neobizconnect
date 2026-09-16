@@ -24,15 +24,38 @@ interface LrDetailsModalProps {
 
 const FALLBACK = "-";
 
-const formatDate = (raw: string) => {
-  if (!raw) return FALLBACK;
-  const d = new Date(raw);
-  if (isNaN(d.getTime())) return raw;
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+
+const MONTH_NAMES = [
+  "jan", "feb", "mar", "apr", "may", "jun",
+  "jul", "aug", "sept", "oct", "nov", "dec",
+];
+
+const formatDateFromParts = (year: number, monthIndex: number, day: number) => {
+  if (!year || monthIndex < 0 || monthIndex > 11 || !day || day < 1 || day > 31) {
+    return FALLBACK;
+  }
+  return `${day} ${MONTH_NAMES[monthIndex]} ${year}`;
+};
+
+const formatDate = (value: string | null | undefined) => {
+  const text = String(value ?? "").trim();
+  if (!text) return FALLBACK;
+
+  const withoutTime = text
+    .split("T")[0]
+    .replace(/\s+\d{1,2}:\d{2}(:\d{2})?(\.\d+)?(\s?(AM|PM))?$/i, "")
+    .trim();
+
+  const ymd = withoutTime.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (ymd) {
+    const [, year, month, day] = ymd;
+    return formatDateFromParts(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const d = new Date(withoutTime);
+  if (isNaN(d.getTime())) return withoutTime;
+
+  return formatDateFromParts(d.getFullYear(), d.getMonth(), d.getDate());
 };
 
 function DetailBlock({ label, value }: { label: string; value: string }) {
