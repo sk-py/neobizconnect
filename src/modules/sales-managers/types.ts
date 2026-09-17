@@ -1,0 +1,44 @@
+export type SalesManagerEmployeeDetails = {
+  id: number;
+  employee_code: string;
+  firstname: string;
+  lastname: string;
+  email: string;
+  number: string;
+  department: string;
+  designation: string;
+  region: string;
+  territory: string;
+  zone: string;
+  city: string;
+  state: string;
+  country: string;
+  pin_code: string;
+  account_password: string;
+  lock_status: number | null;
+  login_status: string; 
+  authorityid: number;
+  companyid: number;
+  groupid: number;
+  locationid: number;
+  branchid: number;
+};
+
+export type SalesManager = {
+  id: number;
+  lock_status: number | null;
+  email: string;
+  locked: "tYES" | "tNO" | string;
+  remarks: string;
+  employeeDetails: SalesManagerEmployeeDetails | null;
+  commissionForSalesEmployee: number;
+  commissionGroup: number;
+  employeeID: number;
+  fax: string;
+  u_DealerPortal: string | null;
+  active: "tYES" | "tNO" | string;
+  salesEmployeeName: string;
+  telephone: string;
+  salesEmployeeCode: string;
+  mobile: string;
+};

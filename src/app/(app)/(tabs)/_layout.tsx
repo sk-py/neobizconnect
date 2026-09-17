@@ -65,6 +65,16 @@ const TabLayout = () => {
                     />
                 </Tabs.Protected>
 
+                <Tabs.Protected guard={canAccess("Sales Managers")}>
+                    <Tabs.Screen
+                        name='sales-managers'
+                        options={{
+                            title: "Sales Manager",
+                            tabBarIcon: ({ color, size }) => (<Feather name='user-check' color={color} size={size} />)
+                        }}
+                    />
+                </Tabs.Protected>
+
                 <Tabs.Protected guard={canAccess("Item Master")}>
                     <Tabs.Screen
                         name='item-master'
@@ -82,7 +92,10 @@ const TabLayout = () => {
                         name='transaction-history'
                         options={{
                             title: "Transaction History",
-                            href: null,
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='repeat' color={color} size={size} />
+                            ),
+                            href: user?.authority === "Sales Manager" ? null : "/transaction-history"
                         }}
                     />
                 </Tabs.Protected>

@@ -13,8 +13,8 @@ import {
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -44,10 +44,16 @@ export default function LeadQueryScreen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isLoading, isError, error, isRefetching, refetch } = useQuery({
     queryKey: ["sales-manager-lead-queries"],
     queryFn: fetchLeadQueries,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const filteredData = useMemo(() => {
     if (!data) return [];
@@ -87,12 +93,24 @@ export default function LeadQueryScreen() {
     setSaving(true);
     setSaveError(null);
     try {
-      const originalForm = editingLead.formJson?.[0];
+      // 1. GET — refetch first so we merge edits into the record's truly
+      // current state, not whatever was cached when the modal opened.
+      const latest = await refetch();
+      const freshLead = latest.data?.find((item) => item.id === editingLead.id);
+      const originalForm = freshLead?.formJson?.[0] ?? editingLead.formJson?.[0];
       if (!originalForm) throw new Error("Original lead data missing — cannot update.");
 
-      await updateLeadQuery(editingLead.id, editingLead.companyid, originalForm, editForm);
+      // 2. POST — submit the update against that fresh original.
+      await updateLeadQuery(
+        editingLead.id,
+        (freshLead ?? editingLead).companyid,
+        originalForm,
+        editForm,
+      );
       closeEditModal();
-      refetch();
+
+      // 3. GET — refetch again so the list reflects what the server now has.
+      await refetch();
     } catch (err: any) {
       setSaveError(
         err?.message ||
@@ -198,12 +216,6 @@ export default function LeadQueryScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          {/* <TouchableOpacity
-            onPress={() => router.push("/sales-manager-modules")}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Feather name="arrow-left" size={20} color={colors.text} />
-          </TouchableOpacity> */}
           <View>
             <Text style={styles.headerTitle}>Leads & Queries</Text>
             <Text style={styles.headerSubtitle}>Manage new leads and customer inquiries</Text>
@@ -258,6 +270,8 @@ export default function LeadQueryScreen() {
           renderItem={renderRow}
           contentContainerStyle={styles.listContent}
           estimatedItemSize={220}
+          onRefresh={refetch}
+          refreshing={isRefetching}
           recycleItems
         />
       )}
