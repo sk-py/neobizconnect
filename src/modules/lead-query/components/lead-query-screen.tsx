@@ -27,7 +27,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// createdDate comes back as a plain "YYYY-MM-DD" string (no time component).
 const formatDate = (isoDate: string) => {
   if (!isoDate) return "-";
   const d = new Date(isoDate);
@@ -93,14 +92,11 @@ export default function LeadQueryScreen() {
     setSaving(true);
     setSaveError(null);
     try {
-      // 1. GET — refetch first so we merge edits into the record's truly
-      // current state, not whatever was cached when the modal opened.
       const latest = await refetch();
       const freshLead = latest.data?.find((item) => item.id === editingLead.id);
       const originalForm = freshLead?.formJson?.[0] ?? editingLead.formJson?.[0];
       if (!originalForm) throw new Error("Original lead data missing — cannot update.");
 
-      // 2. POST — submit the update against that fresh original.
       await updateLeadQuery(
         editingLead.id,
         (freshLead ?? editingLead).companyid,
@@ -109,7 +105,6 @@ export default function LeadQueryScreen() {
       );
       closeEditModal();
 
-      // 3. GET — refetch again so the list reflects what the server now has.
       await refetch();
     } catch (err: any) {
       setSaveError(
@@ -216,11 +211,10 @@ export default function LeadQueryScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <View>
+          <View style={styles.titleTextBlock}>
             <Text style={styles.headerTitle}>Leads & Queries</Text>
             <Text style={styles.headerSubtitle}>Manage new leads and customer inquiries</Text>
           </View>
-          <View style={{ flex: 1 }} />
           <TouchableOpacity
             style={styles.createBtn}
             onPress={() => router.push("/lead-query-create")}
@@ -370,6 +364,7 @@ const styles = StyleSheet.create({
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+  titleTextBlock: { flex: 1 },
   headerTitle: {
     fontSize: 20,
     fontFamily: typography.bold,

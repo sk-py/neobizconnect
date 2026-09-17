@@ -21,7 +21,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
-import { FieldSelect } from "@/components/custom/field-select";
 import { createDealerQuery, fetchDealerQueries, updateDealerQuery } from "../services/dealer-query.api";
 import { DealerQuery } from "../types";
 
@@ -42,22 +41,17 @@ export const DealerQueryScreen = () => {
     const user = useAuthStore((state) => state.user);
     const groupCompanyName = user?.group_company_name || "Neo";
 
-    // Check role/authority to conditionally render inputs
     const isDealer = user?.authority === "Dealer";
-    // Admin/Super Admin can view and edit (Status + Remarks) but not create
-    // new dealer queries — matches the web Admin Portal exactly.
     const canCreate = user?.authority !== "Admin" && user?.authority !== "Super Admin";
 
     const [activeTab, setActiveTab] = useState<"list" | "create">("list");
     const [editingQuery, setEditingQuery] = useState<DealerQuery | null>(null);
 
-    // --- Data Fetching ---
     const { data: queries, isLoading, isRefetching, refetch } = useQuery({
         queryKey: ["dealer-queries"],
         queryFn: fetchDealerQueries,
     });
 
-    // --- Mutations ---
     const createMutation = useMutation({
         mutationFn: (values: FormValues) => createDealerQuery(groupCompanyName, values),
         onSuccess: () => {
@@ -71,10 +65,16 @@ export const DealerQueryScreen = () => {
         },
     });
 
-        const updateMutation = useMutation({
+    const updateMutation = useMutation({
         mutationFn: (values: FormValues) => {
             if (!editingQuery) throw new Error("No query selected to update.");
-            return updateDealerQuery(groupCompanyName, editingQuery, values);
+            return updateDealerQuery({
+                subject: values.subject,
+                query: values.query,
+                remarks: values.remarks,
+                status: values.status,
+                id: editingQuery.id,
+            });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["dealer-queries"] });
@@ -86,10 +86,9 @@ export const DealerQueryScreen = () => {
         },
     });
 
-    // --- Forms ---
     const createForm = useForm<FormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: { subject: "", query: "", remarks: "", status: "Open" }, // Defaulted to Open for new queries
+        defaultValues: { subject: "", query: "", remarks: "", status: "Open" },
     });
 
     const editForm = useForm<FormValues>({
@@ -110,13 +109,13 @@ export const DealerQueryScreen = () => {
 
     const onCreateSubmit = (values: FormValues) => createMutation.mutate(values);
 
-        const onEditSubmit = (values: FormValues) => {
+    const onEditSubmit = (values: FormValues) => {
         if (editingQuery) {
             updateMutation.mutate(values);
         }
     };
 
-       const formatDate = (isoString: string) => {
+    const formatDate = (isoString: string) => {
         if (!isoString) return "-";
         const d = new Date(isoString);
         if (isNaN(d.getTime())) return isoString;
@@ -158,7 +157,7 @@ export const DealerQueryScreen = () => {
                     <View style={[styles.statusBadge, { backgroundColor: statusTheme.bg }]}>
                         <Text style={[styles.statusText, { color: statusTheme.text }]}>{item.status}</Text>
                     </View>
-                            <Text style={styles.dateText}>{formatDate(item.createdDate)}</Text>
+                    <Text style={styles.dateText}>{formatDate(item.createdDate)}</Text>
                 </View>
             </View>
         );
@@ -166,13 +165,11 @@ export const DealerQueryScreen = () => {
 
     return (
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-            {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Dealer Queries</Text>
                 <Text style={styles.headerSubTitle}>Here is a list of dealer queries</Text>
             </View>
 
-            {/* Tabs — Admin/Super Admin are list+edit only, no Create tab */}
             {canCreate && (
                 <View style={styles.tabContainer}>
                     <TouchableOpacity
@@ -193,7 +190,6 @@ export const DealerQueryScreen = () => {
                 </View>
             )}
 
-            {/* Tab Content */}
             {activeTab === "list" ? (
                 isLoading ? (
                     <View style={styles.centerBox}>
@@ -317,7 +313,6 @@ export const DealerQueryScreen = () => {
                 </ScrollView>
             )}
 
-            {/* Edit Modal */}
             <Modal visible={Boolean(editingQuery)} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditingQuery(null)}>
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
@@ -328,10 +323,6 @@ export const DealerQueryScreen = () => {
                     </View>
 
                     <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
-                        {/* Admin/Super Admin edit the record's Status and
-                            Remarks only — Subject/Query are the dealer's
-                            original submission and stay read-only for them,
-                            matching the web Admin Portal's edit modal. */}
                         {canCreate && (
                             <>
                                 <Controller
@@ -362,28 +353,32 @@ export const DealerQueryScreen = () => {
                             <>
                                 <Controller
                                     control={editForm.control}
-                                    name="status"
+                                    name="remarks"
                                     render={({ field: { onChange, value } }) => (
                                         <View style={styles.inputGroup}>
-                                            <Text style={styles.inputLabel}>Status</Text>
-                                            <FieldSelect
-                                                label="Status"
-                                                value={value}
-                                                options={STATUS_OPTIONS}
-                                                onChange={onChange}
-                                                placeholder="Select Status"
-                                            />
+                                            <Text style={styles.inputLabel}>Remarks</Text>
+                                            <TextInput style={[styles.input, styles.textArea]} multiline textAlignVertical="top" value={value} onChangeText={onChange} />
                                         </View>
                                     )}
                                 />
 
                                 <Controller
                                     control={editForm.control}
-                                    name="remarks"
+                                    name="status"
                                     render={({ field: { onChange, value } }) => (
                                         <View style={styles.inputGroup}>
-                                            <Text style={styles.inputLabel}>Remarks</Text>
-                                            <TextInput style={[styles.input, styles.textArea]} multiline textAlignVertical="top" value={value} onChangeText={onChange} />
+                                            <Text style={styles.inputLabel}>Status</Text>
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusChipContainer}>
+                                                {STATUS_OPTIONS.map((status) => (
+                                                    <TouchableOpacity
+                                                        key={status}
+                                                        style={[styles.statusChip, value === status && styles.statusChipActive]}
+                                                        onPress={() => onChange(status)}
+                                                    >
+                                                        <Text style={[styles.statusChipText, value === status && styles.statusChipTextActive]}>{status}</Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </ScrollView>
                                         </View>
                                     )}
                                 />

@@ -4,7 +4,6 @@ import { CreateQueryPayload, DealerQuery, UpdateQueryPayload } from "../types";
 export const fetchDealerQueries = async (): Promise<DealerQuery[]> => {
   const res = await api.get(`/Dealer/User/leadlist`);
 
-
   return res.data.flatMap((item: any) =>
     (item.formJson || []).map((form: any) => ({
       id: item.id,
@@ -13,7 +12,6 @@ export const fetchDealerQueries = async (): Promise<DealerQuery[]> => {
     })),
   );
 };
-
 
 export const createDealerQuery = async (
   groupCompanyName: string,
@@ -27,16 +25,14 @@ export const createDealerQuery = async (
 };
 
 export const updateDealerQuery = async (
-  groupCompanyName: string,
-  originalRecord: DealerQuery,
-  updates: Partial<CreateQueryPayload>,
+  payload: UpdateQueryPayload,
 ) => {
-  const { id, createdDate, ...originalForm } = originalRecord as any;
-  const mergedForm = { ...originalForm, ...updates };
-
-  const res = await api.post(`/Update/${groupCompanyName}/Dealer/User/leaddetails`, {
-    formJson: [mergedForm],
-    id,
+  const res = await api.post(`/Update/Dealer-Admin/User/leaddetails`, {
+    subject: payload.subject,
+    query: payload.query,
+    remarks: payload.remarks,
+    status: payload.status,
+    id: payload.id,
   });
   return res.data;
 };
