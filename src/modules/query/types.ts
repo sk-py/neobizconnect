@@ -5,6 +5,7 @@ export type DealerQuery = {
   remarks: string;
   status: string;
   created_at: string;
+  createdDate: string; 
 };
 
 export type CreateQueryPayload = {

@@ -21,6 +21,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
+import { FieldSelect } from "@/components/custom/field-select";
 import { createDealerQuery, fetchDealerQueries, updateDealerQuery } from "../services/dealer-query.api";
 import { DealerQuery } from "../types";
 
@@ -70,8 +71,11 @@ export const DealerQueryScreen = () => {
         },
     });
 
-    const updateMutation = useMutation({
-        mutationFn: (payload: FormValues & { id: number }) => updateDealerQuery(groupCompanyName, payload),
+        const updateMutation = useMutation({
+        mutationFn: (values: FormValues) => {
+            if (!editingQuery) throw new Error("No query selected to update.");
+            return updateDealerQuery(groupCompanyName, editingQuery, values);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["dealer-queries"] });
             if (Platform.OS === "android") ToastAndroid.show("Query updated successfully!", ToastAndroid.SHORT);
@@ -106,15 +110,17 @@ export const DealerQueryScreen = () => {
 
     const onCreateSubmit = (values: FormValues) => createMutation.mutate(values);
 
-    const onEditSubmit = (values: FormValues) => {
+        const onEditSubmit = (values: FormValues) => {
         if (editingQuery) {
-            updateMutation.mutate({ ...values, id: editingQuery.id });
+            updateMutation.mutate(values);
         }
     };
 
-    const formatDate = (isoString: string) => {
+       const formatDate = (isoString: string) => {
         if (!isoString) return "-";
-        return new Date(isoString).toLocaleDateString("en-GB");
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
     };
 
     const getStatusColor = (status: string) => {
@@ -152,7 +158,7 @@ export const DealerQueryScreen = () => {
                     <View style={[styles.statusBadge, { backgroundColor: statusTheme.bg }]}>
                         <Text style={[styles.statusText, { color: statusTheme.text }]}>{item.status}</Text>
                     </View>
-                    <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
+                            <Text style={styles.dateText}>{formatDate(item.createdDate)}</Text>
                 </View>
             </View>
         );
@@ -322,30 +328,55 @@ export const DealerQueryScreen = () => {
                     </View>
 
                     <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
-                        <Controller
-                            control={editForm.control}
-                            name="subject"
-                            render={({ field: { onChange, value } }) => (
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Subject</Text>
-                                    <TextInput style={styles.input} value={value} onChangeText={onChange} />
-                                </View>
-                            )}
-                        />
+                        {/* Admin/Super Admin edit the record's Status and
+                            Remarks only — Subject/Query are the dealer's
+                            original submission and stay read-only for them,
+                            matching the web Admin Portal's edit modal. */}
+                        {canCreate && (
+                            <>
+                                <Controller
+                                    control={editForm.control}
+                                    name="subject"
+                                    render={({ field: { onChange, value } }) => (
+                                        <View style={styles.inputGroup}>
+                                            <Text style={styles.inputLabel}>Subject</Text>
+                                            <TextInput style={styles.input} value={value} onChangeText={onChange} />
+                                        </View>
+                                    )}
+                                />
 
-                        <Controller
-                            control={editForm.control}
-                            name="query"
-                            render={({ field: { onChange, value } }) => (
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Query</Text>
-                                    <TextInput style={[styles.input, styles.textArea]} multiline textAlignVertical="top" value={value} onChangeText={onChange} />
-                                </View>
-                            )}
-                        />
+                                <Controller
+                                    control={editForm.control}
+                                    name="query"
+                                    render={({ field: { onChange, value } }) => (
+                                        <View style={styles.inputGroup}>
+                                            <Text style={styles.inputLabel}>Query</Text>
+                                            <TextInput style={[styles.input, styles.textArea]} multiline textAlignVertical="top" value={value} onChangeText={onChange} />
+                                        </View>
+                                    )}
+                                />
+                            </>
+                        )}
 
                         {!isDealer && (
                             <>
+                                <Controller
+                                    control={editForm.control}
+                                    name="status"
+                                    render={({ field: { onChange, value } }) => (
+                                        <View style={styles.inputGroup}>
+                                            <Text style={styles.inputLabel}>Status</Text>
+                                            <FieldSelect
+                                                label="Status"
+                                                value={value}
+                                                options={STATUS_OPTIONS}
+                                                onChange={onChange}
+                                                placeholder="Select Status"
+                                            />
+                                        </View>
+                                    )}
+                                />
+
                                 <Controller
                                     control={editForm.control}
                                     name="remarks"
@@ -353,27 +384,6 @@ export const DealerQueryScreen = () => {
                                         <View style={styles.inputGroup}>
                                             <Text style={styles.inputLabel}>Remarks</Text>
                                             <TextInput style={[styles.input, styles.textArea]} multiline textAlignVertical="top" value={value} onChangeText={onChange} />
-                                        </View>
-                                    )}
-                                />
-
-                                <Controller
-                                    control={editForm.control}
-                                    name="status"
-                                    render={({ field: { onChange, value } }) => (
-                                        <View style={styles.inputGroup}>
-                                            <Text style={styles.inputLabel}>Status</Text>
-                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusChipContainer}>
-                                                {STATUS_OPTIONS.map((status) => (
-                                                    <TouchableOpacity
-                                                        key={status}
-                                                        style={[styles.statusChip, value === status && styles.statusChipActive]}
-                                                        onPress={() => onChange(status)}
-                                                    >
-                                                        <Text style={[styles.statusChipText, value === status && styles.statusChipTextActive]}>{status}</Text>
-                                                    </TouchableOpacity>
-                                                ))}
-                                            </ScrollView>
                                         </View>
                                     )}
                                 />
