@@ -10,6 +10,7 @@ export type AppModuleName =
   | "Tracker"
   | "Dashboard"
   | "Dealers"
+  | "Sales Managers"
   | "Item Master"
   | "Transaction History"
   | "Sales Order"
@@ -34,6 +35,7 @@ export const MODULES: Record<AppModuleName, readonly UserRole[]> = {
   ],
   "Sales Order": ["Dealer"],
   Dealers: ["Sales Manager", "Super Admin", "Admin"],
+  "Sales Managers": ["Admin", "Super Admin"],
   "Item Master": ["Sales Manager", "Admin", "Super Admin"],
   "Transaction History": ["Sales Manager", "Admin", "Super Admin"],
   "Order History": ["Sales Manager", "Dealer", "Admin", "Super Admin"],
@@ -41,10 +43,10 @@ export const MODULES: Record<AppModuleName, readonly UserRole[]> = {
   "Dealer Query": ["Dealer", "Admin", "Super Admin"],
   "Sub Dealers": ["Sales Manager", "Dealer", "Admin", "Super Admin"],
   Expense: ["Sales Manager"],
-  "Lead Query": ["Sales Manager"],
+  "Lead Query": ["Sales Manager", "Admin", "Super Admin"],
   "Sales Manager Modules": ["Sales Manager"],
   "Dealer Lead Query": ["Query Manager"],
-  "Online Lead": ["Query Manager"],
+  "Online Lead": ["Query Manager", "Admin", "Super Admin"],
 };
 
 export const hasModuleAccess = (

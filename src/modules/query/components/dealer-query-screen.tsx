@@ -43,15 +43,17 @@ export const DealerQueryScreen = () => {
 
     // Check role/authority to conditionally render inputs
     const isDealer = user?.authority === "Dealer";
+    // Admin/Super Admin can view and edit (Status + Remarks) but not create
+    // new dealer queries — matches the web Admin Portal exactly.
+    const canCreate = user?.authority !== "Admin" && user?.authority !== "Super Admin";
 
     const [activeTab, setActiveTab] = useState<"list" | "create">("list");
     const [editingQuery, setEditingQuery] = useState<DealerQuery | null>(null);
 
     // --- Data Fetching ---
     const { data: queries, isLoading, isRefetching, refetch } = useQuery({
-        queryKey: ["dealer-queries", groupCompanyName],
-        queryFn: () => fetchDealerQueries(groupCompanyName),
-        enabled: Boolean(groupCompanyName),
+        queryKey: ["dealer-queries"],
+        queryFn: fetchDealerQueries,
     });
 
     // --- Mutations ---
@@ -164,24 +166,26 @@ export const DealerQueryScreen = () => {
                 <Text style={styles.headerSubTitle}>Here is a list of dealer queries</Text>
             </View>
 
-            {/* Tabs */}
-            <View style={styles.tabContainer}>
-                <TouchableOpacity
-                    style={[styles.tabBtn, activeTab === "list" && styles.tabBtnActive]}
-                    onPress={() => setActiveTab("list")}
-                >
-                    <Feather name="list" size={16} color={activeTab === "list" ? colors.primary : colors.muted} />
-                    <Text style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}>List</Text>
-                </TouchableOpacity>
+            {/* Tabs — Admin/Super Admin are list+edit only, no Create tab */}
+            {canCreate && (
+                <View style={styles.tabContainer}>
+                    <TouchableOpacity
+                        style={[styles.tabBtn, activeTab === "list" && styles.tabBtnActive]}
+                        onPress={() => setActiveTab("list")}
+                    >
+                        <Feather name="list" size={16} color={activeTab === "list" ? colors.primary : colors.muted} />
+                        <Text style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}>List</Text>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={[styles.tabBtn, activeTab === "create" && styles.tabBtnActive]}
-                    onPress={() => setActiveTab("create")}
-                >
-                    <Feather name="plus-circle" size={16} color={activeTab === "create" ? colors.primary : colors.muted} />
-                    <Text style={[styles.tabText, activeTab === "create" && styles.tabTextActive]}>Create</Text>
-                </TouchableOpacity>
-            </View>
+                    <TouchableOpacity
+                        style={[styles.tabBtn, activeTab === "create" && styles.tabBtnActive]}
+                        onPress={() => setActiveTab("create")}
+                    >
+                        <Feather name="plus-circle" size={16} color={activeTab === "create" ? colors.primary : colors.muted} />
+                        <Text style={[styles.tabText, activeTab === "create" && styles.tabTextActive]}>Create</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
 
             {/* Tab Content */}
             {activeTab === "list" ? (
