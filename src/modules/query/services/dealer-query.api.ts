@@ -4,22 +4,15 @@ import { CreateQueryPayload, DealerQuery, UpdateQueryPayload } from "../types";
 export const fetchDealerQueries = async (): Promise<DealerQuery[]> => {
   const res = await api.get(`/Dealer/User/leadlist`);
 
-  // Replicating the web code's specific extraction logic
   return res.data.flatMap((item: any) =>
     (item.formJson || []).map((form: any) => ({
       id: item.id,
+      createdDate: item.createdDate,
       ...form,
     })),
   );
 };
 
-// The GET above unwraps { id, formJson: [{...}] } records, so create/update
-// must send that same formJson wrapper back. And unlike Lead/Query and
-// Online Lead (a different endpoint family that scopes by numeric
-// companyid in the body), this "Dealer" family scopes by groupCompanyName
-// embedded in the URL path itself — matching every sibling dealer-facing
-// endpoint in this codebase (sub-dealers-api.ts, profile.api.ts,
-// dashboard.api.ts, etc.). The prior 500 was this path segment missing.
 export const createDealerQuery = async (
   groupCompanyName: string,
   payload: CreateQueryPayload,
@@ -32,13 +25,14 @@ export const createDealerQuery = async (
 };
 
 export const updateDealerQuery = async (
-  groupCompanyName: string,
   payload: UpdateQueryPayload,
 ) => {
-  const { id, ...form } = payload;
-  const res = await api.post(`/Update/${groupCompanyName}/Dealer/User/leaddetails`, {
-    formJson: [form],
-    id,
+  const res = await api.post(`/Update/Dealer-Admin/User/leaddetails`, {
+    subject: payload.subject,
+    query: payload.query,
+    remarks: payload.remarks,
+    status: payload.status,
+    id: payload.id,
   });
   return res.data;
 };

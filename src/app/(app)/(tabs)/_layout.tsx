@@ -150,14 +150,37 @@ const TabLayout = () => {
                     />
                 </Tabs.Protected>
 
-                <Tabs.Protected guard={canAccess("Sub Dealers")}>
+                        <Tabs.Protected guard={canAccess("Sub Dealers")}>
                     <Tabs.Screen
                         name='sub-dealer'
                         options={{
-                            title: "Sub Dealers",
-                            href: user?.authority === "Sales Manager" ? null : "/",
+                                                       title: "Sub Dealers",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='users' size={size} color={color} />
+                            )
+                        }}
+                    />
+                </Tabs.Protected>
+
+                <Tabs.Protected guard={canAccess("Sub Dealer List")}>
+                    <Tabs.Screen
+                        name='sub-dealer-list'
+                        options={{
+                            title: "Sub Dealer List",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='users' size={size} color={color} />
+                            )
+                        }}
+                    />
+                </Tabs.Protected>
+
+                <Tabs.Protected guard={canAccess("Sub Dealer Sales Target")}>
+                    <Tabs.Screen
+                        name='sub-dealer-sales-target'
+                        options={{
+                            title: "Sub Dealer Sales Target",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='target' size={size} color={color} />
                             )
                         }}
                     />

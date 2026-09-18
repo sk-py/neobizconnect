@@ -1,6 +1,7 @@
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { fetchArCreditMemos, fetchArCreditMemoStats } from "@/modules/order-history/services/ar-credit-memo.api";
 import { ArCreditMemoDocument } from "@/modules/order-history/types";
+import { useAuthStore } from "@/store/auth.store";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +22,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function ArCreditMemoScreen() {
   const [selectedDetails, setSelectedDetails] = useState<ArCreditMemoDocument | null>(null);
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+      const canSeeClientCode = user?.authority === "Admin" || user?.authority === "Super Admin" || user?.authority === "Sales Manager";
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["ar-credit-memo-stats"],
@@ -45,6 +48,9 @@ export default function ArCreditMemoScreen() {
           <View>
             <Text numberOfLines={1} style={styles.docNo}>{item.customer_name}</Text>
             <Text style={styles.docDate}>Credit Memo #{item.arcreditmemono}</Text>
+            {canSeeClientCode && (
+              <Text style={styles.clientCode}>Client Code: {item.customer_code}</Text>
+            )}
           </View>
           <View>
 
@@ -82,19 +88,7 @@ export default function ArCreditMemoScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <View style={styles.listHeader}>
-        {/* <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.7}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={20} color={colors.textSecondary} />
-          <Text style={styles.backText}>Back to Order History</Text>
-        </TouchableOpacity> */}
-
-        {/* <Text style={styles.listTitle}>Credit Memos List</Text> */}
-        {/* <Text style={styles.listSubtitle}>Here is a List of Credit Memos</Text> */}
-      </View>
+      <View style={styles.listHeader} />
       <View style={styles.statsContainer}>
         <View style={[styles.statCard, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
           <Text style={styles.statLabel}>Total Credit Memos</Text>
@@ -111,7 +105,6 @@ export default function ArCreditMemoScreen() {
           <Feather name="file-text" size={20} color="#22C55E" style={styles.statIcon} />
         </View>
       </View>
-
 
       {listLoading ? (
         <View style={styles.centerBox}>
@@ -136,7 +129,6 @@ export default function ArCreditMemoScreen() {
         />
       )}
 
-      {/* Credit Memo Details Modal */}
       <Modal visible={Boolean(selectedDetails)} animationType="slide" presentationStyle="pageSheet">
         {selectedDetails && (
           <SafeAreaView style={styles.modalContainer}>
@@ -162,7 +154,9 @@ export default function ArCreditMemoScreen() {
                 <View style={[styles.modalSummaryCard, { backgroundColor: "#EFF6FF" }]}>
                   <Text style={styles.modalSummaryLabel}>Customer</Text>
                   <Text style={styles.modalSummaryMain}>{selectedDetails.customer_name}</Text>
-                  <Text style={styles.modalSummarySub}>Customer Code: {selectedDetails.customer_code}</Text>
+                  {canSeeClientCode && (
+                    <Text style={styles.modalSummarySub}>Customer Code: {selectedDetails.customer_code}</Text>
+                  )}
                 </View>
                 <View style={[styles.modalSummaryCard, { backgroundColor: "#F0FDF4" }]}>
                   <Text style={styles.modalSummaryLabel}>Posting Date</Text>
@@ -272,6 +266,7 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   docNo: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   docDate: { fontSize: 12, fontFamily: typography.regular, color: colors.muted, marginTop: 2 },
+  clientCode: { fontSize: 11, fontFamily: typography.semibold, color: "#1D4ED8", marginTop: 2 },
   statusBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl },
   statusClosed: { backgroundColor: "#E0E7FF" },
   statusBadgeText: { fontSize: 10, fontFamily: typography.bold, color: "#1D4ED8", textAlign:"center" },

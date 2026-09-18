@@ -24,6 +24,7 @@ export default function ArInvoiceScreen() {
    const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const groupCompanyName = user?.group_company_name || "Neo";
+    const canSeeClientCode = user?.authority === "Admin" || user?.authority === "Super Admin" || user?.authority === "Sales Manager";
 
   const [page, setPage] = useState(0);
   const [selectedDetails, setSelectedDetails] = useState<ArInvoiceDocument | null>(null);
@@ -41,7 +42,7 @@ export default function ArInvoiceScreen() {
     queryKey: ["ar-invoice-list", groupCompanyName, page],
     queryFn: () => fetchArInvoices(groupCompanyName, page),
     enabled: Boolean(groupCompanyName),
-    placeholderData: (previousData) => previousData, // Keeps old data visible while fetching next page
+    placeholderData: (previousData) => previousData,
   });
 
   const { mutate: handleDownloadPdf } = useMutation({
@@ -49,7 +50,7 @@ export default function ArInvoiceScreen() {
     onMutate: (docEntry) => setDownloadingId(docEntry),
     onSuccess: (uri) => {
       setDownloadingId(null);
-      setPdfUri(uri); // Open the viewer modal with the downloaded URI
+      setPdfUri(uri);
     },
     onError: (error) => {
       setDownloadingId(null);
@@ -73,6 +74,9 @@ export default function ArInvoiceScreen() {
           <View>
             <Text style={styles.docNo}>{item.customer_name}</Text>
             <Text style={styles.docDate}>#{item.invoice_number}</Text>
+            {canSeeClientCode && (
+              <Text style={styles.clientCode}>Client Code: {item.customer_code}</Text>
+            )}
           </View>
           <View>
 
@@ -128,7 +132,6 @@ export default function ArInvoiceScreen() {
 
   return (
     <View style={styles.safeArea}>
-      {/* Stats Header */}
       <View style={styles.statsContainer}>
         <View style={[styles.statCard, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
           <Text style={styles.statLabel}>Total Invoices</Text>
@@ -151,7 +154,6 @@ export default function ArInvoiceScreen() {
         <Text style={styles.listSubtitle}>Here is a List of Invoice Orders</Text>
       </View>
 
-      {/* Main List */}
       {listLoading ? (
        <SkeletonInvoiceList />
       ) : paginatedData?.content.length === 0 ? (
@@ -174,7 +176,6 @@ export default function ArInvoiceScreen() {
         />
       )}
 
-      {/* Pagination Footer */}
       {paginatedData && paginatedData.totalItems > 0 && (
          <View style={[styles.paginationFooter, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
           <Text style={styles.paginationText}>
@@ -199,7 +200,6 @@ export default function ArInvoiceScreen() {
         </View>
       )}
 
-      {/* Invoice Details Modal */}
       <Modal visible={Boolean(selectedDetails)} animationType="slide" presentationStyle="pageSheet">
         {selectedDetails && (
           <SafeAreaView style={styles.modalContainer}>
@@ -218,7 +218,9 @@ export default function ArInvoiceScreen() {
                 <View style={[styles.modalSummaryCard, { backgroundColor: "#EFF6FF" }]}>
                   <Text style={styles.modalSummaryLabel}>Customer</Text>
                   <Text style={styles.modalSummaryMain}>{selectedDetails.customer_name}</Text>
-                  <Text style={styles.modalSummarySub}>{selectedDetails.customer_code}</Text>
+                  {canSeeClientCode && (
+                    <Text style={styles.modalSummarySub}>{selectedDetails.customer_code}</Text>
+                  )}
                 </View>
                 <View style={[styles.modalSummaryCard, { backgroundColor: "#F0FDF4" }]}>
                   <Text style={styles.modalSummaryLabel}>Posting Date</Text>
@@ -331,7 +333,6 @@ export default function ArInvoiceScreen() {
         )}
       </Modal>
 
-      {/* LR Details Modal */}
       <Modal visible={Boolean(selectedLr)} transparent animationType="fade">
         {selectedLr && (
           <View style={styles.modalOverlay}>
@@ -370,7 +371,6 @@ export default function ArInvoiceScreen() {
         )}
       </Modal>
 
-      {/* Reusable PDF Modal */}
       <PdfViewerModal
         visible={Boolean(pdfUri)}
         uri={pdfUri}
@@ -460,6 +460,7 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   docNo: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   docDate: { fontSize: 12, fontFamily: typography.regular, color: colors.muted, marginTop: 2 },
+  clientCode: { fontSize: 11, fontFamily: typography.semibold, color: "#1D4ED8", marginTop: 2 },
   statusBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl,  },
   statusClosed: { backgroundColor: "#F3F4F6" },
   statusBadgeText: { fontSize: 10, fontFamily: typography.bold, color: "#1D4ED8", textAlign:"center" },

@@ -18,6 +18,8 @@ export type AppModuleName =
   | "Customer Ledger"
   | "Dealer Query"
   | "Sub Dealers"
+  | "Sub Dealer List"
+  | "Sub Dealer Sales Target"
   | "Expense"
   | "Lead Query"
   | "Dealer Lead Query"
@@ -41,7 +43,9 @@ export const MODULES: Record<AppModuleName, readonly UserRole[]> = {
   "Order History": ["Sales Manager", "Dealer", "Admin", "Super Admin"],
   "Customer Ledger": ["Sales Manager", "Dealer", "Admin", "Super Admin"],
   "Dealer Query": ["Dealer", "Admin", "Super Admin"],
-  "Sub Dealers": ["Sales Manager", "Dealer", "Admin", "Super Admin"],
+   "Sub Dealers": ["Sales Manager", "Dealer"],
+  "Sub Dealer List": ["Admin", "Super Admin"],
+  "Sub Dealer Sales Target": ["Admin", "Super Admin"],
   Expense: ["Sales Manager"],
   "Lead Query": ["Sales Manager", "Admin", "Super Admin"],
   "Sales Manager Modules": ["Sales Manager"],
