@@ -23,6 +23,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 import { createSubDealer, fetchSubDealers, updateSubDealer } from "../services/sub-dealers-api";
+import { fetchDealers } from "@/modules/dealers/services/dealers.api";
+import { FieldSelect } from "@/components/custom/field-select";
 import { SubDealer } from "../types";
 
 const formSchema = z.object({
@@ -53,17 +55,42 @@ export const SubDealerScreen = () => {
     const queryClient = useQueryClient();
     const user = useAuthStore((state) => state.user);
     const groupCompanyName = user?.group_company_name || "Neo";
-    const registeredByName = user?.name || "NA";
+     const registeredByName = user?.name || "NA";
+        const canRegister = user?.authority !== "Admin" && user?.authority !== "Super Admin";
+    const isAdminView = !canRegister;
+    const screenTitle = canRegister ? "Sub-Dealers" : "Sub Dealer List";
 
     const [activeTab, setActiveTab] = useState<"list" | "create">("list");
     const [editingDealer, setEditingDealer] = useState<SubDealer | null>(null);
+    const [selectedDealerLabel, setSelectedDealerLabel] = useState("");
+    const [selectedDealerCode, setSelectedDealerCode] = useState<string | null>(null);
 
-    // --- Data Fetching ---
+    const { data: parentDealers, isLoading: dealersOptionsLoading } = useQuery({
+        queryKey: ["dealers"],
+        queryFn: fetchDealers,
+        enabled: isAdminView,
+    });
+
+    const dealerOptions = (parentDealers ?? []).map(
+        (d) => `${d.cardName} (${d.cardCode})`,
+    );
+
+    const handleDealerSelect = (label: string) => {
+        setSelectedDealerLabel(label);
+        const match = label.match(/\(([^)]+)\)$/);
+        setSelectedDealerCode(match ? match[1] : null);
+    };
+
+        // --- Data Fetching ---
     const { data: dealers, isLoading, isRefetching, refetch } = useQuery({
         queryKey: ["sub-dealers", groupCompanyName],
         queryFn: () => fetchSubDealers(groupCompanyName),
         enabled: Boolean(groupCompanyName),
     });
+
+    const listData = isAdminView
+        ? (dealers ?? []).filter((d) => d.card_code === selectedDealerCode)
+        : dealers;
 
     // --- Mutations ---
     const createMutation = useMutation({
@@ -289,41 +316,64 @@ export const SubDealerScreen = () => {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Feather name="arrow-left" size={24} color={colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Sub-Dealers</Text>
+                     <Text style={styles.headerTitle}>{screenTitle}</Text>
             </View>
 
-            <View style={styles.tabContainer}>
-                <TouchableOpacity style={[styles.tabBtn, activeTab === "list" && styles.tabBtnActive]} onPress={() => setActiveTab("list")}>
-                    <Feather name="list" size={16} color={activeTab === "list" ? colors.primary : colors.muted} />
-                    <Text style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}>List</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.tabBtn, activeTab === "create" && styles.tabBtnActive]} onPress={() => setActiveTab("create")}>
-                    <Feather name="plus-circle" size={16} color={activeTab === "create" ? colors.primary : colors.muted} />
-                    <Text style={[styles.tabText, activeTab === "create" && styles.tabTextActive]}>Register</Text>
-                </TouchableOpacity>
-            </View>
+                        {canRegister && (
+                <View style={styles.tabContainer}>
+                    <TouchableOpacity style={[styles.tabBtn, activeTab === "list" && styles.tabBtnActive]} onPress={() => setActiveTab("list")}>
+                        <Feather name="list" size={16} color={activeTab === "list" ? colors.primary : colors.muted} />
+                        <Text style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}>List</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.tabBtn, activeTab === "create" && styles.tabBtnActive]} onPress={() => setActiveTab("create")}>
+                        <Feather name="plus-circle" size={16} color={activeTab === "create" ? colors.primary : colors.muted} />
+                        <Text style={[styles.tabText, activeTab === "create" && styles.tabTextActive]}>Register</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
 
-            {activeTab === "list" ? (
-                isLoading ? (
-                    <View style={styles.centerBox}><ActivityIndicator size="large" color={colors.primary} /></View>
-                ) : dealers?.length === 0 ? (
-                    <View style={styles.centerBox}>
-                        <Feather name="users" size={48} color={colors.muted} />
-                        <Text style={styles.emptyTitle}>No Sub-Dealers found</Text>
-                    </View>
-                ) : (
-                    <LegendList
-                        data={dealers}
-                        keyExtractor={(item) => item.id.toString()}
-                        estimatedItemSize={160}
-                        renderItem={renderCard}
-                        contentContainerStyle={styles.listContent}
-                        showsVerticalScrollIndicator={false}
-                        onRefresh={refetch}
-                        refreshing={isRefetching}
-                        recycleItems={true}
-                    />
-                )
+                        {activeTab === "list" ? (
+                <>
+                    {isAdminView && (
+                        <View style={styles.dealerPickerContainer}>
+                            <FieldSelect
+                                label="Select Dealer"
+                                value={selectedDealerLabel}
+                                options={dealerOptions}
+                                onChange={handleDealerSelect}
+                                searchable
+                                placeholder="Select Dealer..."
+                                loading={dealersOptionsLoading}
+                            />
+                        </View>
+                    )}
+
+                    {isAdminView && !selectedDealerCode ? (
+                        <View style={styles.centerBox}>
+                            <Feather name="users" size={48} color={colors.muted} />
+                            <Text style={styles.emptyTitle}>Select a dealer to view their sub-dealers</Text>
+                        </View>
+                    ) : isLoading ? (
+                        <View style={styles.centerBox}><ActivityIndicator size="large" color={colors.primary} /></View>
+                    ) : listData?.length === 0 ? (
+                        <View style={styles.centerBox}>
+                            <Feather name="users" size={48} color={colors.muted} />
+                            <Text style={styles.emptyTitle}>No Sub-Dealers found</Text>
+                        </View>
+                    ) : (
+                        <LegendList
+                            data={listData}
+                            keyExtractor={(item) => item.id.toString()}
+                            estimatedItemSize={160}
+                            renderItem={renderCard}
+                            contentContainerStyle={styles.listContent}
+                            showsVerticalScrollIndicator={false}
+                            onRefresh={refetch}
+                            refreshing={isRefetching}
+                            recycleItems={true}
+                        />
+                    )}
+                </>
             ) : (
                 <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
                     {renderFormContent(createForm.control, false)}
@@ -377,7 +427,8 @@ const styles = StyleSheet.create({
     backButton: { padding: 4, marginRight: spacing.sm },
     headerTitle: { fontSize: 20, fontFamily: typography.bold, color: colors.text },
 
-    tabContainer: { flexDirection: "row", backgroundColor: colors.surface, padding: spacing.sm, marginHorizontal: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
+       tabContainer: { flexDirection: "row", backgroundColor: colors.surface, padding: spacing.sm, marginHorizontal: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
+    dealerPickerContainer: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
     tabBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 10, borderRadius: radius.sm },
     tabBtnActive: { backgroundColor: colors.white, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
     tabText: { fontSize: 14, fontFamily: typography.medium, color: colors.muted },

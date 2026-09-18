@@ -50,9 +50,11 @@ export const SubDealerTargetsScreen = () => {
     const router = useRouter();
     const queryClient = useQueryClient();
     const user = useAuthStore((state) => state.user);
+        const canAssignTarget = user?.authority !== "Admin" && user?.authority !== "Super Admin";
+    const screenTitle = canAssignTarget ? "Sales Targets" : "Sub Dealer Sales List";
     const groupCompanyName = user?.group_company_name || "Neo";
 
-    // Defaults (Based on Sept 2026 Context)[cite: 1]
+    
     const currentYear = new Date().getFullYear().toString();
     const currentMonth = MONTH_NAMES[new Date().getMonth()];
 
@@ -184,19 +186,21 @@ export const SubDealerTargetsScreen = () => {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Feather name="arrow-left" size={24} color={colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Sales Targets</Text>
+                    <Text style={styles.headerTitle}>{screenTitle}</Text>
             </View>
 
-            <View style={styles.tabContainer}>
-                <TouchableOpacity style={[styles.tabBtn, activeTab === "list" && styles.tabBtnActive]} onPress={() => setActiveTab("list")}>
-                    <Feather name="list" size={16} color={activeTab === "list" ? colors.primary : colors.muted} />
-                    <Text style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}>Overview</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.tabBtn, activeTab === "assign" && styles.tabBtnActive]} onPress={() => { setActiveTab("assign"); setMonthValues({}); setSelectedDealerId(null); }}>
-                    <Feather name="target" size={16} color={activeTab === "assign" ? colors.primary : colors.muted} />
-                    <Text style={[styles.tabText, activeTab === "assign" && styles.tabTextActive]}>Assign Target</Text>
-                </TouchableOpacity>
-            </View>
+                        {canAssignTarget && (
+                <View style={styles.tabContainer}>
+                    <TouchableOpacity style={[styles.tabBtn, activeTab === "list" && styles.tabBtnActive]} onPress={() => setActiveTab("list")}>
+                        <Feather name="list" size={16} color={activeTab === "list" ? colors.primary : colors.muted} />
+                        <Text style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}>Overview</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.tabBtn, activeTab === "assign" && styles.tabBtnActive]} onPress={() => { setActiveTab("assign"); setMonthValues({}); setSelectedDealerId(null); }}>
+                        <Feather name="target" size={16} color={activeTab === "assign" ? colors.primary : colors.muted} />
+                        <Text style={[styles.tabText, activeTab === "assign" && styles.tabTextActive]}>Assign Target</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
 
             {activeTab === "list" ? (
                 <>

@@ -28,8 +28,6 @@ const formatDueDate = (isoString: string | null) => {
 export default function ItemMasterScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  // Admin/Super Admin only — Item Code, Production Order, Production Due
-  // Date, and Attachment are not visible to Sales Manager.
   const canSeeExtraDetails =
     user?.authority === "Admin" || user?.authority === "Super Admin";
 
@@ -77,8 +75,32 @@ export default function ItemMasterScreen() {
   const rangeStart = totalItems === 0 ? 0 : safePage * PAGE_SIZE + 1;
   const rangeEnd = Math.min(totalItems, (safePage + 1) * PAGE_SIZE);
 
-    const renderRow = ({ item }: { item: ItemMasterEntry }) => {
+  const renderRow = ({ item }: { item: ItemMasterEntry }) => {
     const outOfStock = item.inStockQty <= 0;
+
+    if (!canSeeExtraDetails) {
+      const salesManagerOutOfStock = item.inStockQty < 4;
+      return (
+        <View style={styles.row}>
+          <View style={styles.rowMain}>
+            <Text style={styles.itemName} numberOfLines={1}>
+              {item.itemName}
+            </Text>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaText}>{item.brand}</Text>
+              <Text style={styles.metaDot}>•</Text>
+              <Text style={styles.metaText}>{item.wheelSize}&quot;</Text>
+            </View>
+          </View>
+          <View style={[styles.stockBadge, salesManagerOutOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
+            <Text style={[styles.stockBadgeText, salesManagerOutOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}>
+              {salesManagerOutOfStock ? "Out of Stock" : item.inStockQty}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
@@ -93,8 +115,8 @@ export default function ItemMasterScreen() {
             </View>
           </View>
 
-          <View style={[styles.stockBadge, outOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
-            <Text style={[styles.stockBadgeText, outOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}>
+          <View style={[styles.stockBadgeLg, outOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
+            <Text style={[styles.stockBadgeTextLg, outOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}>
               {item.inStockQty}
             </Text>
             <Text style={[styles.stockBadgeLabel, outOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}>
@@ -103,44 +125,42 @@ export default function ItemMasterScreen() {
           </View>
         </View>
 
-        {canSeeExtraDetails ? (
-          <View style={styles.detailPanel}>
-            <View style={styles.detailPanelRow}>
-              <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Item Code</Text>
-                <Text style={styles.detailValue} numberOfLines={1}>{item.itemCode}</Text>
-              </View>
-              <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Production Order</Text>
-                <Text style={styles.detailValue}>{item.totalProdOrderQty}</Text>
-              </View>
+        <View style={styles.detailPanel}>
+          <View style={styles.detailPanelRow}>
+            <View style={styles.detailBlock}>
+              <Text style={styles.detailLabel}>Item Code</Text>
+              <Text style={styles.detailValue} numberOfLines={1}>{item.itemCode}</Text>
             </View>
-
-            <View style={styles.detailPanelDivider} />
-
-            <View style={styles.detailPanelRow}>
-              <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Production Due Date</Text>
-                <Text style={styles.detailValue}>{formatDueDate(item.firstPoDueDate)}</Text>
-              </View>
-              <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Attachment</Text>
-                {item.attachment ? (
-                  <TouchableOpacity
-                    style={styles.attachmentLink}
-                    onPress={() => void Linking.openURL(item.attachment)}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                  >
-                    <Feather name="paperclip" size={12} color={colors.primary} />
-                    <Text style={styles.attachmentLinkText}>View file</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={styles.detailValueMuted}>None</Text>
-                )}
-              </View>
+            <View style={styles.detailBlock}>
+              <Text style={styles.detailLabel}>Production Order</Text>
+              <Text style={styles.detailValue}>{item.totalProdOrderQty}</Text>
             </View>
           </View>
-        ) : null}
+
+          <View style={styles.detailPanelDivider} />
+
+          <View style={styles.detailPanelRow}>
+            <View style={styles.detailBlock}>
+              <Text style={styles.detailLabel}>Production Due Date</Text>
+              <Text style={styles.detailValue}>{formatDueDate(item.firstPoDueDate)}</Text>
+            </View>
+            <View style={styles.detailBlock}>
+              <Text style={styles.detailLabel}>Attachment</Text>
+              {item.attachment ? (
+                <TouchableOpacity
+                  style={styles.attachmentLink}
+                  onPress={() => void Linking.openURL(item.attachment)}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Feather name="paperclip" size={12} color={colors.primary} />
+                  <Text style={styles.attachmentLinkText}>View file</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.detailValueMuted}>None</Text>
+              )}
+            </View>
+          </View>
+        </View>
       </View>
     );
   };
@@ -203,7 +223,7 @@ export default function ItemMasterScreen() {
             keyExtractor={(item: ItemMasterEntry) => item.itemCode}
             renderItem={renderRow}
             contentContainerStyle={styles.listContent}
-            estimatedItemSize={92}
+            estimatedItemSize={canSeeExtraDetails ? 170 : 56}
             recycleItems
           />
 
@@ -241,11 +261,11 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.white },
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
-   headerTitle: { 
-        fontSize: 20, 
-        fontFamily: typography.bold, 
-        color: colors.text 
-    },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: typography.bold,
+    color: colors.text
+  },
   headerSubtitle: {
     fontSize: txtSize.small,
     fontFamily: typography.medium,
@@ -273,7 +293,6 @@ const styles = StyleSheet.create({
   metaText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted },
   metaDot: { fontSize: txtSize.xs, color: colors.muted },
 
-    // --- Admin card (bigger, boxed, labeled) ---
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginHorizontal: spacing.md, marginTop: spacing.sm, padding: spacing.md },
   cardTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.sm },
   cardTopLeft: { flex: 1 },
@@ -289,10 +308,13 @@ const styles = StyleSheet.create({
   attachmentLink: { flexDirection: "row", alignItems: "center", gap: 4 },
   attachmentLinkText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
 
-  stockBadge: { minWidth: 56, paddingHorizontal: 10, paddingVertical: 8, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  stockBadge: { minWidth: 34, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  stockBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold },
+
+  stockBadgeLg: { minWidth: 56, paddingHorizontal: 10, paddingVertical: 8, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  stockBadgeTextLg: { fontSize: txtSize.body, fontFamily: typography.bold },
   stockBadgeAvailable: { backgroundColor: "#F0FDF4" },
   stockBadgeEmpty: { backgroundColor: "#FEF2F2" },
-  stockBadgeText: { fontSize: txtSize.body, fontFamily: typography.bold },
   stockBadgeLabel: { fontSize: 10, fontFamily: typography.medium, marginTop: 1 },
   stockTextAvailable: { color: colors.success },
   stockTextEmpty: { color: colors.error },

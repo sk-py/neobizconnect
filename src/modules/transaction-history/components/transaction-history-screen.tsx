@@ -1,4 +1,5 @@
 import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
 import { fetchTransactionHistory } from "@/modules/transaction-history/services/transaction-history.api";
 import { Transaction } from "@/modules/transaction-history/types";
 import { SkeletonList } from "@/components/custom/skeleton";
@@ -7,7 +8,7 @@ import { LegendList } from "@legendapp/list/react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { BackHandler, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { BackHandler, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const getStatusStyle = (status: string) => {
@@ -45,20 +46,30 @@ const formatCurrency = (val: number) =>
 
 export default function TransactionHistoryScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
+
+  const goBack = () => {
+    if (isAdmin) {
+      router.push("/dashboard");
+    } else {
+      router.push("/sales-manager-modules");
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        router.push("/sales-manager-modules");
+        goBack();
         return true;
       };
       const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
       return () => subscription.remove();
-    }, [router]),
+    }, [router, isAdmin]),
   );
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["transaction-history"],
@@ -78,24 +89,11 @@ export default function TransactionHistoryScreen() {
     );
   }, [data, searchQuery]);
 
-  const toggleExpand = (id: number) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
   const renderRow = ({ item }: { item: Transaction }) => {
     const statusStyle = getStatusStyle(item.u_DealerStatus);
     const amount = calcAmount(item.documentLines);
     const qty = calcQty(item.documentLines);
     const stock = getWarehouse(item.documentLines);
-    const isExpanded = expandedIds.has(item.id);
 
     return (
       <View style={styles.card}>
@@ -137,30 +135,14 @@ export default function TransactionHistoryScreen() {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.actionRow}
-          onPress={() => {
-            console.log("DOCUMENT LINES:", JSON.stringify(item.documentLines));
-            toggleExpand(item.id);
-          }}
-        >
-          <Text style={styles.actionText}>{isExpanded ? "Hide items" : "View items"}</Text>
-          <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        {isExpanded && (
-          <View style={styles.expandedBox}>
-            {item.documentLines?.map((line, idx) => (
-              <View key={idx} style={styles.lineItem}>
-                <Text style={styles.lineItemCode} numberOfLines={1}>
-                  {line.ItemCode}
-                </Text>
-                <Text style={styles.lineItemQty}>
-                  {line.Quantity} x Rs.{line.UnitPrice}
-                </Text>
-              </View>
-            ))}
-          </View>
+        {isAdmin && (
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={() => setSelectedTxn(item)}
+          >
+            <Feather name="eye" size={14} color={colors.textSecondary} />
+            <Text style={styles.actionText}>View</Text>
+          </TouchableOpacity>
         )}
       </View>
     );
@@ -171,7 +153,7 @@ export default function TransactionHistoryScreen() {
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <TouchableOpacity
-            onPress={() => router.push("/sales-manager-modules")}
+            onPress={goBack}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Feather name="arrow-left" size={20} color={colors.text} />
@@ -205,15 +187,88 @@ export default function TransactionHistoryScreen() {
           <Text style={styles.emptyText}>No transactions found</Text>
         </View>
       ) : (
-                        <LegendList
+        <LegendList
           data={filteredData}
           keyExtractor={(item: Transaction) => String(item.id)}
           renderItem={renderRow}
           contentContainerStyle={styles.listContent}
           estimatedItemSize={220}
-          extraData={expandedIds}
         />
       )}
+
+      <Modal
+        visible={selectedTxn !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedTxn(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Order Details</Text>
+              <TouchableOpacity
+                onPress={() => setSelectedTxn(null)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedTxn && (
+              <>
+                <View style={styles.modalSummaryBox}>
+                  <View style={styles.modalSummaryRow}>
+                    <Text style={styles.modalSummaryLabel}>SO No</Text>
+                    <Text style={styles.modalSummaryValue}>{selectedTxn.series}</Text>
+                  </View>
+                  <View style={styles.modalSummaryRow}>
+                    <Text style={styles.modalSummaryLabel}>Date</Text>
+                    <Text style={styles.modalSummaryValue}>{formatDate(selectedTxn.docDate)}</Text>
+                  </View>
+                  <View style={styles.modalSummaryRow}>
+                    <Text style={styles.modalSummaryLabel}>Amount</Text>
+                    <Text style={styles.modalSummaryValue}>
+                      ₹{formatCurrency(calcAmount(selectedTxn.documentLines))}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.modalStatusRow}>
+                  <Text style={styles.modalStatusLabel}>Status</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusStyle(selectedTxn.u_DealerStatus).bg }]}>
+                    <Text style={[styles.statusBadgeText, { color: getStatusStyle(selectedTxn.u_DealerStatus).text }]}>
+                      {selectedTxn.u_DealerStatus || "Pending"}
+                    </Text>
+                  </View>
+                </View>
+
+                <ScrollView style={styles.modalLineList}>
+                  {selectedTxn.documentLines?.map((line, idx) => (
+                    <View key={idx} style={styles.modalLineItem}>
+                      <View style={styles.modalLineItemLeft}>
+                        <Text style={styles.modalLineItemCode} numberOfLines={1}>
+                          {line.ItemCode}
+                        </Text>
+                        <Text style={styles.modalLineItemSub} numberOfLines={1}>
+                          {line.ItemCode}
+                        </Text>
+                      </View>
+                      <View style={styles.modalLineItemRight}>
+                        <Text style={styles.modalLineItemQtyLabel}>Qty</Text>
+                        <Text style={styles.modalLineItemQty}>{line.Quantity}</Text>
+                        <Text style={styles.modalLineItemTotalLabel}>Total</Text>
+                        <Text style={styles.modalLineItemTotal}>
+                          ₹{formatCurrency((line.Quantity || 0) * (line.UnitPrice || 0))}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -254,10 +309,29 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
   actionText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
 
-  expandedBox: { marginTop: 8, backgroundColor: colors.surface, borderRadius: radius.sm, padding: spacing.sm, gap: 6 },
-  lineItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  lineItemCode: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text, flex: 1 },
-  lineItemQty: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: spacing.md },
+  modalCard: { backgroundColor: colors.white, borderRadius: radius.lg, maxHeight: "80%", padding: spacing.lg },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md },
+  modalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
+
+  modalSummaryBox: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, gap: 10 },
+  modalSummaryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  modalSummaryLabel: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.textSecondary },
+  modalSummaryValue: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
+
+  modalStatusRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: spacing.md, marginBottom: spacing.sm },
+  modalStatusLabel: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.textSecondary },
+
+  modalLineList: { maxHeight: 320, marginTop: spacing.sm },
+  modalLineItem: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalLineItemLeft: { flex: 1, marginRight: spacing.sm },
+  modalLineItemCode: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
+  modalLineItemSub: { fontSize: txtSize.small, fontFamily: typography.regular, color: colors.textSecondary, marginTop: 2 },
+  modalLineItemRight: { alignItems: "flex-end" },
+  modalLineItemQtyLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted },
+  modalLineItemQty: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginBottom: 4 },
+  modalLineItemTotalLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted },
+  modalLineItemTotal: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
   emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
