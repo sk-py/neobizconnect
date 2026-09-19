@@ -10,14 +10,17 @@ import {
   LeadFormData,
   LeadQuery,
 } from "@/modules/lead-query/types";
+import { useAuth } from "@/hooks/use-auth";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -34,15 +37,17 @@ const formatDate = (isoDate: string) => {
   if (isNaN(d.getTime())) return isoDate;
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 };
-
 export default function LeadQueryScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const canCreate = user?.authority !== "Sales Manager";
 
   const [searchQuery, setSearchQuery] = useState("");
   const [editingLead, setEditingLead] = useState<LeadQuery | null>(null);
   const [editForm, setEditForm] = useState<LeadFormData | null>(null);
-  const [saving, setSaving] = useState(false);
+    const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [newRemark, setNewRemark] = useState("");
 
   const { data, isLoading, isError, error, isRefetching, refetch } = useQuery({
     queryKey: ["sales-manager-lead-queries"],
@@ -71,17 +76,19 @@ export default function LeadQueryScreen() {
     });
   }, [data, searchQuery]);
 
-  const openEditModal = (lead: LeadQuery) => {
+    const openEditModal = (lead: LeadQuery) => {
     const form = lead.formJson?.[0];
     setEditingLead(lead);
     setEditForm(form ? { ...form } : null);
     setSaveError(null);
+    setNewRemark("");
   };
 
   const closeEditModal = () => {
     setEditingLead(null);
     setEditForm(null);
     setSaveError(null);
+    setNewRemark("");
   };
 
   const updateField = (key: keyof LeadFormData, value: string) => {
@@ -93,16 +100,23 @@ export default function LeadQueryScreen() {
     setSaving(true);
     setSaveError(null);
     try {
-      const latest = await refetch();
+            const latest = await refetch();
       const freshLead = latest.data?.find((item) => item.id === editingLead.id);
       const originalForm = freshLead?.formJson?.[0] ?? editingLead.formJson?.[0];
       if (!originalForm) throw new Error("Original lead data missing — cannot update.");
+
+      const trimmedRemark = newRemark.trim();
+      const combinedRemarks = trimmedRemark
+        ? originalForm.sales_manager_remarks
+          ? `${originalForm.sales_manager_remarks}\n${trimmedRemark}`
+          : trimmedRemark
+        : originalForm.sales_manager_remarks;
 
       await updateLeadQuery(
         editingLead.id,
         (freshLead ?? editingLead).companyid,
         originalForm,
-        editForm,
+        { ...editForm, sales_manager_remarks: combinedRemarks },
       );
       closeEditModal();
 
@@ -118,8 +132,15 @@ export default function LeadQueryScreen() {
   };
 
   const renderRow = ({ item }: { item: LeadQuery }) => {
-    const form = item.formJson?.[0];
+        const form = item.formJson?.[0];
     const recentRemarks = [...(item.remarks_list || [])].slice(-4).reverse();
+    const salesManagerRemarkLines = (form?.sales_manager_remarks || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const latestStatus = item.stage_status_list?.length
+      ? item.stage_status_list[item.stage_status_list.length - 1].status
+      : form?.status;
 
     return (
       <View style={styles.card}>
@@ -189,10 +210,10 @@ export default function LeadQueryScreen() {
         </View>
 
         <View style={styles.infoRow}>
-              <View style={styles.infoBlock}>
+                      <View style={styles.infoBlock}>
             <Text style={styles.infoLabel}>Status</Text>
             <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>{form?.status || "-"}</Text>
+              <Text style={styles.statusBadgeText}>{latestStatus || "-"}</Text>
             </View>
           </View>
           <View style={styles.infoBlock}>
@@ -201,19 +222,27 @@ export default function LeadQueryScreen() {
           </View>
         </View>
 
-                        {(form?.sales_manager_remarks || recentRemarks.length > 0) && (
+                        {(salesManagerRemarkLines.length > 0 || recentRemarks.length > 0) && (
           <View style={styles.remarksSection}>
-            {form?.sales_manager_remarks ? (
-              <View style={styles.remarkRow}>
-                <Feather name="edit-3" size={12} color={colors.primary} />
-                <Text style={styles.remarkText} numberOfLines={2}>
-                  {form.sales_manager_remarks}
-                </Text>
-              </View>
-            ) : null}
-            {recentRemarks.map((r, idx) => (
-              <View key={idx} style={styles.remarkRow}>
-                <Feather name="message-circle" size={12} color="#1D4ED8" />
+                        {salesManagerRemarkLines.map((line, idx) => {
+              const isQueryManagerRemark = line.startsWith("[QM]");
+              const displayText = isQueryManagerRemark ? line.replace(/^\[QM\]\s*/, "") : line;
+              return (
+                <View key={`sm-${idx}`} style={styles.remarkRow}>
+                  <Feather
+                    name={isQueryManagerRemark ? "message-square" : "edit-3"}
+                    size={12}
+                    color={isQueryManagerRemark ? colors.success : colors.primary}
+                  />
+                  <Text style={styles.remarkText} numberOfLines={2}>
+                    {displayText}
+                  </Text>
+                </View>
+              );
+            })}
+                {recentRemarks.map((r, idx) => (
+              <View key={`rl-${idx}`} style={styles.remarkRow}>
+                <Feather name="message-circle" size={12} color={colors.success} />
                 <Text style={styles.remarkText} numberOfLines={2}>
                   {r.remark}
                 </Text>
@@ -233,13 +262,15 @@ export default function LeadQueryScreen() {
             <Text style={styles.headerTitle}>Leads & Queries</Text>
             <Text style={styles.headerSubtitle}>Manage new leads and customer inquiries</Text>
           </View>
-          <TouchableOpacity
-            style={styles.createBtn}
-            onPress={() => router.push("/lead-query-create")}
-          >
-            <Feather name="plus" size={14} color={colors.white} />
-            <Text style={styles.createBtnText}>Create</Text>
-          </TouchableOpacity>
+                    {canCreate && (
+            <TouchableOpacity
+              style={styles.createBtn}
+              onPress={() => router.push("/lead-query-create")}
+            >
+              <Feather name="plus" size={14} color={colors.white} />
+              <Text style={styles.createBtnText}>Create</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.searchContainer}>
@@ -288,7 +319,12 @@ export default function LeadQueryScreen() {
         />
       )}
 
-      <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
+            <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
+               <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior="padding"
+          keyboardVerticalOffset={0}
+        >
         <Pressable style={styles.modalOverlay} onPress={closeEditModal}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
@@ -302,7 +338,7 @@ export default function LeadQueryScreen() {
             </View>
 
             {editForm && (
-              <ScrollView style={styles.modalBody}>
+                            <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
                 <View style={styles.modalSection}>
                   <View style={styles.modalSectionHeader}>
                     <View style={styles.modalStepBadge}>
@@ -336,13 +372,13 @@ export default function LeadQueryScreen() {
                     </View>
                   </View>
 
-                  <Text style={styles.fieldLabel}>Sales Manager Remarks</Text>
+                                    <Text style={styles.fieldLabel}>Add a Remark</Text>
                   <TextInput
                     style={styles.remarksInput}
-                    placeholder="Enter remarks regarding the lead..."
+                    placeholder="Enter a new remark..."
                     placeholderTextColor={colors.muted}
-                    value={editForm.sales_manager_remarks}
-                    onChangeText={(v) => updateField("sales_manager_remarks", v)}
+                    value={newRemark}
+                    onChangeText={setNewRemark}
                     multiline
                     numberOfLines={4}
                     textAlignVertical="top"
@@ -370,8 +406,9 @@ export default function LeadQueryScreen() {
                 <Text style={styles.updateBtnText}>{saving ? "Updating..." : "Update Query"}</Text>
               </TouchableOpacity>
             </View>
-          </Pressable>
+                    </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

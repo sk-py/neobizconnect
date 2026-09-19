@@ -26,8 +26,10 @@ import { LegendList } from "@legendapp/list/react-native";
 import { SkeletonList } from "@/components/custom/skeleton";
 import { useCallback, useMemo, useState } from "react";
 import {
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -56,6 +58,7 @@ export default function DealerLeadQueryScreen() {
   const [editCountryCode, setEditCountryCode] = useState("+91");
   const [editLocalPhone, setEditLocalPhone] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [newRemark, setNewRemark] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -113,15 +116,22 @@ export default function DealerLeadQueryScreen() {
     setEditingLead(lead);
     setEditForm(form ? { ...form } : null);
     const { dial, local } = splitPhoneNumber(form?.phone_1 || "");
-    setEditCountryCode(dial);
+        setEditCountryCode(dial);
     setEditLocalPhone(local);
     setSaveError(null);
+    const existingQmLines = (form?.sales_manager_remarks || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("[QM]"))
+      .map((line) => line.replace(/^\[QM\]\s*/, ""));
+    setNewRemark(existingQmLines.join("\n"));
   };
 
   const closeEditModal = () => {
     setEditingLead(null);
     setEditForm(null);
     setSaveError(null);
+    setNewRemark("");
   };
 
   const updateField = (key: keyof LeadFormData, value: string) => {
@@ -147,9 +157,22 @@ export default function DealerLeadQueryScreen() {
       const originalForm = editingLead.formJson?.[0];
       if (!originalForm) throw new Error("Original lead data missing — cannot update.");
 
+                const originalLines = (originalForm.sales_manager_remarks || "")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const nonQmLines = originalLines.filter((line) => !line.startsWith("[QM]"));
+      const newQmLines = newRemark
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => `[QM] ${line}`);
+      const combinedRemarks = [...nonQmLines, ...newQmLines].join("\n");
+
       const finalForm: LeadFormData = {
         ...editForm,
         phone_1: `${editCountryCode}${editLocalPhone.trim()}`,
+        sales_manager_remarks: combinedRemarks,
       };
 
       await updateLeadQuery(editingLead.id, editingLead.companyid, originalForm, finalForm);
@@ -171,8 +194,12 @@ export default function DealerLeadQueryScreen() {
   const saving = updateMutation.isPending;
 
     const renderRow = ({ item }: { item: LeadQuery }) => {
-    const form = item.formJson?.[0];
+        const form = item.formJson?.[0];
     const recentRemarks = [...(item.remarks_list || [])].slice(-4).reverse();
+    const salesManagerRemarkLines = (form?.sales_manager_remarks || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
@@ -208,10 +235,23 @@ export default function DealerLeadQueryScreen() {
           <View style={styles.infoBlock}><Text style={styles.infoLabel}>Status</Text><View style={styles.statusBadge}><Text style={styles.statusBadgeText}>{form?.status || "-"}</Text></View></View>
           <View style={styles.infoBlock}><Text style={styles.infoLabel}>Priority</Text><Text style={styles.infoValue}>{form?.lead_priority || "-"}</Text></View>
         </View>
-        {(form?.sales_manager_remarks || recentRemarks.length > 0) && (
+                {(salesManagerRemarkLines.length > 0 || recentRemarks.length > 0) && (
           <View style={styles.remarksSection}>
-            {form?.sales_manager_remarks ? (<View style={styles.remarkRow}><Feather name="edit-3" size={12} color={colors.primary} /><Text style={styles.remarkText} numberOfLines={2}>{form.sales_manager_remarks}</Text></View>) : null}
-            {recentRemarks.map((r, idx) => (<View key={idx} style={styles.remarkRow}><Feather name="message-circle" size={12} color="#1D4ED8" /><Text style={styles.remarkText} numberOfLines={2}>{r.remark}</Text></View>))}
+            {salesManagerRemarkLines.map((line, idx) => {
+              const isQueryManagerRemark = line.startsWith("[QM]");
+              const displayText = isQueryManagerRemark ? line.replace(/^\[QM\]\s*/, "") : line;
+              return (
+                <View key={`sm-${idx}`} style={styles.remarkRow}>
+                  <Feather
+                    name={isQueryManagerRemark ? "message-square" : "edit-3"}
+                    size={12}
+                    color={isQueryManagerRemark ? colors.success : colors.primary}
+                  />
+                  <Text style={styles.remarkText} numberOfLines={2}>{displayText}</Text>
+                </View>
+              );
+            })}
+              {recentRemarks.map((r, idx) => (<View key={`rl-${idx}`} style={styles.remarkRow}><Feather name="message-circle" size={12} color={colors.success} /><Text style={styles.remarkText} numberOfLines={2}>{r.remark}</Text></View>))}
           </View>
         )}
       </View>
@@ -301,7 +341,12 @@ export default function DealerLeadQueryScreen() {
         </View>
       )}
 
-      <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
+            <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
+            <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior="padding"
+          keyboardVerticalOffset={0}
+        >
         <Pressable style={styles.modalOverlay} onPress={closeEditModal}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
@@ -309,7 +354,7 @@ export default function DealerLeadQueryScreen() {
               <TouchableOpacity onPress={closeEditModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Feather name="x" size={20} color={colors.text} /></TouchableOpacity>
             </View>
             {editForm && (
-              <ScrollView style={styles.modalBody}>
+                  <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
                 <View style={styles.modalSection}>
                   <View style={styles.modalSectionHeader}><View style={styles.modalStepBadge}><Text style={styles.modalStepBadgeText}>1</Text></View><View><Text style={styles.modalSectionTitle}>Customer Details</Text><Text style={styles.modalSectionSubtitle}>Customer basic information</Text></View></View>
                   <Text style={styles.fieldLabel}>Customer Name</Text><TextInput style={styles.textInput} placeholder="Enter customer name" placeholderTextColor={colors.muted} value={editForm.customer_name} onChangeText={(v) => updateField("customer_name", v)} />
@@ -329,7 +374,21 @@ export default function DealerLeadQueryScreen() {
                   <Text style={styles.fieldLabel}>Type of Query</Text><FieldSelect label="Type of Query" value={editForm.type_of_query} options={TYPE_OF_QUERY_OPTIONS} onChange={(v) => updateField("type_of_query", v)} placeholder="Select type of query" />
                   <Text style={styles.fieldLabel}>Lead Priority</Text><FieldSelect label="Lead Priority" value={editForm.lead_priority} options={LEAD_PRIORITY_OPTIONS} onChange={(v) => updateField("lead_priority", v)} placeholder="Select priority" />
                   <Text style={styles.fieldLabel}>Assigned To</Text><FieldSelect label="Assigned To" value={editForm.account_owner} options={employeeNames} onChange={handleAssignedToChange} searchable placeholder="Select employee" loading={employeesLoading} />
-                  <Text style={styles.fieldLabel}>Status</Text><FieldSelect label="Status" value={editForm.status} options={LEAD_STATUS_OPTIONS} onChange={(v) => updateField("status", v)} searchable placeholder="Select status" />
+                      <Text style={styles.fieldLabel}>Status</Text><FieldSelect label="Status" value={editForm.status} options={LEAD_STATUS_OPTIONS} onChange={(v) => updateField("status", v)} searchable placeholder="Select status" />
+                </View>
+                <View style={styles.modalSection}>
+                    <View style={styles.modalSectionHeader}><View style={styles.modalStepBadge}><Text style={styles.modalStepBadgeText}>4</Text></View><View><Text style={styles.modalSectionTitle}>Query Manager Remarks</Text><Text style={styles.modalSectionSubtitle}>Edit, delete, or add your remarks below</Text></View></View>
+                  <Text style={styles.fieldLabel}>Your Remarks</Text>
+                  <TextInput
+                    style={styles.remarksInput}
+                    placeholder="Enter your remark..."
+                    placeholderTextColor={colors.muted}
+                    value={newRemark}
+                    onChangeText={setNewRemark}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                  />
                 </View>
                 {saveError && (<View style={styles.saveErrorBox}><Feather name="alert-triangle" size={14} color={colors.error} /><Text style={styles.saveErrorText}>{saveError}</Text></View>)}
               </ScrollView>
@@ -338,8 +397,9 @@ export default function DealerLeadQueryScreen() {
               <TouchableOpacity style={styles.cancelBtn} onPress={closeEditModal}><Text style={styles.cancelBtnText}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.updateBtn, saving && styles.updateBtnDisabled]} onPress={handleUpdate} disabled={saving}><Text style={styles.updateBtnText}>{saving ? "Updating..." : "Update Query"}</Text></TouchableOpacity>
             </View>
-          </Pressable>
+                    </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -405,7 +465,8 @@ const styles = StyleSheet.create({
   modalSectionTitle: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
   modalSectionSubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary },
   fieldLabel: { fontSize: 11, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 6, marginTop: spacing.sm },
-  textInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 10, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text },
+   textInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 10, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text },
+  remarksInput: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, fontSize: 13, fontFamily: typography.medium, color: colors.text, minHeight: 90 },
   phoneRow: { flexDirection: "row", gap: spacing.sm },
   phoneInput: { flex: 1 },
   saveErrorBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: "#FEF2F2", borderRadius: radius.sm, padding: spacing.sm },

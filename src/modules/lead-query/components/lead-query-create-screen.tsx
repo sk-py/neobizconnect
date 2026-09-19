@@ -2,6 +2,7 @@ import { colors, radius, spacing, typography, txtSize } from "@/constants/theme"
 import {
   createLeadQuery,
   fetchAssignedToOptions,
+  fetchLeadQueries,
 } from "@/modules/lead-query/services/lead-query.api";
 import {
   BRAND_INTEREST_OPTIONS,
@@ -17,7 +18,7 @@ import { CountryCodeSelect } from "@/components/custom/country-code-select";
 import { COUNTRY_CODES } from "@/constants/country-codes";
 import { useAuth } from "@/hooks/use-auth";
 import { Feather } from "@react-native-vector-icons/feather/static";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -55,6 +56,7 @@ export default function LeadQueryCreateScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const [form, setForm] = useState<LeadFormData>(EMPTY_FORM);
   const [countryCode, setCountryCode] = useState("+91");
@@ -95,11 +97,18 @@ export default function LeadQueryCreateScreen() {
       setError("Missing company ID.");
       return;
     }
-    setSaving(true);
+        setSaving(true);
     setError(null);
     try {
+      await fetchLeadQueries();
+
       const payload: LeadFormData = { ...form, phone_1: `${countryCode}${localPhone.trim()}` };
       await createLeadQuery(payload, user.companyid);
+
+      const updated = await fetchLeadQueries();
+      queryClient.setQueryData(["sales-manager-lead-queries"], updated);
+      await queryClient.invalidateQueries({ queryKey: ["sales-manager-lead-queries"] });
+
       router.back();
     } catch (err: any) {
       setError(err?.message || "Failed to create");

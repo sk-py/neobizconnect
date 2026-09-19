@@ -17,10 +17,7 @@ export const createDealerQuery = async (
   groupCompanyName: string,
   payload: CreateQueryPayload,
 ) => {
-  const res = await api.post(`/${groupCompanyName}/Dealer/User/leaddetails`, {
-    formJson: [payload],
-    id: 0,
-  });
+  const res = await api.post(`/Dealer/User/leaddetails`, payload);
   return res.data;
 };
 
