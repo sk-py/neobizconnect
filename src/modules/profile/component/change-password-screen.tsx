@@ -1,11 +1,12 @@
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,27 +18,36 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { changeDealerPassword } from "../service/profile.api";
 
 export const ChangePasswordScreen = () => {
-  const router = useRouter();
+  const { clearSession } = useAuth();
 
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: () => changeDealerPassword(oldPassword.trim(), newPassword.trim()),
     onSuccess: () => {
-      Alert.alert("Success", "Your password has been changed.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      setShowSuccessModal(true);
     },
-        onError: (err: any) => {
-      setError("Current password entered is incorrect.");
+            onError: (err: any) => {
+      if (err?.response) {
+        setError("Current password entered is incorrect.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     },
   });
+
+  const handleLoginRedirect = () => {
+    setShowSuccessModal(false);
+    clearSession();
+  };
 
   const handleSubmit = () => {
     setError(null);
@@ -46,10 +56,6 @@ export const ChangePasswordScreen = () => {
       setError("All fields are required.");
       return;
     }
-            <View style={styles.hintRow}>
-              <Feather name="info" size={12} color={colors.muted} />
-              <Text style={styles.hintText}>Use at least 6 characters.</Text>
-            </View>
     if (newPassword.trim() !== confirmPassword.trim()) {
       setError("New password and confirm password do not match.");
       return;
@@ -58,113 +64,120 @@ export const ChangePasswordScreen = () => {
     mutation.mutate();
   };
 
-  const PasswordField = ({
-    label,
-    value,
-    onChangeText,
-    visible,
-    onToggleVisible,
-    placeholder,
-  }: {
-    label: string;
-    value: string;
-    onChangeText: (v: string) => void;
-    visible: boolean;
-    onToggleVisible: () => void;
-    placeholder: string;
-  }) => (
-    <View style={styles.fieldGroup}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.inputWrapper}>
-        <Feather name="lock" size={16} color={colors.muted} style={styles.inputIcon} />
-        <TextInput
-          style={styles.input}
-          placeholder={placeholder}
-          placeholderTextColor={colors.muted}
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry={!visible}
-        />
-        <TouchableOpacity
-          onPress={onToggleVisible}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={styles.eyeBtn}
-        >
-            <Feather name={visible ? "eye" : "eye-off"} size={16} color={colors.muted} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "bottom"]}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
+            <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={0}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
         >
           <View style={styles.iconCircle}>
-            <Feather name="shield" size={26} color={colors.primary} />
+            <Feather name="lock" size={28} color={colors.primary} />
           </View>
+          <Text style={styles.title}>Change Password</Text>
 
-          <View style={styles.card}>
-            <PasswordField
-              label="Current Password"
-              value={oldPassword}
-              onChangeText={setOldPassword}
-              visible={showOld}
-                onToggleVisible={() => setShowOld((v) => !v)}
-              placeholder="Current password"
-            />
-
-            <View style={styles.divider} />
-
-            <PasswordField
-              label="New Password"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              visible={showNew}
-                onToggleVisible={() => setShowNew((v) => !v)}
-              placeholder="New password"
-            />
-
-            <PasswordField
-              label="Confirm New Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              visible={showConfirm}
-                onToggleVisible={() => setShowConfirm((v) => !v)}
-              placeholder="Confirm new password"
-            />
-          </View>
-
-          {error && (
-            <View style={styles.errorBox}>
-              <Feather name="alert-triangle" size={14} color={colors.error} />
-              <Text style={styles.errorText}>{error}</Text>
+          <View style={styles.form}>
+            <Text style={styles.label}>Current Password</Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.inputWithIcon}
+                placeholder="Enter current password"
+                placeholderTextColor={colors.muted}
+                value={oldPassword}
+                onChangeText={setOldPassword}
+                secureTextEntry={!showOld}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowOld((v) => !v)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name={showOld ? "eye" : "eye-off"} size={18} color={colors.muted} />
+              </TouchableOpacity>
             </View>
-          )}
 
-          <TouchableOpacity
-            style={[styles.submitBtn, mutation.isPending && styles.submitBtnDisabled]}
-            onPress={handleSubmit}
-            disabled={mutation.isPending}
-            activeOpacity={0.85}
-          >
-            <Feather name="check" size={16} color={colors.white} />
-            <Text style={styles.submitBtnText}>
-              {mutation.isPending ? "Updating..." : "Update Password"}
-            </Text>
-          </TouchableOpacity>
+            <Text style={styles.label}>New Password</Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.inputWithIcon}
+                placeholder="Enter new password"
+                placeholderTextColor={colors.muted}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                secureTextEntry={!showNew}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowNew((v) => !v)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name={showNew ? "eye" : "eye-off"} size={18} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.label}>Confirm New Password</Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.inputWithIcon}
+                placeholder="Re-enter new password"
+                placeholderTextColor={colors.muted}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirm}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowConfirm((v) => !v)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name={showConfirm ? "eye" : "eye-off"} size={18} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {error && (
+              <View style={styles.errorBox}>
+                <Feather name="alert-triangle" size={14} color={colors.error} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.submitBtn, mutation.isPending && styles.submitBtnDisabled]}
+              onPress={handleSubmit}
+              disabled={mutation.isPending}
+            >
+              <Text style={styles.submitBtnText}>
+                {mutation.isPending ? "Updating..." : "Update Password"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={() => {}}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconCircle}>
+              <Feather name="check-circle" size={32} color={colors.primary} />
+            </View>
+            <Text style={styles.modalTitle}>Password Changed Successfully</Text>
+            <Text style={styles.modalMessage}>Login with your new password</Text>
+            <TouchableOpacity style={styles.modalLoginBtn} onPress={handleLoginRedirect}>
+              <Text style={styles.modalLoginBtnText}>Login</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.surface },
+  safeArea: { flex: 1, backgroundColor: colors.white },
     scrollContent: { padding: spacing.lg, paddingTop: spacing.xxl, paddingBottom: spacing.xxl },
 
   iconCircle: {
@@ -178,47 +191,53 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl,
     marginBottom: spacing.xl,
   },
-
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
+    title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, textAlign: "center" },
+  subtitle: {
+    fontSize: txtSize.xs,
+    fontFamily: typography.medium,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
-
-  fieldGroup: { marginBottom: spacing.md },
+  form: { width: "100%" },
   label: {
     fontSize: 11,
     fontFamily: typography.semibold,
     color: colors.textSecondary,
     marginBottom: 6,
+    marginTop: spacing.sm,
   },
-  inputWrapper: {
+  input: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 13,
+    fontFamily: typography.medium,
+    color: colors.text,
+  },
+  inputRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.surface,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 10,
+    paddingRight: 8,
   },
-  inputIcon: { marginRight: 8 },
-  input: {
+  inputWithIcon: {
     flex: 1,
-    paddingVertical: 12,
-    fontSize: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 13,
     fontFamily: typography.medium,
     color: colors.text,
-    letterSpacing: 1,
   },
-  eyeBtn: { padding: 4 },
-
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
-
-  hintRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
-  hintText: { fontSize: 11, fontFamily: typography.medium, color: colors.muted },
-
+  eyeBtn: { padding: 6 },
   errorBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -231,22 +250,60 @@ const styles = StyleSheet.create({
     borderColor: "#FECACA",
   },
   errorText: { fontSize: 12, fontFamily: typography.medium, color: colors.error, flex: 1 },
-
   submitBtn: {
-    flexDirection: "row",
-    gap: 8,
     backgroundColor: colors.primary,
     borderRadius: radius.sm,
     paddingVertical: 14,
     alignItems: "center",
-    justifyContent: "center",
     marginTop: spacing.xl,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 5,
-    elevation: 3,
   },
   submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { fontSize: 14, fontFamily: typography.bold, color: colors.white },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    padding: spacing.xl,
+    alignItems: "center",
+  },
+  modalIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    fontSize: txtSize.small,
+    fontFamily: typography.bold,
+    color: colors.text,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: txtSize.xs,
+    fontFamily: typography.medium,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: spacing.xl,
+  },
+  modalLoginBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+    paddingVertical: 12,
+    width: "100%",
+    alignItems: "center",
+  },
+  modalLoginBtnText: { fontSize: 14, fontFamily: typography.bold, color: colors.white },
 });

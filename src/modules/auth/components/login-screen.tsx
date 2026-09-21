@@ -57,9 +57,9 @@ const LoginScreen = () => {
 
 
   return (
-        <KeyboardAvoidingView
+            <KeyboardAvoidingView
       style={styles.keyboardView}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <SafeAreaView style={styles.safeArea}>
         <ScrollView

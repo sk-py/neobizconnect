@@ -8,7 +8,6 @@ export type ExpenseListItem = {
   attachment: string;
   amount: number;
   isUploading?: boolean;
-  isDeleting?: boolean;
   status: string;
   remarks: string;
   employeeId: number;

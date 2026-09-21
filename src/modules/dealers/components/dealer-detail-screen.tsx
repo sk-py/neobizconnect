@@ -27,6 +27,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -65,7 +66,7 @@ type LedgerResponse = {
   TotalCumulativeBalanceLC: number;
   AccountBalance: LedgerEntry[];
   CardCode: string;
-  AccBalance: string;
+  AccBalance: string | number;
   TotalBalanceDueLC: number;
   TotalCreditLC: number;
 };
@@ -128,7 +129,12 @@ const toApiDateString = (d: Date) => {
 };
 
 const formatCurrency = (val: number | string | null | undefined) => {
-  const num = Number(val);
+  if (val === null || val === undefined) return "0.00";
+  
+  // Remove commas if it's a string, then convert to a Number
+  const cleanValue = typeof val === "string" ? val.replace(/,/g, "") : val;
+  const num = Number(cleanValue);
+  
   return (isNaN(num) ? 0 : num).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -348,6 +354,8 @@ export default function DealerDetailScreen() {
   const [appliedLedgerToDate, setAppliedLedgerToDate] = useState<string | undefined>(undefined);
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
+  const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
+  const [ledgerPdfLoadingIdx, setLedgerPdfLoadingIdx] = useState<number | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["dealers"],
@@ -407,17 +415,34 @@ export default function DealerDetailScreen() {
     }
   };
 
+    const handleLedgerViewPdf = async (entry: LedgerEntry, idx: number) => {
+    if (!entry.OriginDocEntry) {
+      Alert.alert("Invoice unavailable", "No invoice is linked to this entry.");
+      return;
+    }
+    try {
+      setLedgerPdfLoadingIdx(idx);
+      const uri = await openInvoicePdf(entry.OriginDocEntry, entry.OriginNo);
+      setPdfUri(uri);
+    } catch (err) {
+      Alert.alert("Couldn't open invoice", "The invoice PDF couldn't be downloaded. Please try again.");
+    } finally {
+      setLedgerPdfLoadingIdx(null);
+    }
+  };
+
   const handleLedgerSearch = () => {
     setAppliedLedgerFromDate(ledgerFromDate ? toApiDateString(ledgerFromDate) : undefined);
     setAppliedLedgerToDate(ledgerToDate ? toApiDateString(ledgerToDate) : undefined);
     setLedgerPage(0);
   };
 
-  const handleLedgerReset = () => {
+    const handleLedgerReset = () => {
     setLedgerFromDate(null);
     setLedgerToDate(null);
     setAppliedLedgerFromDate(undefined);
     setAppliedLedgerToDate(undefined);
+    setLedgerSearchQuery("");
     setLedgerPage(0);
   };
 
@@ -547,10 +572,50 @@ export default function DealerDetailScreen() {
     );
   };
 
-  const ledgerEntriesAll: LedgerEntry[] = ledgerQuery.data?.AccountBalance ?? [];
+    const ledgerEntriesAll: LedgerEntry[] = ledgerQuery.data?.AccountBalance ?? [];
 
-  const renderLedgerFilterRow = () => (
+  const ledgerEntriesFiltered: LedgerEntry[] = (() => {
+    const q = ledgerSearchQuery.trim().toLowerCase();
+    if (!q) return ledgerEntriesAll;
+    return ledgerEntriesAll.filter((entry) => {
+      return (
+        String(entry.Details ?? "").toLowerCase().includes(q) ||
+        String(entry.Origin ?? "").toLowerCase().includes(q) ||
+        String(entry.OriginNo ?? "").toLowerCase().includes(q) ||
+        String(entry.Ref1 ?? "").toLowerCase().includes(q) ||
+        String(entry.Ref2 ?? "").toLowerCase().includes(q) ||
+        String(entry.Ref3 ?? "").toLowerCase().includes(q)
+      );
+    });
+  })();
+
+    const renderLedgerFilterRow = () => (
     <View style={styles.ledgerFilterCard}>
+      <View style={styles.ledgerSearchBox}>
+        <Feather name="search" size={14} color={colors.muted} />
+        <TextInput
+          style={styles.ledgerSearchInput}
+          placeholder="Search by details, origin or invoice no."
+          placeholderTextColor={colors.muted}
+          value={ledgerSearchQuery}
+          onChangeText={(text) => {
+            setLedgerSearchQuery(text);
+            setLedgerPage(0);
+          }}
+          returnKeyType="search"
+        />
+        {ledgerSearchQuery.length > 0 && (
+          <TouchableOpacity
+            onPress={() => {
+              setLedgerSearchQuery("");
+              setLedgerPage(0);
+            }}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Feather name="x" size={14} color={colors.muted} />
+          </TouchableOpacity>
+        )}
+      </View>
       <View style={styles.ledgerFilterRow}>
         <TouchableOpacity style={styles.dateField} onPress={() => setShowFromPicker(true)}>
           <Text style={styles.dateFieldLabel}>From Date</Text>
@@ -627,7 +692,7 @@ export default function DealerDetailScreen() {
         </View>
       );
     }
-    if (ledgerEntriesAll.length === 0) {
+       if (ledgerEntriesAll.length === 0) {
       return (
         <View>
           {renderLedgerFilterRow()}
@@ -640,61 +705,88 @@ export default function DealerDetailScreen() {
         </View>
       );
     }
-    const { pageItems } = paginateClientArray(ledgerEntriesAll, ledgerPage, PAGE_SIZE);
+    if (ledgerEntriesFiltered.length === 0) {
+      return (
+        <View>
+          {renderLedgerFilterRow()}
+          <View style={styles.tabContentBox}>
+            <View style={styles.tabContentIconCircle}>
+              <Feather name="search" size={26} color={colors.muted} />
+            </View>
+            <Text style={styles.tabContentTitle}>No matching entries</Text>
+          </View>
+        </View>
+      );
+    }
+    const { pageItems } = paginateClientArray(ledgerEntriesFiltered, ledgerPage, PAGE_SIZE);
     return (
       <View>
         {renderLedgerFilterRow()}
+        
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Account Balance</Text>
           <Text style={styles.balanceValue}>
-            Rs. {formatCurrency(ledgerQuery.data?.TotalCumulativeBalanceLC ?? 0)}
+            Rs. {formatCurrency(ledgerQuery.data?.AccBalance ?? 0)}
           </Text>
         </View>
+
         {pageItems.map((entry, idx) => {
-          const isDebit = Number(entry.DebitLC) > 0;
+          const invoiceNo = entry.OriginNo || entry.Ref1 || entry.Ref2 || entry.Ref3 || "-";
+          const hasInvoice = Boolean(entry.OriginDocEntry);
           return (
             <View key={idx} style={styles.ledgerCard}>
               <View style={styles.ledgerCardTop}>
                 <Text style={styles.ledgerDocName} numberOfLines={1}>
                   {entry.Origin || "Entry"}
                 </Text>
-                <View
-                  style={[
-                    styles.ledgerTypeBadge,
-                    isDebit ? styles.ledgerTypeBadgeDebit : styles.ledgerTypeBadgeCredit,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.ledgerTypeBadgeText,
-                      isDebit ? styles.ledgerTypeTextDebit : styles.ledgerTypeTextCredit,
-                    ]}
-                  >
-                    {isDebit ? "Debit" : "Credit"}
-                  </Text>
-                </View>
+                <Text style={styles.ledgerDateText}>{formatDate(entry.PostingDate)}</Text>
               </View>
               <Text style={styles.ledgerDetails} numberOfLines={2}>
                 {entry.Details}
               </Text>
               <View style={styles.ledgerDivider} />
-              <View style={styles.ledgerInfoRow}>
-                <View style={styles.ledgerInfoBlock}>
-                  <Text style={styles.ledgerInfoLabel}>Date</Text>
-                  <Text style={styles.ledgerInfoValue}>{formatDate(entry.PostingDate)}</Text>
+                            <View style={styles.ledgerAmountsRow}>
+                <View style={styles.ledgerAmountBox}>
+                  <Text style={styles.ledgerInfoLabel}>Debit</Text>
+                  <Text style={styles.ledgerAmountValue} numberOfLines={1} adjustsFontSizeToFit>
+                    Rs. {formatCurrency(entry.DebitLC)}
+                  </Text>
                 </View>
-                <View style={styles.ledgerInfoBlock}>
-                  <Text style={styles.ledgerInfoLabel}>Amount</Text>
-                  <Text style={styles.ledgerInfoValue}>
-                    Rs. {formatCurrency(isDebit ? entry.DebitLC : entry.CreditLC)}
+                <View style={styles.ledgerAmountDivider} />
+                <View style={styles.ledgerAmountBox}>
+                  <Text style={styles.ledgerInfoLabel}>Credit</Text>
+                  <Text style={styles.ledgerAmountValue} numberOfLines={1} adjustsFontSizeToFit>
+                    Rs. {formatCurrency(entry.CreditLC)}
                   </Text>
                 </View>
               </View>
               <View style={styles.ledgerBalanceRow}>
-                <Text style={styles.ledgerBalanceLabel}>Running Balance</Text>
+                <Text style={styles.ledgerBalanceLabel}>Cumulative Balance</Text>
                 <Text style={styles.ledgerBalanceValue}>
                   Rs. {formatCurrency(entry.CumulativeBalanceLC)}
                 </Text>
+              </View>
+              <View style={styles.ledgerInvoiceRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.ledgerInfoLabel}>Invoice</Text>
+                  <Text style={styles.ledgerInfoValue} numberOfLines={1}>
+                    {invoiceNo}
+                  </Text>
+                </View>
+                {hasInvoice && (
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => handleLedgerViewPdf(entry, idx)}
+                    disabled={ledgerPdfLoadingIdx === idx}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    {ledgerPdfLoadingIdx === idx ? (
+                      <ActivityIndicator size="small" color={colors.textSecondary} />
+                    ) : (
+                      <Feather name="file-text" size={15} color={colors.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           );
@@ -767,10 +859,10 @@ export default function DealerDetailScreen() {
       const meta = paginateClientArray(items, creditMemoPage, PAGE_SIZE);
       return { page: creditMemoPage, setPage: setCreditMemoPage, ...meta };
     }
-    if (activeTab === "ledgerSummary") {
+        if (activeTab === "ledgerSummary") {
       if (ledgerQuery.isLoading || ledgerQuery.isError) return null;
-      if (ledgerEntriesAll.length === 0) return null;
-      const meta = paginateClientArray(ledgerEntriesAll, ledgerPage, PAGE_SIZE);
+      if (ledgerEntriesFiltered.length === 0) return null;
+      const meta = paginateClientArray(ledgerEntriesFiltered, ledgerPage, PAGE_SIZE);
       return { page: ledgerPage, setPage: setLedgerPage, ...meta };
     }
     if (activeTab === "arInvoice") {
@@ -1059,5 +1151,13 @@ const styles = StyleSheet.create({
   searchButton: { flex: 1, backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.primary, borderRadius: radius.sm, paddingVertical: 10, alignItems: "center" },
   searchButtonText: { fontSize: 13, fontFamily: typography.bold, color: colors.primary },
   resetButton: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingVertical: 10, alignItems: "center", backgroundColor: colors.white },
-  resetButtonText: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
+    resetButtonText: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
+  ledgerSearchBox: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 4 },
+  ledgerSearchInput: { flex: 1, fontSize: 13, fontFamily: typography.medium, color: colors.text, paddingVertical: 8 },
+  ledgerDateText: { fontSize: 11, fontFamily: typography.medium, color: colors.muted },
+  ledgerAmountsRow: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, marginBottom: spacing.sm },
+  ledgerAmountBox: { flex: 1, alignItems: "center", paddingVertical: spacing.sm, paddingHorizontal: 4 },
+  ledgerAmountValue: { fontSize: 13, fontFamily: typography.bold, color: colors.text, marginTop: 2 },
+  ledgerAmountDivider: { width: 1, alignSelf: "stretch", backgroundColor: colors.border, marginVertical: spacing.xs },
+  ledgerInvoiceRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
 });

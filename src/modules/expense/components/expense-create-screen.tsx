@@ -72,13 +72,12 @@ export default function ExpenseCreateScreen() {
     setRows((prev) => [...prev, makeEmptyRow()]);
   };
 
-  // ✅ FIXED: Use MediaTypeOptions (correct property name)
   const pickAttachment = async (localId: string) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.6,
     });
-    
+
     if (!result.canceled && result.assets?.[0]) {
       const asset = result.assets[0];
       updateRow(localId, {
@@ -98,32 +97,26 @@ export default function ExpenseCreateScreen() {
     setSaving(true);
     setSaveError(null);
     try {
-      // Build payload array
       const payload: CreateExpensePayload[] = rows.map((r) => ({
-        title: r.title || "",
+        title: r.title || "Untitled Expense",
         date: r.date.toISOString().slice(0, 10),
-        category: r.category || "",
-        subCategory: r.subCategory || "",
+        category: r.category || "miscellaneous",
+        subCategory: r.subCategory || "none",
         description: r.description || "",
         attachment: "",
         amount: r.amount || "0",
         isUploading: false,
-        isDeleting: false,
         status: "Pending",
         remarks: "",
         employee_id: String((user as any)?.employeeid ?? (user as any)?.id ?? "7"),
-        employee_name: (user?.name ?? "").trim(),
+        employee_name: (user?.name ?? "Shafeeq").trim(),
       }));
 
-      // ✅ This sends the correct format: { expenses: [...] }
       await createExpenses(payload);
-
-      // Invalidate cache so list refetches
       await queryClient.invalidateQueries({ queryKey: ["expenses"] });
-
       router.back();
     } catch (err: any) {
-      setSaveError(err?.message || "Failed to save expenses. Please try again.");
+      setSaveError(err?.response?.data?.message || err?.message || "Failed to save expenses.");
     } finally {
       setSaving(false);
     }
@@ -366,20 +359,16 @@ export default function ExpenseCreateScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
-
   header: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   headerSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
-
   scrollContent: { padding: spacing.md, paddingBottom: 180 },
-
   rowCard: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
   rowCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
   rowNumberBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
   rowNumberText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.white },
   deleteRowBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center" },
-
   fieldLabel: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary, marginBottom: 4, marginTop: spacing.sm },
   input: { backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, paddingVertical: 10, justifyContent: "center" },
   inputText: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, flex: 1 },
@@ -388,24 +377,18 @@ const styles = StyleSheet.create({
   inputIconWrap: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center" },
   inputDisabled: { opacity: 0.5 },
   multilineInput: { minHeight: 60, textAlignVertical: "top" },
-
   amountInputWrap: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm },
   rupeeSign: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.textSecondary, marginRight: 4 },
   amountInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, paddingVertical: 10, padding: 0 },
-
   attachmentPreviewWrap: { position: "relative", height: 38 },
   attachmentThumb: { width: "100%", height: "100%", borderRadius: radius.sm, backgroundColor: colors.surface },
   attachmentRemoveBtn: { position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.error, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.white },
-
   fieldPairRow: { flexDirection: "row", gap: spacing.sm },
   fieldHalf: { flex: 1 },
-
   addRowBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
   addRowText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
-
   saveErrorBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: "#FEF2F2", borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.md },
   saveErrorText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.error, flex: 1 },
-
   footer: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border, padding: spacing.md },
   footerTotalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   totalLabel: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.textSecondary },
@@ -416,7 +399,6 @@ const styles = StyleSheet.create({
   saveBtn: { flex: 1, paddingVertical: 12, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: "center" },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.white },
-
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: spacing.xl },
   modalCard: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md, maxHeight: "70%" },
   modalTitle: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginBottom: spacing.sm },

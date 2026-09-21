@@ -82,8 +82,8 @@ export const SubDealerScreen = () => {
     const queryClient = useQueryClient();
     const user = useAuthStore((state) => state.user);
     const groupCompanyName = user?.group_company_name || "Neo";
-     const registeredByName = user?.name || "NA";
-        const canRegister = user?.authority !== "Admin" && user?.authority !== "Super Admin";
+    const registeredByName = user?.name || "NA";
+    const canRegister = user?.authority !== "Admin" && user?.authority !== "Super Admin";
     const isAdminView = !canRegister;
     const screenTitle = canRegister ? "Sub-Dealers" : "Sub Dealer List";
 
@@ -372,7 +372,7 @@ export const SubDealerScreen = () => {
             </FormSection>
 
             {!isEditing && (
-                <FormSection title="4. System Details (Auto-filled)">
+                <FormSection title="4. System Details">
                     <View style={styles.systemDetailsBox}>
                         <Text style={styles.systemDetailsText}>Registered By: <Text style={{ fontFamily: typography.bold }}>{registeredByName}</Text></Text>
                         <Text style={styles.systemDetailsText}>Date & Time: <Text style={{ fontFamily: typography.bold }}>{format(new Date(), "dd/MM/yyyy hh:mm a")}</Text></Text>

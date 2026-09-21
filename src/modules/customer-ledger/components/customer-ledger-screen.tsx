@@ -277,13 +277,18 @@ export default function CustomerLedgerScreen() {
       </View>
 
       {!isLoading && data && (
-        <View style={styles.balanceBanner}>
-          <Text style={styles.balanceLabel}>Account Balance</Text>
-          <Text style={styles.balanceValue}>
-            ₹{formatCurrency(data.TotalCumulativeBalanceLC ?? data.AccBalance)}
-          </Text>
-        </View>
+  <View style={styles.balanceBanner}>
+    <Text style={styles.balanceLabel}>Account Balance</Text>
+    <Text style={styles.balanceValue}>
+      ₹{formatCurrency(
+        data.accbalance ??
+        data.AccBalance ??
+        data.TotalCumulativeBalanceLC ??
+        0
       )}
+    </Text>
+  </View>
+)}
 
       {/* Main List Rendering */}
       {!isDealer && !selectedDealer ? (
