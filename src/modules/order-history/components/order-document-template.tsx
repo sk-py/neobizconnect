@@ -37,6 +37,7 @@ export const OrderDocumentTemplate = ({
 }: OrderDocumentTemplateProps) => {
   const user = useAuthStore((state) => state.user);
   const groupCompanyName = user?.group_company_name || "Neo";
+      const canSeeClientCode = user?.authority === "Admin" || user?.authority === "Super Admin";
 
   const [selectedDoc, setSelectedDoc] = useState<OrderDocument | null>(null);
 
@@ -67,6 +68,9 @@ export const OrderDocumentTemplate = ({
           <View>
             <Text style={styles.docNo}>{item.customer_name}</Text>
             <Text style={styles.docDate}>{documentNumberLabel} #{item.salesorderno}</Text>
+            {canSeeClientCode && (
+              <Text style={styles.clientCode}>Client Code: {item.customer_code}</Text>
+            )}
           </View>
           <View>
 
@@ -102,11 +106,6 @@ export const OrderDocumentTemplate = ({
 
   return (
     <View style={styles.safeArea}>
-      {/* <View style={styles.listHeader}>
-        <Text style={styles.listTitle}>{pageTitle}</Text>
-        <Text style={styles.listSubtitle}>{pageSubtitle}</Text>
-      </View> */}
-      {/* Stats */}
       <View style={styles.statsContainer}>
         <View style={[styles.statCard, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
           <Text style={styles.statLabel}>{statsTitle}</Text>
@@ -124,8 +123,6 @@ export const OrderDocumentTemplate = ({
         </View>
       </View>
 
-
-      {/* List */}
       {docsLoading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -149,7 +146,6 @@ export const OrderDocumentTemplate = ({
         />
       )}
 
-      {/* Details Modal */}
       <Modal visible={Boolean(selectedDoc)} animationType="slide" presentationStyle="pageSheet">
         {selectedDoc && (
           <SafeAreaView style={styles.modalContainer}>
@@ -168,7 +164,9 @@ export const OrderDocumentTemplate = ({
                 <View style={[styles.modalSummaryCard, { backgroundColor: "#EFF6FF" }]}>
                   <Text style={styles.modalSummaryLabel}>Customer</Text>
                   <Text style={styles.modalSummaryMain}>{selectedDoc.customer_name}</Text>
-                  <Text style={styles.modalSummarySub}>{selectedDoc.customer_code}</Text>
+                  {canSeeClientCode && (
+                    <Text style={styles.modalSummarySub}>{selectedDoc.customer_code}</Text>
+                  )}
                 </View>
               </View>
 
@@ -264,6 +262,7 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   docNo: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   docDate: { fontSize: 12, fontFamily: typography.regular, color: colors.muted, marginTop: 2 },
+  clientCode: { fontSize: 11, fontFamily: typography.semibold, color: "#1D4ED8", marginTop: 2 },
   statusBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl },
   statusBadgeText: { fontSize: 10, fontFamily: typography.bold, color: "#1D4ED8" },
   cardBody: { flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.md },

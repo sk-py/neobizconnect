@@ -26,6 +26,7 @@ import { LegendList } from "@legendapp/list/react-native";
 import { SkeletonList } from "@/components/custom/skeleton";
 import { useCallback, useMemo, useState } from "react";
 import {
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -56,12 +57,14 @@ export default function DealerLeadQueryScreen() {
   const [editLocalPhone, setEditLocalPhone] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["dealer-lead-queries"],
     queryFn: fetchLeadQueries,
   });
 
- 
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -90,6 +93,20 @@ export default function DealerLeadQueryScreen() {
       );
     });
   }, [data, searchQuery]);
+
+  const totalEntries = filteredData.length;
+  const totalPages = Math.ceil(totalEntries / pageSize) || 1;
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredData.slice(startIndex, startIndex + pageSize);
+  }, [filteredData, currentPage, pageSize]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   const openEditModal = (lead: LeadQuery) => {
     const form = lead.formJson?.[0];
@@ -138,7 +155,6 @@ export default function DealerLeadQueryScreen() {
       await updateLeadQuery(editingLead.id, editingLead.companyid, originalForm, finalForm);
     },
     onSuccess: () => {
-      
       queryClient.invalidateQueries({ queryKey: ["dealer-lead-queries"] });
       closeEditModal();
     },
@@ -154,23 +170,27 @@ export default function DealerLeadQueryScreen() {
 
   const saving = updateMutation.isPending;
 
-  const renderRow = ({ item }: { item: LeadQuery }) => {
+    const renderRow = ({ item }: { item: LeadQuery }) => {
     const form = item.formJson?.[0];
-    const latestRemark = item.remarks_list?.[item.remarks_list.length - 1];
+    const recentRemarks = [...(item.remarks_list || [])].slice(-4).reverse();
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
-          <Text style={styles.customerName} numberOfLines={1}>{form?.customer_name || "-"}</Text>
-          <View style={styles.cardTopRight}>
-            <Text style={styles.ageText}>{formatDate(item.createdDate)}</Text>
-            <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Feather name="edit-2" size={14} color={colors.primary} />
-            </TouchableOpacity>
+          <View style={styles.cardTopLeft}>
+            <View style={styles.nameDateRow}>
+              <Text style={styles.customerName} numberOfLines={1}>{form?.customer_name || "-"}</Text>
+              <View style={styles.dateBadge}><Text style={styles.dateBadgeText}>{formatDate(item.createdDate)}</Text></View>
+            </View>
           </View>
+          <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="edit-2" size={14} color={colors.primary} />
+          </TouchableOpacity>
         </View>
         <View style={styles.metaRow}>
-          <Feather name="phone" size={11} color={colors.muted} />
-          <Text style={styles.metaText}>{form?.phone_1 || "-"}</Text>
+          <TouchableOpacity style={styles.phoneChip} onPress={() => form?.phone_1 && void Linking.openURL(`tel:${form.phone_1}`)} disabled={!form?.phone_1}>
+            <Feather name="phone" size={11} color={colors.muted} />
+            <Text style={styles.metaText}>{form?.phone_1 || "-"}</Text>
+          </TouchableOpacity>
           <Text style={styles.metaDot}>•</Text>
           <Feather name="map-pin" size={11} color={colors.muted} />
           <Text style={[styles.metaText, { flex: 1 }]} numberOfLines={1}>{form?.city}{form?.state ? `, ${form.state}` : ""}</Text>
@@ -182,17 +202,24 @@ export default function DealerLeadQueryScreen() {
         </View>
         <View style={styles.infoRow}>
           <View style={styles.infoBlock}><Text style={styles.infoLabel}>Type of Query</Text><Text style={styles.infoValue} numberOfLines={1}>{form?.type_of_query || "-"}</Text></View>
-          <View style={styles.infoBlock}><Text style={styles.infoLabel}>Source</Text><Text style={styles.infoValue}>{form?.source || "-"}</Text></View>
-        </View>
-        <View style={styles.infoRow}>
-          <View style={styles.infoBlock}><Text style={styles.infoLabel}>Priority</Text><Text style={styles.infoValue}>{form?.lead_priority || "-"}</Text></View>
           <View style={styles.infoBlock}><Text style={styles.infoLabel}>Assigned To</Text><Text style={styles.infoValue} numberOfLines={1}>{form?.account_owner || "-"}</Text></View>
         </View>
-        {!!form?.status && (<View style={styles.infoRow}><View style={styles.infoBlock}><Text style={styles.infoLabel}>Status</Text><Text style={styles.infoValue}>{form.status}</Text></View></View>)}
-        {latestRemark && (<View style={styles.remarkRow}><Feather name="message-circle" size={12} color={colors.textSecondary} /><Text style={styles.remarkText} numberOfLines={2}>{latestRemark.remark}</Text></View>)}
+        <View style={styles.infoRow}>
+          <View style={styles.infoBlock}><Text style={styles.infoLabel}>Status</Text><View style={styles.statusBadge}><Text style={styles.statusBadgeText}>{form?.status || "-"}</Text></View></View>
+          <View style={styles.infoBlock}><Text style={styles.infoLabel}>Priority</Text><Text style={styles.infoValue}>{form?.lead_priority || "-"}</Text></View>
+        </View>
+        {(form?.sales_manager_remarks || recentRemarks.length > 0) && (
+          <View style={styles.remarksSection}>
+            {form?.sales_manager_remarks ? (<View style={styles.remarkRow}><Feather name="edit-3" size={12} color={colors.primary} /><Text style={styles.remarkText} numberOfLines={2}>{form.sales_manager_remarks}</Text></View>) : null}
+            {recentRemarks.map((r, idx) => (<View key={idx} style={styles.remarkRow}><Feather name="message-circle" size={12} color="#1D4ED8" /><Text style={styles.remarkText} numberOfLines={2}>{r.remark}</Text></View>))}
+          </View>
+        )}
       </View>
     );
   };
+
+  const startEntry = totalEntries === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endEntry = Math.min(currentPage * pageSize, totalEntries);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -206,15 +233,72 @@ export default function DealerLeadQueryScreen() {
         </View>
         <View style={styles.searchContainer}>
           <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
-          <TextInput style={styles.searchInput} placeholder="Search name, phone, city, or car model..." placeholderTextColor={colors.muted} value={searchQuery} onChangeText={setSearchQuery} />
-          {searchQuery.length > 0 && (<TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}><Feather name="x-circle" size={13} color={colors.muted} /></TouchableOpacity>)}
+          <TextInput 
+            style={styles.searchInput} 
+            placeholder="Search name, phone, city, or car model..." 
+            placeholderTextColor={colors.muted} 
+            value={searchQuery} 
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              setCurrentPage(1);
+            }} 
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity 
+              onPress={() => {
+                setSearchQuery("");
+                setCurrentPage(1);
+              }} 
+              style={styles.clearSearchBtn}
+            >
+              <Feather name="x-circle" size={13} color={colors.muted} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       {isLoading ? (<SkeletonList count={6} />) : isError ? (
         <View style={styles.emptyBox}><Feather name="alert-triangle" size={32} color={colors.error} /><Text style={styles.errorTitle}>Couldn't load queries</Text><Text style={styles.errorSubtitle}>{(error as any)?.message || "Something went wrong."}</Text><TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}><Text style={styles.retryBtnText}>Retry</Text></TouchableOpacity></View>
       ) : filteredData.length === 0 ? (<View style={styles.emptyBox}><Feather name="help-circle" size={32} color={colors.muted} /><Text style={styles.emptyText}>No queries found</Text></View>) : (
-        <LegendList data={filteredData} keyExtractor={(item: LeadQuery) => String(item.id)} renderItem={renderRow} contentContainerStyle={styles.listContent} estimatedItemSize={220} recycleItems />
+        <LegendList data={paginatedData} keyExtractor={(item: LeadQuery) => String(item.id)} renderItem={renderRow} contentContainerStyle={styles.listContent} estimatedItemSize={220} recycleItems />
+      )}
+
+      {!isLoading && !isError && filteredData.length > 0 && (
+        <View style={styles.paginationContainer}>
+          <Text style={styles.paginationText}>
+            Showing {startEntry} to {endEntry} of {totalEntries} entries
+          </Text>
+          <View style={styles.paginationControls}>
+            <TouchableOpacity 
+              style={[styles.paginationBtn, currentPage === 1 && styles.paginationBtnDisabled]} 
+              onPress={() => handlePageChange(1)} 
+              disabled={currentPage === 1}
+            >
+              <Feather name="chevrons-left" size={14} color={currentPage === 1 ? colors.muted : colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.paginationBtn, currentPage === 1 && styles.paginationBtnDisabled]} 
+              onPress={() => handlePageChange(currentPage - 1)} 
+              disabled={currentPage === 1}
+            >
+              <Feather name="chevron-left" size={14} color={currentPage === 1 ? colors.muted : colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.paginationBtn, currentPage === totalPages && styles.paginationBtnDisabled]} 
+              onPress={() => handlePageChange(currentPage + 1)} 
+              disabled={currentPage === totalPages}
+            >
+              <Feather name="chevron-right" size={14} color={currentPage === totalPages ? colors.muted : colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.paginationBtn, currentPage === totalPages && styles.paginationBtnDisabled]} 
+              onPress={() => handlePageChange(totalPages)} 
+              disabled={currentPage === totalPages}
+            >
+              <Feather name="chevrons-right" size={14} color={currentPage === totalPages ? colors.muted : colors.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
@@ -274,10 +358,15 @@ const styles = StyleSheet.create({
   clearSearchBtn: { padding: 2 },
   listContent: { padding: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
-  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  cardTopRight: { flexDirection: "row", alignItems: "center", gap: 10 },
-  customerName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, flex: 1, marginRight: spacing.sm },
-  ageText: { fontSize: 10, fontFamily: typography.medium, color: colors.muted },
+    cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
+  cardTopLeft: { flex: 1, marginRight: spacing.sm },
+  nameDateRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  customerName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
+  dateBadge: { alignSelf: "center", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
+  dateBadgeText: { fontSize: 10, fontFamily: typography.semibold, color: "#1D4ED8" },
+  statusBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#F0FDF4" },
+  statusBadgeText: { fontSize: 12, fontFamily: typography.bold, color: colors.success },
+  phoneChip: { flexDirection: "row", alignItems: "center", gap: 4 },
   editBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: spacing.sm },
   metaText: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, flexShrink: 1 },
@@ -289,7 +378,8 @@ const styles = StyleSheet.create({
   infoValue: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
   brandBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#FEF2F2" },
   brandBadgeText: { fontSize: 12, fontFamily: typography.bold, color: colors.primary },
-  remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+   remarksSection: { paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, gap: 6 },
+  remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   remarkText: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, flex: 1, lineHeight: 16 },
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
   emptyText: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
@@ -297,6 +387,11 @@ const styles = StyleSheet.create({
   errorSubtitle: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, textAlign: "center" },
   retryBtn: { marginTop: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radius.sm },
   retryBtnText: { fontSize: 13, fontFamily: typography.bold, color: colors.white },
+  paginationContainer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
+  paginationText: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 4 },
+  paginationBtn: { width: 28, height: 28, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.white },
+  paginationBtnDisabled: { opacity: 0.4, backgroundColor: colors.surface },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: spacing.md },
   modalCard: { backgroundColor: colors.white, borderRadius: radius.lg, maxHeight: "88%", overflow: "hidden" },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },

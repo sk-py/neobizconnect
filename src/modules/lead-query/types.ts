@@ -52,6 +52,7 @@ export type EmployeeOption = {
   name: string;
 };
 
+
 export const LEAD_STATUS_OPTIONS = [
   "In Progress",
   "Sold Offline",

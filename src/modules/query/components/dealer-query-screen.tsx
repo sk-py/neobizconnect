@@ -41,22 +41,17 @@ export const DealerQueryScreen = () => {
     const user = useAuthStore((state) => state.user);
     const groupCompanyName = user?.group_company_name || "Neo";
 
-    // Check role/authority to conditionally render inputs
     const isDealer = user?.authority === "Dealer";
-    // Admin/Super Admin can view and edit (Status + Remarks) but not create
-    // new dealer queries — matches the web Admin Portal exactly.
     const canCreate = user?.authority !== "Admin" && user?.authority !== "Super Admin";
 
     const [activeTab, setActiveTab] = useState<"list" | "create">("list");
     const [editingQuery, setEditingQuery] = useState<DealerQuery | null>(null);
 
-    // --- Data Fetching ---
     const { data: queries, isLoading, isRefetching, refetch } = useQuery({
         queryKey: ["dealer-queries"],
         queryFn: fetchDealerQueries,
     });
 
-    // --- Mutations ---
     const createMutation = useMutation({
         mutationFn: (values: FormValues) => createDealerQuery(groupCompanyName, values),
         onSuccess: () => {
@@ -71,7 +66,16 @@ export const DealerQueryScreen = () => {
     });
 
     const updateMutation = useMutation({
-        mutationFn: (payload: FormValues & { id: number }) => updateDealerQuery(groupCompanyName, payload),
+        mutationFn: (values: FormValues) => {
+            if (!editingQuery) throw new Error("No query selected to update.");
+            return updateDealerQuery({
+                subject: values.subject,
+                query: values.query,
+                remarks: values.remarks,
+                status: values.status,
+                id: editingQuery.id,
+            });
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["dealer-queries"] });
             if (Platform.OS === "android") ToastAndroid.show("Query updated successfully!", ToastAndroid.SHORT);
@@ -82,10 +86,9 @@ export const DealerQueryScreen = () => {
         },
     });
 
-    // --- Forms ---
     const createForm = useForm<FormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: { subject: "", query: "", remarks: "", status: "Open" }, // Defaulted to Open for new queries
+        defaultValues: { subject: "", query: "", remarks: "", status: "Open" },
     });
 
     const editForm = useForm<FormValues>({
@@ -108,13 +111,15 @@ export const DealerQueryScreen = () => {
 
     const onEditSubmit = (values: FormValues) => {
         if (editingQuery) {
-            updateMutation.mutate({ ...values, id: editingQuery.id });
+            updateMutation.mutate(values);
         }
     };
 
     const formatDate = (isoString: string) => {
         if (!isoString) return "-";
-        return new Date(isoString).toLocaleDateString("en-GB");
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
     };
 
     const getStatusColor = (status: string) => {
@@ -152,7 +157,7 @@ export const DealerQueryScreen = () => {
                     <View style={[styles.statusBadge, { backgroundColor: statusTheme.bg }]}>
                         <Text style={[styles.statusText, { color: statusTheme.text }]}>{item.status}</Text>
                     </View>
-                    <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
+                    <Text style={styles.dateText}>{formatDate(item.createdDate)}</Text>
                 </View>
             </View>
         );
@@ -160,13 +165,11 @@ export const DealerQueryScreen = () => {
 
     return (
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-            {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Dealer Queries</Text>
                 <Text style={styles.headerSubTitle}>Here is a list of dealer queries</Text>
             </View>
 
-            {/* Tabs — Admin/Super Admin are list+edit only, no Create tab */}
             {canCreate && (
                 <View style={styles.tabContainer}>
                     <TouchableOpacity
@@ -187,7 +190,6 @@ export const DealerQueryScreen = () => {
                 </View>
             )}
 
-            {/* Tab Content */}
             {activeTab === "list" ? (
                 isLoading ? (
                     <View style={styles.centerBox}>
@@ -311,7 +313,6 @@ export const DealerQueryScreen = () => {
                 </ScrollView>
             )}
 
-            {/* Edit Modal */}
             <Modal visible={Boolean(editingQuery)} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditingQuery(null)}>
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
@@ -322,27 +323,31 @@ export const DealerQueryScreen = () => {
                     </View>
 
                     <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
-                        <Controller
-                            control={editForm.control}
-                            name="subject"
-                            render={({ field: { onChange, value } }) => (
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Subject</Text>
-                                    <TextInput style={styles.input} value={value} onChangeText={onChange} />
-                                </View>
-                            )}
-                        />
+                        {canCreate && (
+                            <>
+                                <Controller
+                                    control={editForm.control}
+                                    name="subject"
+                                    render={({ field: { onChange, value } }) => (
+                                        <View style={styles.inputGroup}>
+                                            <Text style={styles.inputLabel}>Subject</Text>
+                                            <TextInput style={styles.input} value={value} onChangeText={onChange} />
+                                        </View>
+                                    )}
+                                />
 
-                        <Controller
-                            control={editForm.control}
-                            name="query"
-                            render={({ field: { onChange, value } }) => (
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Query</Text>
-                                    <TextInput style={[styles.input, styles.textArea]} multiline textAlignVertical="top" value={value} onChangeText={onChange} />
-                                </View>
-                            )}
-                        />
+                                <Controller
+                                    control={editForm.control}
+                                    name="query"
+                                    render={({ field: { onChange, value } }) => (
+                                        <View style={styles.inputGroup}>
+                                            <Text style={styles.inputLabel}>Query</Text>
+                                            <TextInput style={[styles.input, styles.textArea]} multiline textAlignVertical="top" value={value} onChangeText={onChange} />
+                                        </View>
+                                    )}
+                                />
+                            </>
+                        )}
 
                         {!isDealer && (
                             <>

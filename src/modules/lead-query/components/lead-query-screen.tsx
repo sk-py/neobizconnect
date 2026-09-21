@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -27,7 +28,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// createdDate comes back as a plain "YYYY-MM-DD" string (no time component).
 const formatDate = (isoDate: string) => {
   if (!isoDate) return "-";
   const d = new Date(isoDate);
@@ -93,14 +93,11 @@ export default function LeadQueryScreen() {
     setSaving(true);
     setSaveError(null);
     try {
-      // 1. GET — refetch first so we merge edits into the record's truly
-      // current state, not whatever was cached when the modal opened.
       const latest = await refetch();
       const freshLead = latest.data?.find((item) => item.id === editingLead.id);
       const originalForm = freshLead?.formJson?.[0] ?? editingLead.formJson?.[0];
       if (!originalForm) throw new Error("Original lead data missing — cannot update.");
 
-      // 2. POST — submit the update against that fresh original.
       await updateLeadQuery(
         editingLead.id,
         (freshLead ?? editingLead).companyid,
@@ -109,7 +106,6 @@ export default function LeadQueryScreen() {
       );
       closeEditModal();
 
-      // 3. GET — refetch again so the list reflects what the server now has.
       await refetch();
     } catch (err: any) {
       setSaveError(
@@ -123,29 +119,41 @@ export default function LeadQueryScreen() {
 
   const renderRow = ({ item }: { item: LeadQuery }) => {
     const form = item.formJson?.[0];
-    const latestRemark = item.remarks_list?.[item.remarks_list.length - 1];
+    const recentRemarks = [...(item.remarks_list || [])].slice(-4).reverse();
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardTop}>
-          <Text style={styles.customerName} numberOfLines={1}>
-            {form?.customer_name || "-"}
-          </Text>
-          <View style={styles.cardTopRight}>
-            <Text style={styles.ageText}>{formatDate(item.createdDate)}</Text>
-            <TouchableOpacity
-              style={styles.editBtn}
-              onPress={() => openEditModal(item)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="edit-2" size={14} color={colors.primary} />
-            </TouchableOpacity>
+                <View style={styles.cardTop}>
+          <View style={styles.cardTopLeft}>
+            <View style={styles.nameDateRow}>
+              <Text style={styles.customerName} numberOfLines={1}>
+                {form?.customer_name || "-"}
+              </Text>
+              <View style={styles.dateBadge}>
+                <Text style={styles.dateBadgeText}>{formatDate(item.createdDate)}</Text>
+              </View>
+            </View>
           </View>
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => openEditModal(item)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="edit-2" size={14} color={colors.primary} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.metaRow}>
-          <Feather name="phone" size={11} color={colors.muted} />
-          <Text style={styles.metaText}>{form?.phone_1 || "-"}</Text>
+          <TouchableOpacity
+            style={styles.phoneChip}
+            onPress={() =>
+              form?.phone_1 && void Linking.openURL(`tel:${form.phone_1}`)
+            }
+            disabled={!form?.phone_1}
+          >
+            <Feather name="phone" size={11} color={colors.muted} />
+            <Text style={styles.metaText}>{form?.phone_1 || "-"}</Text>
+          </TouchableOpacity>
           <Text style={styles.metaDot}>•</Text>
           <Feather name="map-pin" size={11} color={colors.muted} />
           <Text style={[styles.metaText, { flex: 1 }]} numberOfLines={1}>
@@ -175,37 +183,42 @@ export default function LeadQueryScreen() {
             <Text style={styles.infoValue} numberOfLines={1}>{form?.type_of_query || "-"}</Text>
           </View>
           <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>Source</Text>
-            <Text style={styles.infoValue}>{form?.source || "-"}</Text>
-          </View>
-        </View>
-
-        <View style={styles.infoRow}>
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>Priority</Text>
-            <Text style={styles.infoValue}>{form?.lead_priority || "-"}</Text>
-          </View>
-          <View style={styles.infoBlock}>
             <Text style={styles.infoLabel}>Assigned To</Text>
             <Text style={styles.infoValue} numberOfLines={1}>{form?.account_owner || "-"}</Text>
           </View>
         </View>
 
-        {!!form?.status && (
-          <View style={styles.infoRow}>
-            <View style={styles.infoBlock}>
-              <Text style={styles.infoLabel}>Status</Text>
-              <Text style={styles.infoValue}>{form.status}</Text>
+        <View style={styles.infoRow}>
+              <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Status</Text>
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>{form?.status || "-"}</Text>
             </View>
           </View>
-        )}
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Priority</Text>
+            <Text style={styles.infoValue}>{form?.lead_priority || "-"}</Text>
+          </View>
+        </View>
 
-        {latestRemark && (
-          <View style={styles.remarkRow}>
-            <Feather name="message-circle" size={12} color={colors.textSecondary} />
-            <Text style={styles.remarkText} numberOfLines={2}>
-              {latestRemark.remark}
-            </Text>
+                        {(form?.sales_manager_remarks || recentRemarks.length > 0) && (
+          <View style={styles.remarksSection}>
+            {form?.sales_manager_remarks ? (
+              <View style={styles.remarkRow}>
+                <Feather name="edit-3" size={12} color={colors.primary} />
+                <Text style={styles.remarkText} numberOfLines={2}>
+                  {form.sales_manager_remarks}
+                </Text>
+              </View>
+            ) : null}
+            {recentRemarks.map((r, idx) => (
+              <View key={idx} style={styles.remarkRow}>
+                <Feather name="message-circle" size={12} color="#1D4ED8" />
+                <Text style={styles.remarkText} numberOfLines={2}>
+                  {r.remark}
+                </Text>
+              </View>
+            ))}
           </View>
         )}
       </View>
@@ -216,11 +229,10 @@ export default function LeadQueryScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <View>
+          <View style={styles.titleTextBlock}>
             <Text style={styles.headerTitle}>Leads & Queries</Text>
             <Text style={styles.headerSubtitle}>Manage new leads and customer inquiries</Text>
           </View>
-          <View style={{ flex: 1 }} />
           <TouchableOpacity
             style={styles.createBtn}
             onPress={() => router.push("/lead-query-create")}
@@ -370,6 +382,7 @@ const styles = StyleSheet.create({
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+  titleTextBlock: { flex: 1 },
   headerTitle: {
     fontSize: 20,
     fontFamily: typography.bold,
@@ -394,13 +407,18 @@ const styles = StyleSheet.create({
 
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
 
-  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  cardTopRight: { flexDirection: "row", alignItems: "center", gap: 10 },
-  customerName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, flex: 1, marginRight: spacing.sm },
-  ageText: { fontSize: 10, fontFamily: typography.medium, color: colors.muted },
+  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
+  cardTopLeft: { flex: 1, marginRight: spacing.sm },
+    customerName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
+    nameDateRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  dateBadge: { alignSelf: "center", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
+  dateBadgeText: { fontSize: 10, fontFamily: typography.semibold, color: "#1D4ED8" },
+  statusBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#F0FDF4" },
+  statusBadgeText: { fontSize: 12, fontFamily: typography.bold, color: colors.success },
   editBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
 
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: spacing.sm },
+  phoneChip: { flexDirection: "row", alignItems: "center", gap: 4 },
   metaText: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, flexShrink: 1 },
   metaDot: { fontSize: 11, color: colors.muted },
 
@@ -414,7 +432,8 @@ const styles = StyleSheet.create({
   brandBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#FEF2F2" },
   brandBadgeText: { fontSize: 12, fontFamily: typography.bold, color: colors.primary },
 
-  remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  remarksSection: { paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, gap: 6 },
+  remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   remarkText: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, flex: 1, lineHeight: 16 },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
