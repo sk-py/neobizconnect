@@ -102,7 +102,7 @@ export const SubDealerTargetsScreen = () => {
 
     const assignMutation = useMutation({
         mutationFn: async () => {
-            if (!selectedDealerId) throw new Error("Select a Sub Dealer");
+                        if (selectedDealerId === null) throw new Error("Select a Sub Dealer");
             
             const generatedMonths = generateFinancialYearMonths(formFinancialYear);
             const quotaPayload: TargetQuotaMonth[] = generatedMonths.map(month => ({
@@ -295,10 +295,10 @@ export const SubDealerTargetsScreen = () => {
                                 {totalQuantity.toLocaleString()}
                             </Text>
                         </View>
-                        <TouchableOpacity
-                            style={[styles.submitBtn, (assignMutation.isPending || !selectedDealerId) && styles.submitBtnDisabled]}
+                                               <TouchableOpacity
+                            style={[styles.submitBtn, (assignMutation.isPending || selectedDealerId === null) && styles.submitBtnDisabled]}
                             onPress={() => assignMutation.mutate()}
-                            disabled={assignMutation.isPending || !selectedDealerId}
+                            disabled={assignMutation.isPending || selectedDealerId === null}
                         >
                             {assignMutation.isPending ? <ActivityIndicator color={colors.white} /> : <Text style={styles.submitBtnText}>Submit Target</Text>}
                         </TouchableOpacity>
