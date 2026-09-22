@@ -34,14 +34,19 @@ type DealerOption = {
   card_name: string;
 };
 
+const PAGE_SIZE = 10;
+
 export default function CustomerLedgerScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const groupCompanyName = user?.group_company_name || "Neo";
   const isDealer = user?.authority === "Dealer";
 
-  // Search State
+   // Search State
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Pagination State
+  const [page, setPage] = useState(0);
 
   // Filter States
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
@@ -121,6 +126,20 @@ export default function CustomerLedgerScreen() {
       item.Origin?.toLowerCase().includes(query)
     );
   }, [data?.AccountBalance, searchQuery]);
+
+    useEffect(() => {
+    setPage(0);
+  }, [searchQuery, selectedDealer?.card_code, appliedFromDate, appliedToDate]);
+
+  const totalItems = filteredData.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paginatedData = useMemo(() => {
+    const start = safePage * PAGE_SIZE;
+    return filteredData.slice(start, start + PAGE_SIZE);
+  }, [filteredData, safePage]);
+  const rangeStart = totalItems === 0 ? 0 : safePage * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(totalItems, (safePage + 1) * PAGE_SIZE);
 
   // Local Search Filtering for Dealers List
   const filteredDealers = useMemo(() => {
@@ -304,19 +323,46 @@ export default function CustomerLedgerScreen() {
           <Feather name="file-minus" size={48} color={colors.muted} />
           <Text style={styles.emptyTitle}>No entries found</Text>
         </View>
-      ) : (
-        <LegendList
-          data={filteredData}
-          keyExtractor={(item: LedgerEntry, index) => `${item.OriginNo}-${index}`}
-          estimatedItemSize={200}
-          renderItem={renderCard}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          onRefresh={refetch}
-          refreshing={isRefetching}
-          recycleItems={true}
-          extraData={downloadingId}
-        />
+            ) : (
+        <>
+          <LegendList
+            data={paginatedData}
+            keyExtractor={(item: LedgerEntry, index) => `${item.OriginNo}-${index}`}
+            estimatedItemSize={200}
+            renderItem={renderCard}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            onRefresh={refetch}
+            refreshing={isRefetching}
+            recycleItems={true}
+            extraData={downloadingId}
+          />
+
+          <View style={styles.paginationBar}>
+            <Text style={styles.paginationText}>
+              {rangeStart}-{rangeEnd} of {totalItems}
+            </Text>
+            <View style={styles.paginationControls}>
+              <TouchableOpacity
+                style={[styles.pageBtn, safePage === 0 && styles.pageBtnDisabled]}
+                onPress={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={safePage === 0}
+              >
+                <Feather name="chevron-left" size={15} color={safePage === 0 ? colors.muted : colors.text} />
+              </TouchableOpacity>
+              <Text style={styles.pageIndicator}>
+                {safePage + 1} / {totalPages}
+              </Text>
+              <TouchableOpacity
+                style={[styles.pageBtn, safePage >= totalPages - 1 && styles.pageBtnDisabled]}
+                onPress={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={safePage >= totalPages - 1}
+              >
+                <Feather name="chevron-right" size={15} color={safePage >= totalPages - 1 ? colors.muted : colors.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </>
       )}
 
       {/* Dealer Selection Modal */}
@@ -557,8 +603,15 @@ const styles = StyleSheet.create({
   closeBtn: { padding: 4, marginRight: -4 },
   modalSearchWrapper: { flexDirection: "row", alignItems: "center", backgroundColor: colors.white, paddingHorizontal: spacing.md, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
   modalSearchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, padding: 0 },
-  dealerOption: { padding: spacing.md, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.surface, borderRadius: radius.sm, marginBottom: spacing.md },
+   dealerOption: { padding: spacing.md, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.surface, borderRadius: radius.sm, marginBottom: spacing.md },
   dealerOptionSelected: { borderColor: colors.primary, borderWidth: 1 },
   dealerOptionName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 4 },
   dealerOptionCode: { fontSize: 12, fontFamily: typography.medium, color: colors.muted },
+
+  paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.white },
+  paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pageBtn: { width: 28, height: 28, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+  pageBtnDisabled: { opacity: 0.5 },
+  pageIndicator: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
 });

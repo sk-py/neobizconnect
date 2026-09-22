@@ -6,21 +6,26 @@ import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 
 export default function ArCreditMemoScreen() {
+  const insets = useSafeAreaInsets();
   const [selectedDetails, setSelectedDetails] = useState<ArCreditMemoDocument | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 10;
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
       const canSeeClientCode = user?.authority === "Admin" || user?.authority === "Super Admin" || user?.authority === "Sales Manager";
@@ -35,10 +40,43 @@ export default function ArCreditMemoScreen() {
     queryFn: fetchArCreditMemos,
   });
 
-  const formatDate = (dateString: string) => {
+    const formatDate = (dateString: string) => {
     if (!dateString) return "-";
-    const date = new Date(dateString);
+    const withoutTime = String(dateString)
+      .split("T")[0]
+      .replace(/\s+\d{1,2}:\d{2}(:\d{2})?(\.\d+)?(\s?(AM|PM))?$/i, "")
+      .trim();
+    const ymd = withoutTime.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (ymd) {
+      const [, year, month, day] = ymd;
+      return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+    }
+    const date = new Date(withoutTime);
+    if (isNaN(date.getTime())) return "-";
     return date.toLocaleDateString("en-GB");
+  };
+
+  const filteredMemos = useMemo(() => {
+    if (!searchQuery.trim()) return creditMemos;
+    const query = searchQuery.toLowerCase();
+    return creditMemos.filter(
+      (item) =>
+        item.arcreditmemono?.toLowerCase().includes(query) ||
+        item.customer_name?.toLowerCase().includes(query) ||
+        item.customer_code?.toLowerCase().includes(query),
+    );
+  }, [creditMemos, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMemos.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages - 1);
+  const paginatedMemos = useMemo(
+    () => filteredMemos.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE),
+    [filteredMemos, currentPage],
+  );
+
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    setPage(0);
   };
 
   const renderCard = ({ item }: { item: ArCreditMemoDocument }) => {
@@ -59,7 +97,7 @@ export default function ArCreditMemoScreen() {
               {item.status}
             </Text>
           </View>
-            <Text style={styles.docDate}>{item.posting_date}</Text>
+                              <Text style={styles.docDate}>{formatDate(item.document_date || item.posting_date)}</Text>
           </View>
         </View>
 
@@ -106,27 +144,70 @@ export default function ArCreditMemoScreen() {
         </View>
       </View>
 
+            <View style={styles.searchContainer}>
+        <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by memo no, customer name..."
+          placeholderTextColor={colors.muted}
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
+            <Feather name="x-circle" size={16} color={colors.muted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
       {listLoading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      ) : creditMemos.length === 0 ? (
+      ) : filteredMemos.length === 0 ? (
         <View style={styles.centerBox}>
           <Feather name="inbox" size={48} color={colors.muted} />
           <Text style={styles.emptyTitle}>No credit memos found</Text>
         </View>
       ) : (
         <LegendList
-          data={creditMemos}
+          data={paginatedMemos}
           keyExtractor={(item: ArCreditMemoDocument) => item.id.toString()}
           estimatedItemSize={160}
           renderItem={renderCard}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onRefresh={() => refetch()}
+          onRefresh={() => { setPage(0); refetch(); }}
           refreshing={isRefetching}
           recycleItems={true}
         />
+      )}
+
+      {filteredMemos.length > 0 && (
+        <View style={[styles.paginationFooter, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
+          <Text style={styles.paginationText}>
+            {currentPage * PAGE_SIZE + 1}-{Math.min((currentPage + 1) * PAGE_SIZE, filteredMemos.length)} of {filteredMemos.length}
+          </Text>
+          <View style={styles.paginationControls}>
+            <TouchableOpacity
+              style={[styles.pageBtn, currentPage === 0 && styles.pageBtnDisabled]}
+              disabled={currentPage === 0}
+              onPress={() => setPage((p) => p - 1)}
+            >
+              <Feather name="chevron-left" size={15} color={currentPage === 0 ? colors.muted : colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.pageIndicator}>
+              {currentPage + 1} / {totalPages}
+            </Text>
+            <TouchableOpacity
+              style={[styles.pageBtn, currentPage >= totalPages - 1 && styles.pageBtnDisabled]}
+              disabled={currentPage >= totalPages - 1}
+              onPress={() => setPage((p) => p + 1)}
+            >
+              <Feather name="chevron-right" size={15} color={currentPage >= totalPages - 1 ? colors.muted : colors.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       <Modal visible={Boolean(selectedDetails)} animationType="slide" presentationStyle="pageSheet">
@@ -261,6 +342,16 @@ const styles = StyleSheet.create({
   listTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
   listSubtitle: { fontSize: txtSize.small, fontFamily: typography.regular, color: colors.textSecondary, marginTop: 2 },
   emptyTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text, marginTop: spacing.md },
+    searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingHorizontal: spacing.sm, height: 40 },
+  searchIcon: { marginRight: spacing.sm },
+  searchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, height: "100%" },
+  clearSearchBtn: { padding: 4 },
+  paginationFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
+  paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pageBtn: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.white },
+  pageBtnDisabled: { backgroundColor: colors.surface, borderColor: colors.surface },
+  pageIndicator: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
   listContent: { padding: spacing.md, gap: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },

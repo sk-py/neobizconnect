@@ -3,18 +3,21 @@ import { useAuthStore } from "@/store/auth.store";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { OrderDocument, StandardStats } from "../types";
+
+const PAGE_SIZE = 10;
 
 interface OrderDocumentTemplateProps {
   pageTitle: string;
@@ -24,6 +27,10 @@ interface OrderDocumentTemplateProps {
   queryKeyBase: string;
   fetchList: (company: string) => Promise<OrderDocument[]>;
   fetchStats: (company: string) => Promise<StandardStats>;
+  dateFieldLabel?: string;
+  enableSearch?: boolean;
+  enablePagination?: boolean;
+  alwaysShowClientCode?: boolean;
 }
 
 export const OrderDocumentTemplate = ({
@@ -34,12 +41,19 @@ export const OrderDocumentTemplate = ({
   queryKeyBase,
   fetchList,
   fetchStats,
+  dateFieldLabel = "Date",
+  enableSearch = true,
+  enablePagination = true,
+  alwaysShowClientCode = false,
 }: OrderDocumentTemplateProps) => {
   const user = useAuthStore((state) => state.user);
+  const insets = useSafeAreaInsets();
   const groupCompanyName = user?.group_company_name || "Neo";
-      const canSeeClientCode = user?.authority === "Admin" || user?.authority === "Super Admin";
+  const canSeeClientCode = alwaysShowClientCode || user?.authority === "Admin" || user?.authority === "Super Admin";
 
   const [selectedDoc, setSelectedDoc] = useState<OrderDocument | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: [`${queryKeyBase}-stats`, groupCompanyName],
@@ -52,6 +66,33 @@ export const OrderDocumentTemplate = ({
     queryFn: () => fetchList(groupCompanyName),
     enabled: Boolean(groupCompanyName),
   });
+
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    setPage(0);
+  };
+
+  const filteredDocs = useMemo(() => {
+    if (!enableSearch || !searchQuery.trim()) return docs;
+    const query = searchQuery.toLowerCase();
+    return docs.filter(
+      (doc) =>
+        doc.salesorderno?.toString().toLowerCase().includes(query) ||
+        doc.customer_name?.toLowerCase().includes(query) ||
+        doc.customer_code?.toLowerCase().includes(query),
+    );
+  }, [docs, searchQuery, enableSearch]);
+
+  const totalItems = filteredDocs.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paginatedDocs = useMemo(() => {
+    if (!enablePagination) return filteredDocs;
+    const start = safePage * PAGE_SIZE;
+    return filteredDocs.slice(start, start + PAGE_SIZE);
+  }, [filteredDocs, safePage, enablePagination]);
+  const rangeStart = totalItems === 0 ? 0 : safePage * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(totalItems, (safePage + 1) * PAGE_SIZE);
 
   const formatDate = (isoString: string) => {
     if (!isoString) return "N/A";
@@ -73,11 +114,11 @@ export const OrderDocumentTemplate = ({
             )}
           </View>
           <View>
-
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusBadgeText}>{item.portal_status}</Text>
-          </View>
-            <Text style={[styles.docDate, {textAlign:"right"}]}>{formatDate(item.document_date)}</Text>
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>{item.portal_status}</Text>
+            </View>
+            <Text style={[styles.dateFieldLabel, { textAlign: "right" }]}>{dateFieldLabel}</Text>
+            <Text style={[styles.docDate, { textAlign: "right" }]}>{formatDate(item.document_date)}</Text>
           </View>
         </View>
 
@@ -123,27 +164,74 @@ export const OrderDocumentTemplate = ({
         </View>
       </View>
 
+      {enableSearch && (
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={`Search by ${documentNumberLabel.toLowerCase()}, customer name...`}
+            placeholderTextColor={colors.muted}
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
+              <Feather name="x-circle" size={16} color={colors.muted} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {docsLoading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      ) : docs.length === 0 ? (
+      ) : filteredDocs.length === 0 ? (
         <View style={styles.centerBox}>
           <Feather name="inbox" size={48} color={colors.muted} />
           <Text style={styles.emptyTitle}>No records found</Text>
         </View>
       ) : (
-        <LegendList
-          data={docs}
-          keyExtractor={(item: OrderDocument) => item.id.toString()}
-          estimatedItemSize={160}
-          renderItem={renderCard}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          onRefresh={refetch}
-          refreshing={isRefetching}
-          recycleItems={true}
-        />
+        <>
+          <LegendList
+            data={paginatedDocs}
+            keyExtractor={(item: OrderDocument) => item.id.toString()}
+            estimatedItemSize={160}
+            renderItem={renderCard}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            onRefresh={refetch}
+            refreshing={isRefetching}
+            recycleItems={true}
+          />
+
+          {enablePagination && (
+            <View style={[styles.paginationBar, { paddingBottom: spacing.sm + insets.bottom }]}>
+              <Text style={styles.paginationText}>
+                {rangeStart}-{rangeEnd} of {totalItems}
+              </Text>
+              <View style={styles.paginationControls}>
+                <TouchableOpacity
+                  style={[styles.pageBtn, safePage === 0 && styles.pageBtnDisabled]}
+                  onPress={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={safePage === 0}
+                >
+                  <Feather name="chevron-left" size={15} color={safePage === 0 ? colors.muted : colors.text} />
+                </TouchableOpacity>
+                <Text style={styles.pageIndicator}>
+                  {safePage + 1} / {totalPages}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.pageBtn, safePage >= totalPages - 1 && styles.pageBtnDisabled]}
+                  onPress={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={safePage >= totalPages - 1}
+                >
+                  <Feather name="chevron-right" size={15} color={safePage >= totalPages - 1 ? colors.muted : colors.text} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </>
       )}
 
       <Modal visible={Boolean(selectedDoc)} animationType="slide" presentationStyle="pageSheet">
@@ -165,8 +253,12 @@ export const OrderDocumentTemplate = ({
                   <Text style={styles.modalSummaryLabel}>Customer</Text>
                   <Text style={styles.modalSummaryMain}>{selectedDoc.customer_name}</Text>
                   {canSeeClientCode && (
-                    <Text style={styles.modalSummarySub}>{selectedDoc.customer_code}</Text>
+                    <Text style={styles.modalSummarySub}>Client Code: {selectedDoc.customer_code}</Text>
                   )}
+                </View>
+                <View style={[styles.modalSummaryCard, { backgroundColor: "#F0FDF4" }]}>
+                  <Text style={styles.modalSummaryLabel}>{dateFieldLabel}</Text>
+                  <Text style={styles.modalSummaryMain}>{formatDate(selectedDoc.document_date)}</Text>
                 </View>
               </View>
 
@@ -254,6 +346,16 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, fontFamily: typography.bold, color: colors.text },
   statIcon: { position: "absolute", top: 16, right: 16, opacity: 0.2 },
   listHeader: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingHorizontal: spacing.sm, height: 40 },
+  searchIcon: { marginRight: spacing.sm },
+  searchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, height: "100%" },
+  clearSearchBtn: { padding: 4 },
+  paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.white },
+  paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pageBtn: { width: 28, height: 28, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+  pageBtnDisabled: { opacity: 0.5 },
+  pageIndicator: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
   listTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
   listSubtitle: { fontSize: txtSize.small, fontFamily: typography.regular, color: colors.textSecondary, marginTop: 2 },
   emptyTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text, marginTop: spacing.md },
@@ -262,6 +364,7 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   docNo: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   docDate: { fontSize: 12, fontFamily: typography.regular, color: colors.muted, marginTop: 2 },
+  dateFieldLabel: { fontSize: 10, fontFamily: typography.medium, color: colors.muted },
   clientCode: { fontSize: 11, fontFamily: typography.semibold, color: "#1D4ED8", marginTop: 2 },
   statusBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl },
   statusBadgeText: { fontSize: 10, fontFamily: typography.bold, color: "#1D4ED8" },

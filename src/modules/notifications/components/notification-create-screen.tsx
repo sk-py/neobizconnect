@@ -1,11 +1,13 @@
 import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
 import { sendNotification } from "@/modules/notifications/services/notifications-api";
+import NotificationListScreen from "@/modules/notifications/components/notification-list-screen";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -13,14 +15,48 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  ToastAndroid,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
 
 export default function NotificationCreateScreen() {
+  const [viewMode, setViewMode] = useState<"send" | "history">("send");
+
+  useFocusEffect(
+    useCallback(() => {
+      setViewMode("send");
+    }, []),
+  );
+
+  useEffect(() => {
+    if (viewMode !== "history") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setViewMode("send");
+      return true;
+    });
+    return () => sub.remove();
+  }, [viewMode]);
+
+  const renderToggleBar = () => (
+    <View style={styles.toggleBar}>
+      <TouchableOpacity
+        style={[styles.toggleBtn, viewMode === "send" && styles.toggleBtnActive]}
+        onPress={() => setViewMode("send")}
+      >
+        <Text style={viewMode === "send" ? styles.toggleBtnTextActive : styles.toggleBtnText}>Send</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.toggleBtn, viewMode === "history" && styles.toggleBtnActive]}
+        onPress={() => setViewMode("history")}
+      >
+        <Text style={viewMode === "history" ? styles.toggleBtnTextActive : styles.toggleBtnText}>History</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [imageUri, setImageUri] = useState<string | undefined>();
@@ -93,6 +129,15 @@ export default function NotificationCreateScreen() {
     resetForm();
   };
 
+  if (viewMode === "history") {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        {renderToggleBar()}
+        <NotificationListScreen />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
@@ -101,6 +146,8 @@ export default function NotificationCreateScreen() {
           This will be sent to all dealers, sales managers, and other users.
         </Text>
       </View>
+
+      {renderToggleBar()}
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -203,7 +250,6 @@ export default function NotificationCreateScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
-
   header: {
     padding: spacing.md,
     backgroundColor: colors.white,
@@ -217,8 +263,36 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
-
   scrollContent: { padding: spacing.md, paddingBottom: spacing.xxl },
+  
+  toggleBar: { 
+    flexDirection: "row", 
+    margin: spacing.md, 
+    marginBottom: spacing.sm, 
+    borderRadius: radius.sm, 
+    backgroundColor: colors.border, 
+    padding: 2,
+  },
+  toggleBtn: { 
+    flex: 1, 
+    paddingVertical: 10, 
+    alignItems: "center", 
+    justifyContent: "center", 
+    borderRadius: radius.sm - 2,
+  },
+  toggleBtnActive: { 
+    backgroundColor: colors.white, 
+  },
+  toggleBtnText: { 
+    fontSize: 13, 
+    fontFamily: typography.bold, 
+    color: colors.muted 
+  },
+  toggleBtnTextActive: { 
+    fontSize: 13, 
+    fontFamily: typography.bold, 
+    color: colors.primary 
+  },
 
   label: {
     fontSize: txtSize.xs,
@@ -240,7 +314,6 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   textArea: { height: 100 },
-
   uploadBox: {
     backgroundColor: colors.white,
     borderRadius: radius.sm,
@@ -253,7 +326,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   uploadText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted },
-
   previewWrap: { position: "relative", height: 140 },
   previewImage: {
     width: "100%",
@@ -274,7 +346,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.white,
   },
-
   errorBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -287,7 +358,6 @@ const styles = StyleSheet.create({
     borderColor: "#FECACA",
   },
   errorText: { fontSize: 12, fontFamily: typography.medium, color: colors.error, flex: 1 },
-
   submitBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -300,7 +370,6 @@ const styles = StyleSheet.create({
   },
   submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { fontSize: 14, fontFamily: typography.bold, color: colors.white },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",

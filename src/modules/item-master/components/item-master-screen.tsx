@@ -78,12 +78,12 @@ export default function ItemMasterScreen() {
   const renderRow = ({ item }: { item: ItemMasterEntry }) => {
     const outOfStock = item.inStockQty <= 0;
 
-    if (!canSeeExtraDetails) {
+        if (!canSeeExtraDetails) {
       const salesManagerOutOfStock = item.inStockQty < 4;
       return (
         <View style={styles.row}>
           <View style={styles.rowMain}>
-            <Text style={styles.itemName} numberOfLines={1}>
+            <Text style={styles.itemName} numberOfLines={2}>
               {item.itemName}
             </Text>
             <View style={styles.metaRow}>
@@ -93,7 +93,10 @@ export default function ItemMasterScreen() {
             </View>
           </View>
           <View style={[styles.stockBadge, salesManagerOutOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
-            <Text style={[styles.stockBadgeText, salesManagerOutOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}>
+            <Text
+              style={[styles.stockBadgeText, salesManagerOutOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}
+              numberOfLines={1}
+            >
               {salesManagerOutOfStock ? "Out of Stock" : item.inStockQty}
             </Text>
           </View>
@@ -284,11 +287,10 @@ const styles = StyleSheet.create({
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 2 },
-
   listContent: { paddingBottom: 0 },
   row: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.sm },
-  rowMain: { flex: 1 },
-  itemName: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text },
+  rowMain: { flex: 1, flexShrink: 1 },
+  itemName: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text, lineHeight: 16 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   metaText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted },
   metaDot: { fontSize: txtSize.xs, color: colors.muted },
@@ -308,7 +310,7 @@ const styles = StyleSheet.create({
   attachmentLink: { flexDirection: "row", alignItems: "center", gap: 4 },
   attachmentLinkText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
 
-  stockBadge: { minWidth: 34, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+    stockBadge: { minWidth: 34, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   stockBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold },
 
   stockBadgeLg: { minWidth: 56, paddingHorizontal: 10, paddingVertical: 8, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },

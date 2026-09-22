@@ -1,5 +1,24 @@
 import { api } from "@/services/axios";
 
+export type NotificationListItem = {
+  id?: string | number;
+  title?: string;
+  message?: string;
+  imageUrl?: string;
+  createdDate?: string;
+  [key: string]: any;
+};
+
+export const fetchNotifications = async (): Promise<NotificationListItem[]> => {
+  const res = await api.get(`/Notification/List`);
+  const data = res.data;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.List)) return data.List;
+  if (Array.isArray(data?.Notifications)) return data.Notifications;
+  return [];
+};
+
 export type SendNotificationPayload = {
   title: string;
   message: string;
@@ -16,14 +35,13 @@ export const sendNotification = async (
   formData.append("message", payload.message);
 
   if (payload.imageUri) {
-    formData.append("file", {
+    const file: any = {
       uri: payload.imageUri,
       name: payload.imageName || "attachment.jpg",
       type: payload.imageType || "image/jpeg",
-    } as any);
+    };
+    formData.append("file", file);
   }
 
-  await api.post("/Notification/Upload", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  await api.post("/Notification/Upload", formData);
 };
