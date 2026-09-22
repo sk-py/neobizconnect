@@ -41,15 +41,15 @@ export const OrderDocumentTemplate = ({
   queryKeyBase,
   fetchList,
   fetchStats,
-  dateFieldLabel = "Date",
+    dateFieldLabel = "Order Date",
   enableSearch = true,
   enablePagination = true,
   alwaysShowClientCode = false,
 }: OrderDocumentTemplateProps) => {
   const user = useAuthStore((state) => state.user);
   const insets = useSafeAreaInsets();
-  const groupCompanyName = user?.group_company_name || "Neo";
-  const canSeeClientCode = alwaysShowClientCode || user?.authority === "Admin" || user?.authority === "Super Admin";
+    const groupCompanyName = user?.group_company_name || "Neo";
+  const canSeeClientCode = alwaysShowClientCode || user?.authority === "Admin" || user?.authority === "Super Admin" || user?.authority === "Sales Manager";
 
   const [selectedDoc, setSelectedDoc] = useState<OrderDocument | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

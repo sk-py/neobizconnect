@@ -835,8 +835,8 @@ export default function DealerDetailScreen() {
                 </Text>
               </View>
               <View style={styles.ledgerInvoiceRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.ledgerInfoLabel}>Invoice</Text>
+                    <View style={{ flex: 1 }}>
+                  <Text style={styles.ledgerInfoLabel}>Document Number</Text>
                   <Text style={styles.ledgerInfoValue} numberOfLines={1}>
                     {invoiceNo}
                   </Text>

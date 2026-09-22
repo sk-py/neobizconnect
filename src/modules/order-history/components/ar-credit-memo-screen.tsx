@@ -1,532 +1,404 @@
-import {
-  colors,
-  radius,
-  spacing,
-  typography,
-  txtSize,
-} from "@/constants/theme";
-import { ArCreditMemo } from "@/modules/dealers/types";
+import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
+import { fetchArCreditMemos, fetchArCreditMemoStats } from "@/modules/order-history/services/ar-credit-memo.api";
+import { ArCreditMemoDocument } from "@/modules/order-history/types";
+import { useAuthStore } from "@/store/auth.store";
+import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface ArCreditMemoDetailModalProps {
-  memo: ArCreditMemo | null;
-  visible: boolean;
-  onClose: () => void;
-}
 
-const FALLBACK = "-";
+export default function ArCreditMemoScreen() {
+  const insets = useSafeAreaInsets();
+  const [selectedDetails, setSelectedDetails] = useState<ArCreditMemoDocument | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 10;
+  const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+      const canSeeClientCode = user?.authority === "Admin" || user?.authority === "Super Admin" || user?.authority === "Sales Manager";
 
-const formatCurrency = (val: number | string | null | undefined) => {
-  const num = Number(val);
-  return (isNaN(num) ? 0 : num).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["ar-credit-memo-stats"],
+    queryFn: fetchArCreditMemoStats,
   });
-};
 
+  const { data: creditMemos = [], isLoading: listLoading, isRefetching, refetch } = useQuery({
+    queryKey: ["ar-credit-memo-list"],
+    queryFn: fetchArCreditMemos,
+  });
 
-const MONTH_NAMES = [
-  "jan", "feb", "mar", "apr", "may", "jun",
-  "jul", "aug", "sept", "oct", "nov", "dec",
-];
-
-const formatDateFromParts = (year: number, monthIndex: number, day: number) => {
-  if (!year || monthIndex < 0 || monthIndex > 11 || !day || day < 1 || day > 31) {
-    return FALLBACK;
-  }
-  return `${day} ${MONTH_NAMES[monthIndex]} ${year}`;
-};
-
-const formatDate = (value: string | null | undefined) => {
-  const text = String(value ?? "").trim();
-  if (!text) return FALLBACK;
-
-  const withoutTime = text
-    .split("T")[0]
-    .replace(/\s+\d{1,2}:\d{2}(:\d{2})?(\.\d+)?(\s?(AM|PM))?$/i, "")
-    .trim();
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    const withoutTime = String(dateString)
+      .split("T")[0]
+      .replace(/\s+\d{1,2}:\d{2}(:\d{2})?(\.\d+)?(\s?(AM|PM))?$/i, "")
+      .trim();
 
     const ymd = withoutTime.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (ymd) {
-    const [, year, month, day] = ymd;
-    return formatDateFromParts(Number(year), Number(month) - 1, Number(day));
-  }
+    if (ymd) {
+      const [, year, month, day] = ymd;
+      return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+    }
 
-  const mdy = withoutTime.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (mdy) {
-    const [, month, day, year] = mdy;
-    return formatDateFromParts(Number(year), Number(month) - 1, Number(day));
-  }
+    const mdy = withoutTime.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (mdy) {
+      const [, month, day, year] = mdy;
+      return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+    }
 
-  const d = new Date(withoutTime);
-  if (isNaN(d.getTime())) return withoutTime;
+    return "-";
+  };
 
-  return formatDateFromParts(d.getFullYear(), d.getMonth(), d.getDate());
-};
+  const filteredMemos = useMemo(() => {
+    if (!searchQuery.trim()) return creditMemos;
+    const query = searchQuery.toLowerCase();
+    return creditMemos.filter(
+      (item) =>
+        item.arcreditmemono?.toLowerCase().includes(query) ||
+        item.customer_name?.toLowerCase().includes(query) ||
+        item.customer_code?.toLowerCase().includes(query),
+    );
+  }, [creditMemos, searchQuery]);
 
-const formatAddressBlock = (value: string) => {
-  if (!value) return FALLBACK;
-  return value
-    .split("\r")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join(", ");
-};
+  const totalPages = Math.max(1, Math.ceil(filteredMemos.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages - 1);
+  const paginatedMemos = useMemo(
+    () => filteredMemos.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE),
+    [filteredMemos, currentPage],
+  );
 
-const getStatusStyle = (status: string) => {
-  const normalized = (status || "").toLowerCase();
-  if (normalized.includes("open") || normalized.includes("pending")) {
-    return { bg: "#FFFBEB", text: "#B45309" };
-  }
-  if (normalized.includes("close")) {
-    return { bg: "#EFF6FF", text: "#2563EB" };
-  }
-  if (normalized.includes("cancel") || normalized.includes("reject")) {
-    return { bg: "#FEF2F2", text: colors.error };
-  }
-  return { bg: colors.surface, text: colors.textSecondary };
-};
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    setPage(0);
+  };
 
-function InfoField({ label, value }: { label: string; value: string }) {
+  const renderCard = ({ item }: { item: ArCreditMemoDocument }) => {
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View>
+            <Text numberOfLines={1} style={styles.docNo}>{item.customer_name}</Text>
+            <Text style={styles.docDate}>Credit Memo #{item.arcreditmemono}</Text>
+            {canSeeClientCode && (
+              <Text style={styles.clientCode}>Client Code: {item.customer_code}</Text>
+            )}
+          </View>
+          <View>
+
+          <View style={[styles.statusBadge, item.status === "Closed" && styles.statusClosed]}>
+            <Text style={[styles.statusBadgeText, item.status === "Closed" && styles.statusTextClosed]}>
+              {item.status}
+            </Text>
+          </View>
+            <Text style={styles.docDate}>{formatDate(item.posting_date)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.cardBody}>
+          <View style={styles.infoCol}>
+            <Text style={styles.infoLabel}>Quantity</Text>
+            <Text style={styles.infoValue}>{item.items_quantity}</Text>
+          </View>
+          <View style={styles.infoCol}>
+            <Text style={styles.infoLabel}>Amount</Text>
+            <Text style={styles.infoValue}>₹{parseFloat(item.doc_total).toLocaleString("en-IN")}</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.viewButton}
+          activeOpacity={0.8}
+          onPress={() => setSelectedDetails(item)}
+        >
+          <Feather name="eye" size={16} color={colors.primary} />
+          <Text style={styles.viewButtonText}>View Details</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
-    <View style={styles.infoCell}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <Text style={styles.fieldValue}>{value || FALLBACK}</Text>
+    <View style={styles.safeArea}>
+      <View style={styles.listHeader} />
+      <View style={styles.statsContainer}>
+        <View style={[styles.statCard, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
+          <Text style={styles.statLabel}>Total Credit Memos</Text>
+          {statsLoading ? <ActivityIndicator size="small" /> : (
+            <Text style={styles.statValue}>{stats?.total_arcreditmemo || 0}</Text>
+          )}
+          <Feather name="shopping-cart" size={20} color="#3B82F6" style={styles.statIcon} />
+        </View>
+        <View style={[styles.statCard, { backgroundColor: "#F0FDF4", borderColor: "#BBF7D0" }]}>
+          <Text style={styles.statLabel}>Total Amount</Text>
+          {statsLoading ? <ActivityIndicator size="small" /> : (
+            <Text style={styles.statValue}>₹{parseFloat(stats?.total_arcreditmemo_amount || "0").toLocaleString("en-IN")}</Text>
+          )}
+          <Feather name="file-text" size={20} color="#22C55E" style={styles.statIcon} />
+        </View>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by memo no, customer name..."
+          placeholderTextColor={colors.muted}
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
+            <Feather name="x-circle" size={16} color={colors.muted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {listLoading ? (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : filteredMemos.length === 0 ? (
+        <View style={styles.centerBox}>
+          <Feather name="inbox" size={48} color={colors.muted} />
+          <Text style={styles.emptyTitle}>No credit memos found</Text>
+        </View>
+      ) : (
+        <LegendList
+          data={paginatedMemos}
+          keyExtractor={(item: ArCreditMemoDocument) => item.id.toString()}
+          estimatedItemSize={160}
+          renderItem={renderCard}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          onRefresh={() => { setPage(0); refetch(); }}
+          refreshing={isRefetching}
+          recycleItems={true}
+        />
+      )}
+
+      {filteredMemos.length > 0 && (
+        <View style={[styles.paginationFooter, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
+          <Text style={styles.paginationText}>
+            {currentPage * PAGE_SIZE + 1}-{Math.min((currentPage + 1) * PAGE_SIZE, filteredMemos.length)} of {filteredMemos.length}
+          </Text>
+          <View style={styles.paginationControls}>
+            <TouchableOpacity
+              style={[styles.pageBtn, currentPage === 0 && styles.pageBtnDisabled]}
+              disabled={currentPage === 0}
+              onPress={() => setPage((p) => p - 1)}
+            >
+              <Feather name="chevron-left" size={15} color={currentPage === 0 ? colors.muted : colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.pageIndicator}>
+              {currentPage + 1} / {totalPages}
+            </Text>
+            <TouchableOpacity
+              style={[styles.pageBtn, currentPage >= totalPages - 1 && styles.pageBtnDisabled]}
+              disabled={currentPage >= totalPages - 1}
+              onPress={() => setPage((p) => p + 1)}
+            >
+              <Feather name="chevron-right" size={15} color={currentPage >= totalPages - 1 ? colors.muted : colors.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      <Modal visible={Boolean(selectedDetails)} animationType="slide" presentationStyle="pageSheet">
+        {selectedDetails && (
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Credit Memo Details</Text>
+                <Text style={styles.modalSubtitle}>Credit Memo #{selectedDetails.arcreditmemono}</Text>
+              </View>
+              <View style={styles.modalHeaderRight}>
+                <View style={[styles.statusBadge, selectedDetails.status === "Closed" && styles.statusClosed, { marginRight: 12 }]}>
+                  <Text style={[styles.statusBadgeText, selectedDetails.status === "Closed" && styles.statusTextClosed]}>
+                    {selectedDetails.status}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedDetails(null)} style={styles.closeButton}>
+                  <Feather name="x" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalScroll}>
+              <View style={styles.modalSummaryRow}>
+                <View style={[styles.modalSummaryCard, { backgroundColor: "#EFF6FF" }]}>
+                  <Text style={styles.modalSummaryLabel}>Customer</Text>
+                  <Text style={styles.modalSummaryMain}>{selectedDetails.customer_name}</Text>
+                  {canSeeClientCode && (
+                    <Text style={styles.modalSummarySub}>Customer Code: {selectedDetails.customer_code}</Text>
+                  )}
+                </View>
+                <View style={[styles.modalSummaryCard, { backgroundColor: "#F0FDF4" }]}>
+                  <Text style={styles.modalSummaryLabel}>Posting Date</Text>
+                  <Text style={styles.modalSummaryMain}>{formatDate(selectedDetails.posting_date)}</Text>
+                </View>
+              </View>
+
+              <View style={[styles.modalSummaryCard, { backgroundColor: "#FFF7ED", marginTop: spacing.md }]}>
+                <Text style={styles.modalSummaryLabel}>Total Amount</Text>
+                <Text style={styles.modalSummaryMain}>₹{parseFloat(selectedDetails.doc_total).toLocaleString("en-IN")}</Text>
+                <Text style={styles.modalSummarySub}>Payment Terms: {selectedDetails.payment_terms}</Text>
+              </View>
+
+              <View style={styles.infoSection}>
+                <Text style={styles.sectionTitle}>Order Information</Text>
+
+                <View style={styles.infoGridRow}>
+                  <View style={styles.infoGridCol}>
+                    <Text style={styles.infoLabel}>Sales Manager</Text>
+                    <Text style={styles.infoValue}>{selectedDetails.sales_manager || "-"}</Text>
+                  </View>
+                  <View style={styles.infoGridCol}>
+                    <Text style={styles.infoLabel}>Contact Person</Text>
+                    <Text style={styles.infoValue}>{selectedDetails.contact_person || "-"}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.infoGridRow}>
+                  <View style={styles.infoGridCol}>
+                    <Text style={styles.infoLabel}>Branch</Text>
+                    <Text style={styles.infoValue}>{selectedDetails.branch || "-"}</Text>
+                  </View>
+                  <View style={styles.infoGridCol}>
+                    <Text style={styles.infoLabel}>GSTIN</Text>
+                    <Text style={styles.infoValue}>{selectedDetails.gstin || "-"}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.infoBlock}>
+                  <Text style={styles.infoLabel}>Ship To Address</Text>
+                  <Text style={styles.infoValue}>{selectedDetails.ship_to_address}</Text>
+                </View>
+                <View style={styles.infoBlock}>
+                  <Text style={styles.infoLabel}>Bill To Address</Text>
+                  <Text style={styles.infoValue}>{selectedDetails.bill_to_address}</Text>
+                </View>
+                <View style={styles.infoBlock}>
+                  <Text style={styles.infoLabel}>Remarks</Text>
+                  <Text style={styles.infoValue}>{selectedDetails.remarks || "-"}</Text>
+                </View>
+              </View>
+
+              <View style={styles.infoSection}>
+                <View style={styles.productHeader}>
+                  <Text style={styles.sectionTitle}>Product Details</Text>
+                  <View style={styles.qtyBadge}>
+                    <Text style={styles.qtyBadgeText}>Total Qty: {selectedDetails.items_quantity}</Text>
+                  </View>
+                </View>
+
+                {selectedDetails.items.map((item, index) => (
+                  <View key={item.LineNo} style={styles.productRow}>
+                    <Text style={styles.productIndex}>{index + 1}</Text>
+                    <View style={styles.productDetails}>
+                      <Text style={styles.productName}>{item.ItemDescription}</Text>
+                    </View>
+                    <View style={styles.productNumbers}>
+                      <Text style={styles.productQty}>{parseFloat(item.Quantity).toFixed(6)}</Text>
+                      <Text style={styles.productPrice}>₹{parseFloat(item.UnitPrice).toLocaleString("en-IN")}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        )}
+      </Modal>
     </View>
   );
 }
 
-export function ArCreditMemoDetailModal({
-  memo,
-  visible,
-  onClose,
-}: ArCreditMemoDetailModalProps) {
-  if (!memo) {
-    return null;
-  }
-
-  const statusStyle = getStatusStyle(memo.status);
-  const items = memo.items ?? [];
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={onClose}
-    >
-      <View style={styles.backdrop}>
-        <View style={styles.card}>
-          <View style={styles.topRow}>
-            <View style={styles.titleBlock}>
-              <Text style={styles.title}>Credit Memo Details</Text>
-              <Text style={styles.subtitle}>
-                Credit Memo #{memo.arcreditmemono || FALLBACK}
-              </Text>
-            </View>
-
-            <View style={styles.topRowRight}>
-              {memo.status ? (
-                <View
-                  style={[
-                    styles.statusPill,
-                    { backgroundColor: statusStyle.bg },
-                  ]}
-                >
-                  <Text
-                    style={[styles.statusPillText, { color: statusStyle.text }]}
-                  >
-                    {memo.status}
-                  </Text>
-                </View>
-              ) : null}
-
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={onClose}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Feather name="x" size={18} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <ScrollView
-            style={styles.body}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.summaryRow}>
-              <View style={[styles.summaryCard, styles.summaryCardBlue]}>
-                <Text style={styles.summaryLabel}>Customer</Text>
-                <Text style={styles.summaryValue} numberOfLines={2}>
-                  {memo.customer_name || FALLBACK}
-                </Text>
-                <Text style={styles.summarySubtext}>
-                  Customer Code: {memo.customer_code || FALLBACK}
-                </Text>
-              </View>
-
-              <View style={[styles.summaryCard, styles.summaryCardGreen]}>
-                <Text style={styles.summaryLabel}>Posting Date</Text>
-                <Text style={styles.summaryValue}>
-                  {formatDate(memo.posting_date)}
-                </Text>
-              </View>
-
-              <View style={[styles.summaryCard, styles.summaryCardOrange]}>
-                <Text style={styles.summaryLabel}>Total Amount</Text>
-                <Text style={styles.summaryValuePrimary}>
-                  Rs. {formatCurrency(memo.doc_total)}
-                </Text>
-                <Text style={styles.summarySubtext}>
-                  Payment Terms: {memo.payment_terms || FALLBACK}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Order Information</Text>
-
-              <View style={styles.infoGrid}>
-                <InfoField label="Sales Manager" value={memo.sales_manager} />
-                <InfoField label="Contact Person" value={memo.contact_person} />
-
-                <InfoField label="Branch" value={memo.branch} />
-                <InfoField label="GSTIN" value={memo.gstin} />
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Ship To Address</Text>
-              <Text style={styles.addressText}>
-                {formatAddressBlock(memo.ship_to_address)}
-              </Text>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Bill To Address</Text>
-              <Text style={styles.addressText}>
-                {formatAddressBlock(memo.bill_to_address)}
-              </Text>
-            </View>
-
-            {memo.remarks ? (
-              <View style={styles.section}>
-                <Text style={styles.fieldLabel}>Remarks</Text>
-                <Text style={styles.addressText}>{memo.remarks}</Text>
-              </View>
-            ) : null}
-
-            <View style={styles.section}>
-              <View style={styles.productHeaderRow}>
-                <Text style={styles.sectionTitle}>Product Details</Text>
-                <View style={styles.qtyBadge}>
-                  <Text style={styles.qtyBadgeText}>
-                    Total Qty: {memo.items_quantity ?? FALLBACK}
-                  </Text>
-                </View>
-              </View>
-
-              {items.length === 0 ? (
-                <Text style={styles.emptyText}>No line items</Text>
-              ) : (
-                <View style={styles.productTable}>
-                  <View style={styles.productTableHeader}>
-                    <Text style={[styles.productHeaderText, styles.srCol]}>
-                      #
-                    </Text>
-                    <Text
-                      style={[styles.productHeaderText, styles.nameCol]}
-                    >
-                      Description
-                    </Text>
-                    <Text style={[styles.productHeaderText, styles.qtyCol]}>
-                      Qty
-                    </Text>
-                    <Text
-                      style={[styles.productHeaderText, styles.priceCol]}
-                    >
-                      Unit Price (Pre GST)
-                    </Text>
-                  </View>
-
-                  {items.map((item, index) => (
-                    <View
-                      key={`${item.ItemNo}-${item.LineNo}-${index}`}
-                      style={styles.productRow}
-                    >
-                      <Text style={[styles.productCellText, styles.srCol]}>
-                        {index + 1}
-                      </Text>
-                      <Text
-                        style={[styles.productCellText, styles.nameCol]}
-                        numberOfLines={2}
-                      >
-                        {item.ItemDescription || FALLBACK}
-                      </Text>
-                      <Text style={[styles.productCellText, styles.qtyCol]}>
-                        {Number(item.Quantity) || 0}
-                      </Text>
-                      <Text
-                        style={[styles.productCellText, styles.priceCol]}
-                      >
-                        Rs. {formatCurrency(item.UnitPrice)}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    padding: spacing.lg,
-  },
-
-  card: {
-    maxHeight: "88%",
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    paddingTop: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-
-  titleBlock: {
-    flex: 1,
-    gap: 2,
-  },
-
-  title: {
-    fontSize: txtSize.small,
-    fontFamily: typography.bold,
-    color: colors.text,
-  },
-
-  subtitle: {
-    fontSize: txtSize.xs,
-    fontFamily: typography.medium,
-    color: colors.textSecondary,
-  },
-
-  topRowRight: {
+  safeArea: { flex: 1, backgroundColor: colors.surface },
+  centerBox: { flex: 1, justifyContent: "center", alignItems: "center" },
+  backButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: 8,
+    marginBottom: spacing.md,
   },
-
-  statusPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: radius.xl ?? 999,
-  },
-
-  statusPillText: {
-    fontSize: txtSize.xs,
-    fontFamily: typography.bold,
-  },
-
-  closeButton: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-
-  body: {
-    marginTop: spacing.md,
-  },
-
-  summaryRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-
-  summaryCard: {
-    flexGrow: 1,
-    flexBasis: "30%",
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    gap: 3,
-  },
-
-  summaryCardBlue: { backgroundColor: "#EFF6FF" },
-  summaryCardGreen: { backgroundColor: "#F0FDF4" },
-  summaryCardOrange: { backgroundColor: "#FFF7ED" },
-
-  summaryLabel: {
-    fontSize: txtSize.xs,
-    fontFamily: typography.medium,
-    color: colors.textSecondary,
-  },
-
-  summaryValue: {
+  backText: {
     fontSize: txtSize.small,
-    fontFamily: typography.bold,
-    color: colors.text,
-  },
-
-  summaryValuePrimary: {
-    fontSize: txtSize.small,
-    fontFamily: typography.bold,
-    color: colors.primary,
-  },
-
-  summarySubtext: {
-    fontSize: txtSize.xs,
     fontFamily: typography.medium,
     color: colors.textSecondary,
   },
-
-  section: {
-    marginBottom: spacing.lg,
-  },
-
-  sectionTitle: {
-    fontSize: txtSize.small,
-    fontFamily: typography.bold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-
-  infoGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.md,
-  },
-
-  infoCell: {
-    minWidth: "45%",
-    gap: 2,
-  },
-
-  fieldLabel: {
-    fontSize: txtSize.xs,
-    fontFamily: typography.medium,
-    color: colors.textSecondary,
-    marginBottom: 2,
-  },
-
-  fieldValue: {
-    fontSize: txtSize.xs,
-    fontFamily: typography.semibold,
-    color: colors.text,
-  },
-
-  addressText: {
-    fontSize: txtSize.xs,
-    fontFamily: typography.semibold,
-    color: colors.text,
-    lineHeight: 18,
-  },
-
-  productHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-
-  qtyBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-    backgroundColor: "#EFF6FF",
-  },
-
-  qtyBadgeText: {
-    fontSize: txtSize.xs,
-    fontFamily: typography.bold,
-    color: "#2563EB",
-  },
-
-  productTable: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    overflow: "hidden",
-  },
-
-  productTableHeader: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-  },
-
-  productHeaderText: {
-    fontSize: txtSize.xs,
-    fontFamily: typography.bold,
-    color: colors.textSecondary,
-  },
-
-  productRow: {
-    flexDirection: "row",
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-
-  productCellText: {
-    fontSize: txtSize.xs,
-    fontFamily: typography.semibold,
-    color: colors.text,
-  },
-
-  srCol: {
-    width: 24,
-  },
-
-  nameCol: {
-    flex: 1,
-    paddingRight: spacing.xs,
-  },
-
-  qtyCol: {
-    width: 40,
-    textAlign: "center",
-  },
-
-  priceCol: {
-    width: 80,
-    textAlign: "right",
-  },
-
-  emptyText: {
-    fontSize: txtSize.xs,
-    fontFamily: typography.medium,
-    color: colors.textSecondary,
-  },
+  statsContainer: { flexDirection: "row", padding: spacing.md, gap: spacing.md },
+  statCard: { flex: 1, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, position: "relative", overflow: "hidden" },
+  statLabel: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 4 },
+  statValue: { fontSize: 22, fontFamily: typography.bold, color: colors.text },
+  statIcon: { position: "absolute", top: 16, right: 16, opacity: 0.2 },
+  listHeader: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+  listTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
+  listSubtitle: { fontSize: txtSize.small, fontFamily: typography.regular, color: colors.textSecondary, marginTop: 2 },
+  emptyTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text, marginTop: spacing.md },
+  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingHorizontal: spacing.sm, height: 40 },
+  searchIcon: { marginRight: spacing.sm },
+  searchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, height: "100%" },
+  clearSearchBtn: { padding: 4 },
+  paginationFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
+  paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pageBtn: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.white },
+  pageBtnDisabled: { backgroundColor: colors.surface, borderColor: colors.surface },
+  pageIndicator: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
+  listContent: { padding: spacing.md, gap: spacing.md },
+  card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  docNo: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
+  docDate: { fontSize: 12, fontFamily: typography.regular, color: colors.muted, marginTop: 2 },
+  clientCode: { fontSize: 11, fontFamily: typography.semibold, color: "#1D4ED8", marginTop: 2 },
+  statusBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl },
+  statusClosed: { backgroundColor: "#E0E7FF" },
+  statusBadgeText: { fontSize: 10, fontFamily: typography.bold, color: "#1D4ED8", textAlign:"center" },
+  statusTextClosed: { color: "#374151" },
+  cardBody: { flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.md },
+  infoCol: { flex: 1 },
+  infoLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginBottom: 2 },
+  infoValue: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
+  viewButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#EFF6FF", paddingVertical: 10, borderRadius: radius.sm, borderWidth: 1, borderColor: "#BFDBFE" },
+  viewButtonText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
+  modalContainer: { flex: 1, backgroundColor: colors.surface },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.lg, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { fontSize: 20, fontFamily: typography.bold, color: colors.text },
+  modalSubtitle: { fontSize: 13, fontFamily: typography.medium, color: colors.muted, marginTop: 2 },
+  modalHeaderRight: { flexDirection: "row", alignItems: "center" },
+  closeButton: { padding: 8, backgroundColor: colors.surface, borderRadius: radius.xl },
+  modalScroll: { padding: spacing.md, gap: spacing.md },
+  modalSummaryRow: { flexDirection: "row", gap: spacing.md },
+  modalSummaryCard: { flex: 1, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  modalSummaryLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginBottom: 4 },
+  modalSummaryMain: { fontSize: 16, fontFamily: typography.bold, color: colors.text },
+  modalSummarySub: { fontSize: 12, fontFamily: typography.regular, color: colors.textSecondary, marginTop: 4 },
+  infoSection: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
+  sectionTitle: { fontSize: 16, fontFamily: typography.bold, color: colors.text, marginBottom: spacing.md },
+  infoGridRow: { flexDirection: "row", marginBottom: spacing.md },
+  infoGridCol: { flex: 1, paddingRight: spacing.sm },
+  infoBlock: { marginBottom: spacing.md },
+  productHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  qtyBadge: { backgroundColor: "#EFF6FF", paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl },
+  qtyBadgeText: { fontSize: 12, fontFamily: typography.bold, color: "#1D4ED8" },
+  productRow: { flexDirection: "row", alignItems: "center", paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  productIndex: { width: 24, fontSize: 12, fontFamily: typography.bold, color: colors.muted },
+  productDetails: { flex: 1, paddingRight: spacing.sm },
+  productName: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
+  productNumbers: { alignItems: "flex-end", flexDirection: "row", gap: 16 },
+  productQty: { fontSize: 13, fontFamily: typography.medium, color: colors.textSecondary },
+  productPrice: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
 });
