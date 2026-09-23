@@ -1,11 +1,12 @@
-import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
-import { MOCK_CATEGORIES } from "@/modules/expense/types";
-import { createExpenses, CreateExpensePayload } from "@/modules/expense/services/expense.api";
+import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
-import { Feather } from "@react-native-vector-icons/feather/static";
+import { CreateExpensePayload, createExpenses } from "@/modules/expense/services/expense.api";
+import { MOCK_CATEGORIES } from "@/modules/expense/types";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import * as ImagePicker from "expo-image-picker";
+import { Feather } from "@react-native-vector-icons/feather/static";
+import { useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -20,7 +21,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQueryClient } from "@tanstack/react-query";
 
 type RowState = {
   localId: string;
@@ -176,6 +176,21 @@ export default function ExpenseCreateScreen() {
                 <Text style={styles.inputText}>{formatDate(row.date)}</Text>
               </View>
             </TouchableOpacity>
+            {datePickerFor && (
+              <DateTimePicker
+                value={rows.find((r) => r.localId === datePickerFor)?.date || new Date()}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={(event, selectedDate) => {
+                  if (Platform.OS === "android") setDatePickerFor(null);
+                  if (selectedDate && datePickerFor) {
+                    updateRow(datePickerFor, { date: selectedDate });
+                    setDatePickerFor(null)
+                  }
+                }}
+                themeVariant="light"
+              />
+            )}
 
             <View style={styles.fieldPairRow}>
               <View style={styles.fieldHalf}>
@@ -269,6 +284,7 @@ export default function ExpenseCreateScreen() {
             <Text style={styles.saveErrorText}>{saveError}</Text>
           </View>
         )}
+
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.md }]}>
@@ -290,19 +306,6 @@ export default function ExpenseCreateScreen() {
         </View>
       </View>
 
-      {datePickerFor && (
-        <DateTimePicker
-          value={rows.find((r) => r.localId === datePickerFor)?.date || new Date()}
-          mode="date"
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={(event, selectedDate) => {
-            if (Platform.OS === "android") setDatePickerFor(null);
-            if (selectedDate && datePickerFor) {
-              updateRow(datePickerFor, { date: selectedDate });
-            }
-          }}
-        />
-      )}
 
       <Modal visible={!!categoryModalFor} transparent animationType="fade" onRequestClose={() => setCategoryModalFor(null)}>
         <Pressable style={styles.modalOverlay} onPress={() => setCategoryModalFor(null)}>

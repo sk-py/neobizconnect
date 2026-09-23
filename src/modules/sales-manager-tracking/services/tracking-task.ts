@@ -65,7 +65,7 @@ export const sendLocationUpdate = async (location: Location.LocationObject) => {
       ],
     };
 
-    console.log("[Background Tracking] Dispatching live payload:", payload);
+    // console.log("[Background Tracking] Dispatching live payload:", payload);
     await api.post(API_URL, payload);
   } catch (error) {
     console.error("[Background Tracking Error]:", error);

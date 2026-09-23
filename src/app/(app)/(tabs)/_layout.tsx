@@ -1,8 +1,11 @@
 import { hasModuleAccess, type AppModuleName, type UserRole } from '@/constants/modules';
 import { colors, typography } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Feather from '@react-native-vector-icons/feather/static';
 import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,6 +14,23 @@ const TabLayout = () => {
     const userRole = user?.authority as UserRole | undefined;
     const insets = useSafeAreaInsets();
 
+    const { initializePush } = usePushNotifications(user?.user_id);
+
+    useEffect(() => {
+    const setupPush = async () => {
+      if (!user?.user_id) return;
+      
+      const pushEnabled = await AsyncStorage.getItem("pushEnabled");
+      
+      // Default to true. Only skip if the user explicitly toggled it off.
+      if (pushEnabled !== "false") {
+        await initializePush();
+      }
+    };
+
+    setupPush();
+  }, [user?.user_id, initializePush]);
+    
     const canAccess = (moduleName: AppModuleName) => hasModuleAccess(moduleName, userRole);
 
     return (

@@ -1,13 +1,16 @@
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
+import { removePushToken, syncPushToken } from "@/services/pushApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
+import { getDevicePushTokenAsync, getPermissionsAsync, requestPermissionsAsync } from 'expo-notifications';
 import { useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fetchDealerProfile } from "../service/profile.api";
 
-// Helper function to check if a value is actually valid and not an empty string or 'NA'
 const isValidValue = (val?: string | null) => {
   if (!val) return false;
   const normalized = val.trim().toUpperCase();
@@ -18,12 +21,68 @@ export const ProfileScreen = () => {
   const router = useRouter();
   const { user, clearSession } = useAuth();
   const groupCompanyName = user?.group_company_name || "Neo";
+  const [pushEnabled, setPushEnabled] = useState(true);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["dealer-profile", groupCompanyName],
     queryFn: () => fetchDealerProfile(groupCompanyName),
     enabled: Boolean(groupCompanyName),
   });
+
+  // Hydrate the toggle state when the screen mounts
+  useEffect(() => {
+    AsyncStorage.getItem("pushEnabled").then((val) => {
+      if (val === "false") {
+        setPushEnabled(false);
+      }
+    });
+  }, []);
+
+  const handlePushToggle = async (value: boolean) => {
+    setPushEnabled(value);
+    try {
+      
+      if (value) {
+
+        const { status: existingStatus } = await getPermissionsAsync();
+        let finalStatus = existingStatus;
+
+        if (existingStatus !== "granted") {
+          const { status } = await requestPermissionsAsync();
+          finalStatus = status;
+        }
+
+        if (finalStatus !== "granted") {
+          setPushEnabled(false); // Revert switch
+          Alert.alert(
+            "Permission Required",
+            "Push notifications are blocked. Please enable them in your device settings.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Open Settings", onPress: () => Linking.openSettings() }
+            ]
+          );
+          return; // Abort execution
+        }
+        
+        const tokenData = await getDevicePushTokenAsync();
+        const token = tokenData.data;
+
+        await AsyncStorage.setItem("pushEnabled", value ? "true" : "false");
+        await syncPushToken(user?.user_id!, token);
+      } else {
+        const tokenData = await getDevicePushTokenAsync();
+        await AsyncStorage.setItem("pushEnabled", "false");
+        await removePushToken(user?.user_id!, tokenData.data);
+      }
+
+    } catch (error) {
+      // Revert the UI switch and storage if the backend fails
+      setPushEnabled(!value);
+      await AsyncStorage.setItem("pushEnabled", !value ? "true" : "false");
+      Alert.alert("Error", "Failed to update notification settings.");
+    }
+  };
 
   if (isLoading || !profile) {
     return (
@@ -46,7 +105,6 @@ export const ProfileScreen = () => {
     ? `${primaryShipTo.ship_to_buildingfloorroom ? primaryShipTo.ship_to_buildingfloorroom + " " : ""}${primaryShipTo.ship_to_address}`
     : "";
 
-  // Array of all potential fields filtered by valid values
   const displayFields = [
     { id: "contact", icon: "user", label: "Contact Person", value: profile.contact_person },
     { id: "phone", icon: "phone", label: "Phone No.", value: profile.phone_no },
@@ -70,7 +128,6 @@ export const ProfileScreen = () => {
     <View style={styles.safeArea} >
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        {/* Centered Minimal Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarCircle}>
             <Feather name="briefcase" size={32} color={colors.primary} />
@@ -84,20 +141,37 @@ export const ProfileScreen = () => {
           )}
         </View>
 
-        {/* Clean Data List - Only renders if there are valid fields */}
         {displayFields.length > 0 && (
           <View style={styles.sectionCard}>
             {displayFields.map((field, index) => (
-              <InfoRow 
-                key={field.id} 
-                icon={field.icon} 
-                label={field.label} 
-                value={field.value} 
-                isLast={index === displayFields.length - 1} 
+              <InfoRow
+                key={field.id}
+                icon={field.icon}
+                label={field.label}
+                value={field.value}
+                isLast={index === displayFields.length - 1}
               />
             ))}
           </View>
         )}
+
+        {/* New Settings Section */}
+        <View style={[styles.sectionCard, { marginTop: spacing.lg }]}>
+          <View style={[styles.infoRow, styles.infoRowLast, { alignItems: "center" }]}>
+            <Feather name="bell" size={18} color={colors.textSecondary} style={styles.infoIcon} />
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoValue}>Push Notifications</Text>
+              <Text style={styles.infoLabel}>Receive alerts and order updates</Text>
+            </View>
+            <Switch
+              value={pushEnabled}
+              onValueChange={handlePushToggle}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.white}
+              ios_backgroundColor={colors.border}
+            />
+          </View>
+        </View>
 
                 <Pressable
           onPress={() => router.push("/change-password")}
@@ -156,14 +230,12 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   scrollContent: {
-    padding: spacing.lg,
+    padding: spacing.md,
     paddingBottom: spacing.xxl
   },
-
-  // Header Styles
   profileHeader: {
     alignItems: "center",
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.xs,
     marginBottom: spacing.md,
   },
   avatarCircle: {
@@ -198,8 +270,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.medium,
     color: colors.textSecondary,
   },
-
-  // List Styles
   sectionCard: {
     backgroundColor: colors.white,
     borderRadius: radius.lg,
@@ -236,8 +306,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 20,
   },
-
-  // Logout Button Styles
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",

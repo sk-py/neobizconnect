@@ -1,6 +1,17 @@
-import { Stack } from 'expo-router'
+import Feather from '@react-native-vector-icons/feather/static'
+import { Stack, useRouter } from 'expo-router'
+import { Pressable } from 'react-native'
 
 const _layout = () => {
+
+  const router = useRouter()
+
+  const handleBackPress = () => {
+    if (router.canGoBack()) {
+      router.back()
+    }
+  }
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name='cart' />
@@ -15,28 +26,48 @@ const _layout = () => {
         headerShown: true,
         headerShadowVisible: false,
         title: "Pending Orders List",
-        headerTitleAlign: "center"
+        headerTitleAlign: "center",
+        headerLeft: ({ }) => {
+          return (<Pressable onPress={handleBackPress}>
+            <Feather name='arrow-left' size={20} />
+          </Pressable>)
+        }
       }} name='pending-orders' />
 
       <Stack.Screen options={{
         headerShown: true,
         headerShadowVisible: false,
         title: "Proforma Invoice List",
-        headerTitleAlign: "center"
+        headerTitleAlign: "center",
+        headerLeft: ({ }) => {
+          return (<Pressable onPress={handleBackPress}>
+            <Feather name='arrow-left' size={20} />
+          </Pressable>)
+        }
       }} name='proforma-invoice' />
 
       <Stack.Screen options={{
         headerShown: true,
         headerShadowVisible: false,
         title: "Invoice Orders List",
-        headerTitleAlign: "center"
+        headerTitleAlign: "center",
+        headerLeft: ({ }) => {
+          return (<Pressable onPress={handleBackPress}>
+            <Feather name='arrow-left' size={20} />
+          </Pressable>)
+        }
       }} name='ar-invoice' />
 
       <Stack.Screen options={{
         headerShown: true,
         headerShadowVisible: false,
         title: "Credit Memos List",
-        headerTitleAlign: "center"
+        headerTitleAlign: "center",
+        headerLeft: ({ }) => {
+          return (<Pressable onPress={handleBackPress}>
+            <Feather name='arrow-left' size={20} />
+          </Pressable>)
+        }
       }} name='ar-credit-memo' />
             <Stack.Screen name='manage-sub-dealers' />
 

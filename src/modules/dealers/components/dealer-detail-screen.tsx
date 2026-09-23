@@ -1,21 +1,21 @@
+import { PdfViewerModal } from "@/components/shared/pdf-viewer-modal";
 import { colors, radius, spacing, typography } from "@/constants/theme";
-import { fetchDealers } from "@/modules/dealers/services/dealers.api";
-import { fetchDealerLedger } from "@/modules/dealers/services/dealer-ledger.api";
-import { fetchDealerPendingOrders } from "@/modules/dealers/services/dealer-pending-orders.api";
-import { fetchDealerProformaInvoices } from "@/modules/dealers/services/dealer-proforma-invoice.api";
-import { fetchDealerArInvoices } from "@/modules/dealers/services/dealer-ar-invoice.api";
-import { fetchDealerArCreditMemos } from "@/modules/dealers/services/dealer-ar-credit-memo.api";
-import { fetchDealerTargetAchievement } from "@/modules/dealers/services/dealer-target-achievement.api";
+import { ArCreditMemoDetailModal } from "@/modules/dealers/components/ar-credit-memo-detail-modal";
 import { InvoiceDetailModal } from "@/modules/dealers/components/invoice-detail-modal";
 import { LrDetailsModal } from "@/modules/dealers/components/lr-details-modal";
 import { PendingOrderDetailModal } from "@/modules/dealers/components/pending-order-detail-modal";
 import { ProformaInvoiceDetailModal } from "@/modules/dealers/components/proforma-invoice-detail-modal";
-import { ArCreditMemoDetailModal } from "@/modules/dealers/components/ar-credit-memo-detail-modal";
+import { fetchDealerArCreditMemos } from "@/modules/dealers/services/dealer-ar-credit-memo.api";
+import { fetchDealerArInvoices } from "@/modules/dealers/services/dealer-ar-invoice.api";
+import { fetchDealerLedger } from "@/modules/dealers/services/dealer-ledger.api";
+import { fetchDealerPendingOrders } from "@/modules/dealers/services/dealer-pending-orders.api";
+import { fetchDealerProformaInvoices } from "@/modules/dealers/services/dealer-proforma-invoice.api";
+import { fetchDealerTargetAchievement } from "@/modules/dealers/services/dealer-target-achievement.api";
+import { fetchDealers } from "@/modules/dealers/services/dealers.api";
+import { ArCreditMemo, ArInvoice, PendingOrder, ProformaInvoice } from "@/modules/dealers/types";
 import { openInvoicePdf } from "@/modules/dealers/utils/open-invoice-pdf";
-import { PdfViewerModal } from "@/components/shared/pdf-viewer-modal";
-import { ArInvoice, PendingOrder, ProformaInvoice, ArCreditMemo } from "@/modules/dealers/types";
-import { Feather } from "@react-native-vector-icons/feather/static";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -393,8 +393,8 @@ export default function DealerDetailScreen() {
   const [ledgerToDate, setLedgerToDate] = useState<Date | null>(null);
   const [appliedLedgerFromDate, setAppliedLedgerFromDate] = useState<string | undefined>(undefined);
   const [appliedLedgerToDate, setAppliedLedgerToDate] = useState<string | undefined>(undefined);
-  const [showFromPicker, setShowFromPicker] = useState(false);
-  const [showToPicker, setShowToPicker] = useState(false);
+  const [activeDatePicker, setActiveDatePicker] =
+    useState<"from" | "to" | null>(null);
   const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
   const [ledgerPdfLoadingIdx, setLedgerPdfLoadingIdx] = useState<number | null>(null);
 
@@ -685,13 +685,20 @@ export default function DealerDetailScreen() {
         )}
       </View>
       <View style={styles.ledgerFilterRow}>
-        <TouchableOpacity style={styles.dateField} onPress={() => setShowFromPicker(true)}>
+        <TouchableOpacity
+          style={styles.dateField}
+          onPress={() => setActiveDatePicker("from")}
+        >
           <Text style={styles.dateFieldLabel}>From Date</Text>
           <Text style={styles.dateFieldValue}>
             {ledgerFromDate ? formatPickerDate(ledgerFromDate) : "Select date"}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.dateField} onPress={() => setShowToPicker(true)}>
+
+        <TouchableOpacity
+          style={styles.dateField}
+          onPress={() => setActiveDatePicker("to")}
+        >
           <Text style={styles.dateFieldLabel}>To Date</Text>
           <Text style={styles.dateFieldValue}>
             {ledgerToDate ? formatPickerDate(ledgerToDate) : "Select date"}
@@ -706,29 +713,32 @@ export default function DealerDetailScreen() {
           <Text style={styles.resetButtonText}>Reset</Text>
         </TouchableOpacity>
       </View>
-      {showFromPicker && (
+      {activeDatePicker && (
         <DateTimePicker
-          value={ledgerFromDate ?? new Date()}
+          value={
+            activeDatePicker === "from"
+              ? ledgerFromDate ?? new Date()
+              : ledgerToDate ?? new Date()
+          }
           mode="date"
-          display={Platform.OS === "ios" ? "spinner" : "default"}
+          display={Platform.OS === "ios" ? "inline" : "default"}
+          maximumDate={new Date()}
+          themeVariant="light"
           onChange={(event, selectedDate) => {
-            setShowFromPicker(Platform.OS === "ios");
-            if (event.type !== "dismissed" && selectedDate) {
-              setLedgerFromDate(selectedDate);
+            if (event.type === "dismissed") {
+              setActiveDatePicker(null);
+              return;
             }
-          }}
-        />
-      )}
-      {showToPicker && (
-        <DateTimePicker
-          value={ledgerToDate ?? new Date()}
-          mode="date"
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={(event, selectedDate) => {
-            setShowToPicker(Platform.OS === "ios");
-            if (event.type !== "dismissed" && selectedDate) {
+
+            if (!selectedDate) return;
+
+            if (activeDatePicker === "from") {
+              setLedgerFromDate(selectedDate);
+            } else {
               setLedgerToDate(selectedDate);
             }
+
+            setActiveDatePicker(null);
           }}
         />
       )}

@@ -7,7 +7,7 @@ import { create } from "zustand";
 export type BrandType = "Neo" | "Zetta";
 
 export type User = {
-  //   id: string;
+  user_id: number;
   name: string;
   authority_id: number;
   authority: UserRole;

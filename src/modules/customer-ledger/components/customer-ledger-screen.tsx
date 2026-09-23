@@ -72,19 +72,19 @@ export default function CustomerLedgerScreen() {
     enabled: Boolean(groupCompanyName) && !isDealer,
   });
 
-    useFocusEffect(
-      useCallback(() => {
-        const onBackPress = () => {
-  
-          if (user?.authority !== "Sales Manager") return;
-  
-          router.push("/sales-manager-modules");
-          return true;
-        };
-        const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-        return () => subscription.remove();
-      }, [router]),
-    );
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+
+        if (user?.authority !== "Sales Manager") return;
+
+        router.push("/sales-manager-modules");
+        return true;
+      };
+      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => subscription.remove();
+    }, [router]),
+  );
 
   // Query: Fetch Ledger Data (Dynamic based on role)
   const { data, isLoading, isRefetching, refetch } = useQuery({
@@ -92,7 +92,7 @@ export default function CustomerLedgerScreen() {
     queryFn: async () => {
       if (!isDealer) {
         if (!selectedDealer) return null;
-        
+
         return fetchDealerAccountBalance(selectedDealer.card_code);
       }
       return fetchCustomerLedger(groupCompanyName, appliedFromDate, appliedToDate);
@@ -145,7 +145,7 @@ export default function CustomerLedgerScreen() {
   const filteredDealers = useMemo(() => {
     if (!dealerSearchQuery.trim()) return dealersList;
     const query = dealerSearchQuery.toLowerCase();
-    return dealersList.filter((d: DealerOption) => 
+    return dealersList.filter((d: DealerOption) =>
       d.card_name.toLowerCase().includes(query) || d.card_code.toLowerCase().includes(query)
     );
   }, [dealersList, dealerSearchQuery]);
@@ -262,9 +262,9 @@ export default function CustomerLedgerScreen() {
 
         {/* Manager Specific Dealer Selection Filter */}
         {!isDealer && (
-          <TouchableOpacity 
-            style={styles.dealerSelector} 
-            activeOpacity={0.7} 
+          <TouchableOpacity
+            style={styles.dealerSelector}
+            activeOpacity={0.7}
             onPress={() => setDealerModalVisible(true)}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
@@ -374,7 +374,7 @@ export default function CustomerLedgerScreen() {
               <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.modalSearchWrapper}>
             <Feather name="search" size={18} color={colors.muted} />
             <TextInput
@@ -389,14 +389,14 @@ export default function CustomerLedgerScreen() {
           {isLoadingDealers ? (
             <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xl }} />
           ) : (
-                        <LegendList
+            <LegendList
               data={filteredDealers}
               keyExtractor={(item) => item.card_code}
               contentContainerStyle={{ padding: spacing.md }}
               estimatedItemSize={70}
               recycleItems
               renderItem={({ item }) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.dealerOption, selectedDealer?.card_code === item.card_code && styles.dealerOptionSelected]}
                   onPress={() => {
                     setSelectedDealer(item);
@@ -442,6 +442,17 @@ export default function CustomerLedgerScreen() {
                   {displayDate(tempToDate)}
                 </Text>
               </TouchableOpacity>
+
+              {isFilterModalVisible && showPicker && (
+                <DateTimePicker
+                  value={(showPicker === "from" ? tempFromDate : tempToDate) || new Date()}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "inline" : "default"}
+                  onChange={handleDateChange}
+                  maximumDate={new Date()}
+                  themeVariant="light"
+                />
+              )}
             </View>
 
             <View style={styles.filterActionRow}>
@@ -452,21 +463,17 @@ export default function CustomerLedgerScreen() {
                 <Text style={styles.searchBtnText}>Apply Filters</Text>
               </TouchableOpacity>
             </View>
+
           </View>
         </View>
+
       </Modal>
 
-      {showPicker && (
-        <DateTimePicker
-          value={(showPicker === "from" ? tempFromDate : tempToDate) || new Date()}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-          maximumDate={new Date()}
-        />
-      )}
 
-      <PdfViewerModal 
+
+
+
+      <PdfViewerModal
         visible={Boolean(pdfUri)}
         uri={pdfUri}
         title="Ledger Document"

@@ -8,7 +8,12 @@
     "scheme": "neobizconnect",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.skpy.neobizconnect",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,17 +24,18 @@
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "pan",
       "package": "com.skpy.neobizconnect",
-      "blockedPermissions": [
-        "android.permission.ACCESS_FINE_LOCATION",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION",
-        "android.permission.CAMERA",
-        "android.permission.POST_NOTIFICATIONS",
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT",
-        "android.permission.ACTIVITY_RECOGNITION"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.INTERNET"
       ]
     },
     "web": {
@@ -65,9 +71,9 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location for attendance tracking.",
-          "isAndroidBackgroundLocationEnabled": false,
-          "isAndroidForegroundServiceEnabled": false,
-          "isIosBackgroundLocationEnabled": false
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ],
       [
@@ -75,9 +81,9 @@
         {
           "icon": "./assets/images/ic_stat_react_logo.png",
           "color": "#ffffff",
-          "defaultChannel": "default",
-          // "sounds": ["./assets/sounds/notifications_sound.wav"],
-          "enableBackgroundRemoteNotifications": false
+          "defaultChannel": "channel",
+          "sounds": ["./assets/sounds/notifications_sound.wav"],
+          "enableBackgroundRemoteNotifications": true
         }
       ],
       [
@@ -90,7 +96,6 @@
       "@react-native-community/datetimepicker",
       [
         "expo-image-picker",
-        
         {
           "photosPermission": "Allow NeoBizConnect to access your photos for vehicle meter submissions.",
           "cameraPermission": "Allow NeoBizConnect to access your camera for vehicle meter submissions.",
@@ -112,7 +117,14 @@
           "enableFileSharing": true
         }
       ],
-      "expo-background-task"
+      "expo-background-task",
+      [
+        "expo-notification-service-extension-plugin",
+        {
+          "mode": "production",
+          "iosNSEFilePath": "./ios-custom/NotificationService.m"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
