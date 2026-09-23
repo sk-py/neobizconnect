@@ -25,6 +25,7 @@ import { z } from "zod";
 import { createSubDealer, fetchSubDealers, updateSubDealer } from "../services/sub-dealers-api";
 import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { FieldSelect } from "@/components/custom/field-select";
+import { INDIAN_STATES } from "@/constants/indian-states";
 import { SubDealer } from "../types";
 
 const formSchema = z.object({
@@ -48,15 +49,41 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const STATUS_OPTIONS = ["Active", "Inactive"];
+const BUSINESS_TYPE_OPTIONS = [
+    "Tyre Dealer",
+    "Alloy Wheel Dealer",
+    "Accessories Shop",
+    "Car Decor",
+    "Workshop / Garage",
+    "Multi-brand Auto Store",
+    "Other",
+];
+
+const POTENTIAL_SALES_OPTIONS = [
+    "1-5 sets/month",
+    "6-10 sets/month",
+    "11-20 sets/month",
+    "21-50 sets/month",
+    "50+ sets/month",
+];
+
+const STATUS_OPTIONS = [
+    "Active",
+    "New Prospect",
+    "Interested",
+    "Not Interested",
+    "Follow-up Required",
+    "Dormant",
+    "Closed/Not-Working",
+];
 
 export const SubDealerScreen = () => {
     const router = useRouter();
     const queryClient = useQueryClient();
     const user = useAuthStore((state) => state.user);
     const groupCompanyName = user?.group_company_name || "Neo";
-     const registeredByName = user?.name || "NA";
-        const canRegister = user?.authority !== "Admin" && user?.authority !== "Super Admin";
+    const registeredByName = user?.name || "NA";
+    const canRegister = user?.authority !== "Admin" && user?.authority !== "Super Admin";
     const isAdminView = !canRegister;
     const screenTitle = canRegister ? "Sub-Dealers" : "Sub Dealer List";
 
@@ -215,13 +242,13 @@ export const SubDealerScreen = () => {
         );
     };
 
-    const FormField = ({ control, name, label, placeholder, isTextArea = false, isNumeric = false }: any) => (
+        const FormField = ({ control, name, label, placeholder, isTextArea = false, isNumeric = false, required = true }: any) => (
         <Controller
             control={control}
             name={name}
             render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>{label}</Text>
+                    <Text style={styles.inputLabel}>{label}{required && <Text style={styles.required}> *</Text>}</Text>
                     <TextInput
                         style={[styles.input, isTextArea && styles.textArea, error && styles.inputError]}
                         placeholder={placeholder}
@@ -248,12 +275,45 @@ export const SubDealerScreen = () => {
     const renderFormContent = (control: any, isEditing: boolean = false) => (
         <>
             <FormSection title="1. Shop Details">
-                <FormField control={control} name="shopName" label="Shop Name" placeholder="Enter shop name" />
-                <FormField control={control} name="businessType" label="Business Type" placeholder="e.g. Alloy Wheel Dealer" />
+                                <FormField control={control} name="shopName" label="Shop Name" placeholder="Enter shop name" />
+                <Controller
+                    control={control}
+                    name="businessType"
+                    render={({ field: { onChange, value } }) => (
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Business Type</Text>
+                            <FieldSelect
+                                label="Business Type"
+                                value={value}
+                                options={BUSINESS_TYPE_OPTIONS}
+                                onChange={onChange}
+                                placeholder="Select business type"
+                            />
+                        </View>
+                    )}
+                />
                 <FormField control={control} name="address" label="Address" placeholder="Enter complete address" isTextArea />
                 <View style={styles.row}>
                     <View style={styles.colHalf}><FormField control={control} name="city" label="City" placeholder="Enter city" /></View>
-                    <View style={styles.colHalf}><FormField control={control} name="state" label="State" placeholder="Enter state" /></View>
+                    <View style={styles.colHalf}>
+                        <Controller
+                            control={control}
+                            name="state"
+                            render={({ field: { onChange, value } }) => (
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>State</Text>
+                                    <FieldSelect
+                                        label="State"
+                                        value={value}
+                                        options={INDIAN_STATES}
+                                        onChange={onChange}
+                                        searchable
+                                        placeholder="Select state"
+                                    />
+                                </View>
+                            )}
+                        />
+                    </View>
                 </View>
                 <View style={styles.row}>
                     <View style={styles.colHalf}><FormField control={control} name="pincode" label="Pincode" placeholder="Enter pincode" isNumeric /></View>
@@ -263,8 +323,8 @@ export const SubDealerScreen = () => {
 
             <FormSection title="2. Contact Details">
                 <View style={styles.row}>
-                    <View style={styles.colHalf}><FormField control={control} name="firstName" label="First Name" placeholder="Contact first name" /></View>
-                    <View style={styles.colHalf}><FormField control={control} name="lastName" label="Last Name" placeholder="Contact last name" /></View>
+                                        <View style={styles.colHalf}><FormField control={control} name="firstName" label="Dealer First Name / Contact Person" placeholder="Contact first name" /></View>
+                    <View style={styles.colHalf}><FormField control={control} name="lastName" label="Dealer Last Name / Contact Person" placeholder="Contact last name" /></View>
                 </View>
                 <FormField control={control} name="phone" label="Phone Number" placeholder="Enter phone number" isNumeric />
                 <FormField control={control} name="email" label="Email ID" placeholder="Enter email address" />
@@ -272,8 +332,24 @@ export const SubDealerScreen = () => {
             </FormSection>
 
             <FormSection title="3. Business Potential">
-                <FormField control={control} name="brandsCurrentlySold" label="Brands Currently Sold" placeholder="Enter current brands" />
-                <FormField control={control} name="potentialSalesPerMonth" label="Potential Sales Per Month" placeholder="e.g. 100 sets/month" />
+                                <FormField control={control} name="brandsCurrentlySold" label="Brands Currently Sold" placeholder="Enter current brands" />
+
+                <Controller
+                    control={control}
+                    name="potentialSalesPerMonth"
+                    render={({ field: { onChange, value } }) => (
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Potential Sales Per Month</Text>
+                            <FieldSelect
+                                label="Potential Sales Per Month"
+                                value={value}
+                                options={POTENTIAL_SALES_OPTIONS}
+                                onChange={onChange}
+                                placeholder="Select monthly potential"
+                            />
+                        </View>
+                    )}
+                />
 
                 <Controller
                     control={control}
@@ -281,17 +357,13 @@ export const SubDealerScreen = () => {
                     render={({ field: { onChange, value } }) => (
                         <View style={styles.inputGroup}>
                             <Text style={styles.inputLabel}>Sub-Dealer Status</Text>
-                            <View style={styles.statusChipContainer}>
-                                {STATUS_OPTIONS.map((status) => (
-                                    <TouchableOpacity
-                                        key={status}
-                                        style={[styles.statusChip, value === status && styles.statusChipActive]}
-                                        onPress={() => onChange(status)}
-                                    >
-                                        <Text style={[styles.statusChipText, value === status && styles.statusChipTextActive]}>{status}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                            <FieldSelect
+                                label="Sub-Dealer Status"
+                                value={value}
+                                options={STATUS_OPTIONS}
+                                onChange={onChange}
+                                placeholder="Select status"
+                            />
                         </View>
                     )}
                 />
@@ -300,7 +372,7 @@ export const SubDealerScreen = () => {
             </FormSection>
 
             {!isEditing && (
-                <FormSection title="4. System Details (Auto-filled)">
+                <FormSection title="4. System Details">
                     <View style={styles.systemDetailsBox}>
                         <Text style={styles.systemDetailsText}>Registered By: <Text style={{ fontFamily: typography.bold }}>{registeredByName}</Text></Text>
                         <Text style={styles.systemDetailsText}>Date & Time: <Text style={{ fontFamily: typography.bold }}>{format(new Date(), "dd/MM/yyyy hh:mm a")}</Text></Text>
@@ -375,19 +447,28 @@ export const SubDealerScreen = () => {
                     )}
                 </>
             ) : (
-                <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
+                                <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
                     {renderFormContent(createForm.control, false)}
-                    <TouchableOpacity
-                        style={[styles.submitBtn, createMutation.isPending && styles.submitBtnDisabled]}
-                        onPress={createForm.handleSubmit(onCreateSubmit)}
-                        disabled={createMutation.isPending}
-                    >
-                        {createMutation.isPending ? (
-                            <ActivityIndicator color={colors.white} size="small" />
-                        ) : (
-                            <Text style={styles.submitBtnText}>Register Sub-Dealer</Text>
-                        )}
-                    </TouchableOpacity>
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity
+                            style={styles.resetBtn}
+                            onPress={() => createForm.reset(defaultFormValues)}
+                            disabled={createMutation.isPending}
+                        >
+                                                        <Text style={styles.resetBtnText} numberOfLines={1}>Reset Form</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.submitBtn, styles.submitBtnFlex, createMutation.isPending && styles.submitBtnDisabled]}
+                            onPress={createForm.handleSubmit(onCreateSubmit)}
+                            disabled={createMutation.isPending}
+                        >
+                            {createMutation.isPending ? (
+                                <ActivityIndicator color={colors.white} size="small" />
+                            ) : (
+                                <Text style={styles.actionBtnText} numberOfLines={1} adjustsFontSizeToFit>Register Sub-Dealer</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
             )}
 
@@ -467,24 +548,24 @@ const styles = StyleSheet.create({
 
     inputGroup: { marginBottom: 12 },
     inputLabel: { fontSize: 12, fontFamily: typography.bold, color: colors.text, marginBottom: 4 },
+    required: { color: colors.error },
     input: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, fontFamily: typography.medium, color: colors.text },
     inputError: { borderColor: colors.error },
     textArea: { height: 60 },
     errorText: { color: colors.error, fontSize: 11, fontFamily: typography.medium, marginTop: 4 },
 
-    statusChipContainer: { flexDirection: "row", gap: spacing.sm },
-    statusChip: { flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-    statusChipActive: { backgroundColor: colors.text, borderColor: colors.text },
-    statusChipText: { fontSize: 13, fontFamily: typography.medium, color: colors.textSecondary },
-    statusChipTextActive: { color: colors.white, fontFamily: typography.bold },
-
-    systemDetailsBox: { backgroundColor: colors.surface, padding: 12, borderRadius: radius.sm },
+    systemDetailsBox:{ backgroundColor: colors.surface, padding: 12, borderRadius: radius.sm },
     systemDetailsText: { fontSize: 13, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 4 },
 
-    submitBtn: { backgroundColor: colors.primary, paddingVertical: 10, borderRadius: radius.sm, alignItems: "center", marginBottom: spacing.xxl },
+        submitBtn: { backgroundColor: colors.primary, paddingVertical: 10, borderRadius: radius.sm, alignItems: "center", marginBottom: spacing.xxl },
+    submitBtnFlex: { flex: 1, marginBottom: 0, paddingHorizontal: 4 },
     submitBtnDisabled: { opacity: 0.7 },
     submitBtnText: { color: colors.white, fontSize: 16, fontFamily: typography.bold },
+    actionBtnText: { color: colors.white, fontSize: 13, fontFamily: typography.bold, textAlign: "center" },
 
+    actionRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.xxl },
+    resetBtn: { flex: 1, paddingVertical: 10, paddingHorizontal: 4, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
+    resetBtnText: { color: colors.text, fontSize: 13, fontFamily: typography.bold, textAlign: "center" },
     modalContainer: { flex: 1, backgroundColor: colors.surface },
     modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.lg, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
     modalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },

@@ -2,6 +2,7 @@ import { colors, radius, spacing, txtSize, typography } from "@/constants/theme"
 import { useAuth } from "@/hooks/use-auth";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fetchDealerProfile } from "../service/profile.api";
@@ -14,6 +15,7 @@ const isValidValue = (val?: string | null) => {
 };
 
 export const ProfileScreen = () => {
+  const router = useRouter();
   const { user, clearSession } = useAuth();
   const groupCompanyName = user?.group_company_name || "Neo";
 
@@ -96,6 +98,23 @@ export const ProfileScreen = () => {
             ))}
           </View>
         )}
+
+                <Pressable
+          onPress={() => router.push("/change-password")}
+          style={({ pressed, hovered }: any) => [
+            styles.logoutButton,
+            (pressed || hovered) && { backgroundColor: colors.primary }
+          ]}
+        >
+          {({ pressed, hovered }: any) => (
+            <>
+              <Feather name="lock" size={18} color={(pressed || hovered) ? colors.white : colors.primary} />
+              <Text style={[styles.logoutText, (pressed || hovered) && { color: colors.white }]}>
+                Change Password
+              </Text>
+            </>
+          )}
+        </Pressable>
 
         <Pressable
           onPress={clearSession}

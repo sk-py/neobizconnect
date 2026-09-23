@@ -188,46 +188,35 @@ export default function ExpenseListScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
-
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: 8 },
   headerTitle: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flex: 1 },
   addBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.sm },
   addBtnText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.white },
-
   searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 34 },
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 2 },
-
   listContent: { padding: spacing.md },
-
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flex: 1, marginRight: spacing.sm },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.xl },
   statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold },
   dateText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted, marginBottom: spacing.sm },
-
   divider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.sm },
-
   infoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.sm },
   infoBlock: { flex: 1 },
   infoLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted, marginBottom: 3 },
   infoValue: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
-
   description: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, lineHeight: 16, marginBottom: spacing.sm },
-
   amountRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   amountLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
   amountValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
-
   employeeRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: spacing.xs },
   employeeText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted },
-
   remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: spacing.sm },
   remarkText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flex: 1, lineHeight: 16 },
-
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
   emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
   emptySubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted },

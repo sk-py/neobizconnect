@@ -38,7 +38,14 @@ const _layout = () => {
         title: "Credit Memos List",
         headerTitleAlign: "center"
       }} name='ar-credit-memo' />
-      <Stack.Screen name='manage-sub-dealers' />
+            <Stack.Screen name='manage-sub-dealers' />
+
+      <Stack.Screen options={{
+        headerShown: true,
+        headerShadowVisible: false,
+        title: "Change Password",
+        headerTitleAlign: "center"
+      }} name='change-password' />
     </Stack>
   )
 }

@@ -6,13 +6,14 @@ import { useAuthStore } from "@/store/auth.store";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   ToastAndroid,
   TouchableOpacity,
   View
@@ -21,12 +22,13 @@ import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, w
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ArInvoiceScreen() {
-   const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const groupCompanyName = user?.group_company_name || "Neo";
-    const canSeeClientCode = user?.authority === "Admin" || user?.authority === "Super Admin" || user?.authority === "Sales Manager";
+  const canSeeClientCode = user?.authority === "Admin" || user?.authority === "Super Admin" || user?.authority === "Sales Manager";
 
   const [page, setPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedDetails, setSelectedDetails] = useState<ArInvoiceDocument | null>(null);
   const [selectedLr, setSelectedLr] = useState<ArInvoiceDocument | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -59,11 +61,37 @@ export default function ArInvoiceScreen() {
     },
   });
 
-  const formatDate = (dateString: string) => {
+    const formatDate = (dateString: string) => {
     if (!dateString) return "-";
 
-    return dateString;
+    const withoutTime = String(dateString)
+      .split("T")[0]
+      .replace(/\s+\d{1,2}:\d{2}(:\d{2})?(\.\d+)?(\s?(AM|PM))?$/i, "")
+      .trim();
+
+    const ymd = withoutTime.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (ymd) {
+      const [, year, month, day] = ymd;
+      return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+    }
+
+    const date = new Date(withoutTime);
+    if (isNaN(date.getTime())) return withoutTime;
+
+    return date.toLocaleDateString("en-GB");
   };
+
+  const filteredContent = useMemo(() => {
+    const content = paginatedData?.content || [];
+    if (!searchQuery.trim()) return content;
+    const query = searchQuery.toLowerCase();
+    return content.filter(
+      (item: ArInvoiceDocument) =>
+        item.invoice_number?.toLowerCase().includes(query) ||
+        item.customer_name?.toLowerCase().includes(query) ||
+        item.customer_code?.toLowerCase().includes(query),
+    );
+  }, [paginatedData?.content, searchQuery]);
 
   const renderCard = ({ item }: { item: ArInvoiceDocument }) => {
     const isDownloading = downloadingId === item.invoice_doc_entry;
@@ -79,13 +107,13 @@ export default function ArInvoiceScreen() {
             )}
           </View>
           <View>
-
-          <View style={[styles.statusBadge, item.invoice_status === "Closed" && styles.statusClosed]}>
-            <Text style={[styles.statusBadgeText, item.invoice_status === "Closed" && styles.statusTextClosed]}>
-              {item.invoice_status}
-            </Text>
-          </View>
-            <Text style={styles.docDate}>{formatDate(item.document_date)}</Text>
+            <View style={[styles.statusBadge, item.invoice_status === "Closed" && styles.statusClosed]}>
+              <Text style={[styles.statusBadgeText, item.invoice_status === "Closed" && styles.statusTextClosed]}>
+                {item.invoice_status}
+              </Text>
+            </View>
+            <Text style={[styles.dateFieldLabel, { textAlign: "right" }]}>Date</Text>
+            <Text style={[styles.docDate, { textAlign: "right" }]}>{formatDate(item.document_date)}</Text>
           </View>
         </View>
 
@@ -154,16 +182,32 @@ export default function ArInvoiceScreen() {
         <Text style={styles.listSubtitle}>Here is a List of Invoice Orders</Text>
       </View>
 
+      <View style={styles.searchContainer}>
+        <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by invoice no, customer name..."
+          placeholderTextColor={colors.muted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
+            <Feather name="x-circle" size={16} color={colors.muted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
       {listLoading ? (
-       <SkeletonInvoiceList />
-      ) : paginatedData?.content.length === 0 ? (
+        <SkeletonInvoiceList />
+      ) : filteredContent.length === 0 ? (
         <View style={styles.centerBox}>
           <Feather name="inbox" size={48} color={colors.muted} />
           <Text style={styles.emptyTitle}>No invoices found</Text>
         </View>
       ) : (
         <LegendList
-          data={paginatedData?.content || []}
+          data={filteredContent}
           keyExtractor={(item: ArInvoiceDocument) => item.id.toString()}
           estimatedItemSize={180}
           renderItem={renderCard}
@@ -177,9 +221,9 @@ export default function ArInvoiceScreen() {
       )}
 
       {paginatedData && paginatedData.totalItems > 0 && (
-         <View style={[styles.paginationFooter, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
+        <View style={[styles.paginationFooter, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
           <Text style={styles.paginationText}>
-            Showing {page * paginatedData.size + 1} to {Math.min((page + 1) * paginatedData.size, paginatedData.totalItems)} of {paginatedData.totalItems} entries
+            {page * paginatedData.size + 1}-{Math.min((page + 1) * paginatedData.size, paginatedData.totalItems)} of {paginatedData.totalItems}
           </Text>
           <View style={styles.paginationControls}>
             <TouchableOpacity
@@ -187,14 +231,17 @@ export default function ArInvoiceScreen() {
               disabled={page === 0}
               onPress={() => setPage(p => p - 1)}
             >
-              <Feather name="chevron-left" size={18} color={page === 0 ? colors.muted : colors.text} />
+              <Feather name="chevron-left" size={15} color={page === 0 ? colors.muted : colors.text} />
             </TouchableOpacity>
+            <Text style={styles.pageIndicator}>
+              {page + 1} / {paginatedData.totalPages}
+            </Text>
             <TouchableOpacity
               style={[styles.pageBtn, paginatedData.isLast && styles.pageBtnDisabled]}
               disabled={paginatedData.isLast}
               onPress={() => setPage(p => p + 1)}
             >
-              <Feather name="chevron-right" size={18} color={paginatedData.isLast ? colors.muted : colors.text} />
+              <Feather name="chevron-right" size={15} color={paginatedData.isLast ? colors.muted : colors.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -219,7 +266,7 @@ export default function ArInvoiceScreen() {
                   <Text style={styles.modalSummaryLabel}>Customer</Text>
                   <Text style={styles.modalSummaryMain}>{selectedDetails.customer_name}</Text>
                   {canSeeClientCode && (
-                    <Text style={styles.modalSummarySub}>{selectedDetails.customer_code}</Text>
+                    <Text style={styles.modalSummarySub}>Client Code: {selectedDetails.customer_code}</Text>
                   )}
                 </View>
                 <View style={[styles.modalSummaryCard, { backgroundColor: "#F0FDF4" }]}>
@@ -314,7 +361,7 @@ export default function ArInvoiceScreen() {
                   </View>
                 </View>
 
-                {selectedDetails.items.map((item, index) => (
+                {selectedDetails.items.map((item: ArInvoiceDocument["items"][number], index: number) => (
                   <View key={item.LineNo} style={styles.productRow}>
                     <Text style={styles.productIndex}>{index + 1}</Text>
                     <View style={styles.productDetails}>
@@ -460,10 +507,11 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   docNo: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   docDate: { fontSize: 12, fontFamily: typography.regular, color: colors.muted, marginTop: 2 },
+  dateFieldLabel: { fontSize: 10, fontFamily: typography.medium, color: colors.muted },
   clientCode: { fontSize: 11, fontFamily: typography.semibold, color: "#1D4ED8", marginTop: 2 },
-  statusBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl,  },
+  statusBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl },
   statusClosed: { backgroundColor: "#F3F4F6" },
-  statusBadgeText: { fontSize: 10, fontFamily: typography.bold, color: "#1D4ED8", textAlign:"center" },
+  statusBadgeText: { fontSize: 10, fontFamily: typography.bold, color: "#1D4ED8", textAlign: "center" },
   statusTextClosed: { color: "#4B5563" },
   cardBody: { flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.md },
   infoCol: { flex: 1 },
@@ -473,11 +521,16 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: "row", gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
   actionButton: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.surface, paddingVertical: 10, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border },
   actionText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
+  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingHorizontal: spacing.sm, height: 40 },
+  searchIcon: { marginRight: spacing.sm },
+  searchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, height: "100%" },
+  clearSearchBtn: { padding: 4 },
   paginationFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
-  paginationText: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
-  paginationControls: { flexDirection: "row", gap: spacing.sm },
-  pageBtn: { padding: 8, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.white },
+  paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pageBtn: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.white },
   pageBtnDisabled: { backgroundColor: colors.surface, borderColor: colors.surface },
+  pageIndicator: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
   modalContainer: { flex: 1, backgroundColor: colors.surface },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.lg, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: 20, fontFamily: typography.bold, color: colors.text },

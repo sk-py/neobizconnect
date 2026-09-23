@@ -27,6 +27,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -65,7 +66,7 @@ type LedgerResponse = {
   TotalCumulativeBalanceLC: number;
   AccountBalance: LedgerEntry[];
   CardCode: string;
-  AccBalance: string;
+  AccBalance: string | number;
   TotalBalanceDueLC: number;
   TotalCreditLC: number;
 };
@@ -128,7 +129,12 @@ const toApiDateString = (d: Date) => {
 };
 
 const formatCurrency = (val: number | string | null | undefined) => {
-  const num = Number(val);
+  if (val === null || val === undefined) return "0.00";
+  
+  // Remove commas if it's a string, then convert to a Number
+  const cleanValue = typeof val === "string" ? val.replace(/,/g, "") : val;
+  const num = Number(cleanValue);
+  
   return (isNaN(num) ? 0 : num).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -211,6 +217,15 @@ const getQtyFromItems = (obj: any): number | undefined => {
   return undefined;
 };
 
+const matchesDocSearch = (item: any, query: string) => {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const docNo = String(pick(item, DOC_NO_KEYS) ?? "").toLowerCase();
+  const cardName = String(pick(item, CARD_NAME_KEYS) ?? "").toLowerCase();
+  const cardCode = String(pick(item, CARD_CODE_KEYS) ?? "").toLowerCase();
+  return docNo.includes(q) || cardName.includes(q) || cardCode.includes(q);
+};
+
 const paginateClientArray = <T,>(items: T[], page: number, size: number) => {
   const totalItems = items.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / size));
@@ -221,6 +236,33 @@ const paginateClientArray = <T,>(items: T[], page: number, size: number) => {
   const rangeEnd = Math.min(totalItems, start + pageItems.length);
   return { pageItems, totalItems, totalPages, safePage, rangeStart, rangeEnd };
 };
+
+const TabSearchBox = ({
+  value,
+  onChangeText,
+  placeholder,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder: string;
+}) => (
+  <View style={styles.docSearchBox}>
+    <Feather name="search" size={14} color={colors.muted} />
+    <TextInput
+      style={styles.docSearchInput}
+      placeholder={placeholder}
+      placeholderTextColor={colors.muted}
+      value={value}
+      onChangeText={onChangeText}
+      returnKeyType="search"
+    />
+    {value.length > 0 && (
+      <TouchableOpacity onPress={() => onChangeText("")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+        <Feather name="x" size={14} color={colors.muted} />
+      </TouchableOpacity>
+    )}
+  </View>
+);
 
 type GenericDocCardProps = {
   item: any;
@@ -336,11 +378,16 @@ export default function DealerDetailScreen() {
   const [pdfLoadingId, setPdfLoadingId] = useState<number | null>(null);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
 
-  const [invoicePage, setInvoicePage] = useState(0);
+    const [invoicePage, setInvoicePage] = useState(0);
   const [pendingOrdersPage, setPendingOrdersPage] = useState(0);
   const [proformaPage, setProformaPage] = useState(0);
   const [creditMemoPage, setCreditMemoPage] = useState(0);
   const [ledgerPage, setLedgerPage] = useState(0);
+
+  const [pendingOrdersSearch, setPendingOrdersSearch] = useState("");
+  const [proformaSearch, setProformaSearch] = useState("");
+  const [arInvoiceSearch, setArInvoiceSearch] = useState("");
+  const [creditMemoSearch, setCreditMemoSearch] = useState("");
 
   const [ledgerFromDate, setLedgerFromDate] = useState<Date | null>(null);
   const [ledgerToDate, setLedgerToDate] = useState<Date | null>(null);
@@ -348,6 +395,8 @@ export default function DealerDetailScreen() {
   const [appliedLedgerToDate, setAppliedLedgerToDate] = useState<string | undefined>(undefined);
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
+  const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
+  const [ledgerPdfLoadingIdx, setLedgerPdfLoadingIdx] = useState<number | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["dealers"],
@@ -407,27 +456,44 @@ export default function DealerDetailScreen() {
     }
   };
 
+    const handleLedgerViewPdf = async (entry: LedgerEntry, idx: number) => {
+    if (!entry.OriginDocEntry) {
+      Alert.alert("Invoice unavailable", "No invoice is linked to this entry.");
+      return;
+    }
+    try {
+      setLedgerPdfLoadingIdx(idx);
+      const uri = await openInvoicePdf(entry.OriginDocEntry, entry.OriginNo);
+      setPdfUri(uri);
+    } catch (err) {
+      Alert.alert("Couldn't open invoice", "The invoice PDF couldn't be downloaded. Please try again.");
+    } finally {
+      setLedgerPdfLoadingIdx(null);
+    }
+  };
+
   const handleLedgerSearch = () => {
     setAppliedLedgerFromDate(ledgerFromDate ? toApiDateString(ledgerFromDate) : undefined);
     setAppliedLedgerToDate(ledgerToDate ? toApiDateString(ledgerToDate) : undefined);
     setLedgerPage(0);
   };
 
-  const handleLedgerReset = () => {
+    const handleLedgerReset = () => {
     setLedgerFromDate(null);
     setLedgerToDate(null);
     setAppliedLedgerFromDate(undefined);
     setAppliedLedgerToDate(undefined);
+    setLedgerSearchQuery("");
     setLedgerPage(0);
   };
 
-  const STAT_CARDS = [
-    { key: "pendingOrders", label: "Pending Orders", icon: "shopping-cart", bg: "#DBEAFE", iconColor: "#2563EB", value: summary ? summary.pending_order_count : null },
-    { key: "proformaInvoices", label: "Proforma Invoices", icon: "file-text", bg: "#EDE9FE", iconColor: "#7C3AED", value: summary ? summary.performa_invoice_count : null },
-    { key: "arInvoices", label: "AR Invoices", icon: "check-circle", bg: "#DCFCE7", iconColor: "#16A34A", value: summary ? summary.ar_invoice_count : null },
-    { key: "arCreditMemos", label: "AR Credit Memos", icon: "rotate-ccw", bg: "#FEE2E2", iconColor: "#DC2626", value: summary ? summary.ar_credit_count : null },
-    { key: "targetAssigned", label: "Target Assigned", icon: "target", bg: "#FEF3C7", iconColor: "#D97706", value: summary ? summary.target_assigned_quantity : null },
-    { key: "achievement", label: "Achievement", icon: "award", bg: "#FFEDD5", iconColor: "#EA580C", value: summary ? summary.achievement_quantity : null },
+   const STAT_CARDS = [
+    { key: "pendingOrders", label: "Pending Orders", icon: "shopping-cart", bg: "#DBEAFE", iconColor: "#2563EB", value: summary ? summary.pending_order_count : null, amount: summary ? summary.pending_order_amount : null },
+    { key: "proformaInvoices", label: "Proforma Invoices", icon: "file-text", bg: "#EDE9FE", iconColor: "#7C3AED", value: summary ? summary.performa_invoice_count : null, amount: summary ? summary.performa_invoice_amount : null },
+    { key: "arInvoices", label: "AR Invoices", icon: "check-circle", bg: "#DCFCE7", iconColor: "#16A34A", value: summary ? summary.ar_invoice_count : null, amount: summary ? summary.ar_invoice_amount : null },
+    { key: "arCreditMemos", label: "AR Credit Memos", icon: "rotate-ccw", bg: "#FEE2E2", iconColor: "#DC2626", value: summary ? summary.ar_credit_count : null, amount: summary ? summary.ar_credit_amount : null },
+    { key: "targetAssigned", label: "Target Assigned", icon: "target", bg: "#FEF3C7", iconColor: "#D97706", value: summary ? summary.target_assigned_quantity : null, amount: null },
+    { key: "achievement", label: "Achievement", icon: "award", bg: "#FFEDD5", iconColor: "#EA580C", value: summary ? summary.achievement_quantity : null, amount: null },
   ] as const;
 
   if (isLoading) {
@@ -474,7 +540,7 @@ export default function DealerDetailScreen() {
         </View>
       );
     }
-    if (arInvoiceItems.length === 0) {
+        if (arInvoiceItems.length === 0) {
       return (
         <View style={styles.tabContentBox}>
           <View style={styles.tabContentIconCircle}>
@@ -484,29 +550,45 @@ export default function DealerDetailScreen() {
         </View>
       );
     }
+    const filteredInvoiceItems = arInvoiceItems.filter((item) => matchesDocSearch(item, arInvoiceSearch));
     return (
       <View>
-        {arInvoiceItems.map((item, idx) => (
-          <GenericDocCard
-            key={item.id ?? idx}
-            item={item}
-            docPrefix="INV-"
-            onView={(inv) => setSelectedInvoice(inv as ArInvoice)}
-            onViewLR={(inv) => setSelectedLrInvoice(inv as ArInvoice)}
-            onViewPdf={(inv) => handleViewPdf(inv as ArInvoice)}
-            pdfLoading={pdfLoadingId === (item as ArInvoice).id}
-          />
-        ))}
+        <TabSearchBox
+          value={arInvoiceSearch}
+          onChangeText={setArInvoiceSearch}
+          placeholder="Search by invoice no, customer name..."
+        />
+        {filteredInvoiceItems.length === 0 ? (
+          <View style={styles.tabContentBox}>
+            <View style={styles.tabContentIconCircle}>
+              <Feather name="search" size={26} color={colors.muted} />
+            </View>
+            <Text style={styles.tabContentTitle}>No matching results</Text>
+          </View>
+        ) : (
+          filteredInvoiceItems.map((item, idx) => (
+            <GenericDocCard
+              key={item.id ?? idx}
+              item={item}
+              docPrefix="INV-"
+              onView={(inv) => setSelectedInvoice(inv as ArInvoice)}
+              onViewLR={(inv) => setSelectedLrInvoice(inv as ArInvoice)}
+              onViewPdf={(inv) => handleViewPdf(inv as ArInvoice)}
+              pdfLoading={pdfLoadingId === (item as ArInvoice).id}
+            />
+          ))
+        )}
       </View>
     );
   };
 
-  const renderClientPaginatedList = (
+    const renderClientPaginatedList = (
     query: UseQueryResult<any>,
     docPrefix: string,
     emptyLabel: string,
     page: number,
     onView?: (item: any) => void,
+    searchProps?: { value: string; onChangeText: (text: string) => void; placeholder: string },
   ) => {
     if (query.isLoading) {
       return (
@@ -537,20 +619,71 @@ export default function DealerDetailScreen() {
         </View>
       );
     }
-    const { pageItems } = paginateClientArray(allItems, page, PAGE_SIZE);
+    const filteredItems = searchProps ? allItems.filter((item) => matchesDocSearch(item, searchProps.value)) : allItems;
+    const { pageItems } = paginateClientArray(filteredItems, page, PAGE_SIZE);
     return (
       <View>
-        {pageItems.map((item, idx) => (
-          <GenericDocCard key={item.id ?? idx} item={item} docPrefix={docPrefix} onView={onView} />
-        ))}
+        {searchProps && <TabSearchBox {...searchProps} />}
+        {filteredItems.length === 0 ? (
+          <View style={styles.tabContentBox}>
+            <View style={styles.tabContentIconCircle}>
+              <Feather name="search" size={26} color={colors.muted} />
+            </View>
+            <Text style={styles.tabContentTitle}>No matching results</Text>
+          </View>
+        ) : (
+          pageItems.map((item, idx) => (
+            <GenericDocCard key={item.id ?? idx} item={item} docPrefix={docPrefix} onView={onView} />
+          ))
+        )}
       </View>
     );
   };
 
-  const ledgerEntriesAll: LedgerEntry[] = ledgerQuery.data?.AccountBalance ?? [];
+    const ledgerEntriesAll: LedgerEntry[] = ledgerQuery.data?.AccountBalance ?? [];
 
-  const renderLedgerFilterRow = () => (
+  const ledgerEntriesFiltered: LedgerEntry[] = (() => {
+    const q = ledgerSearchQuery.trim().toLowerCase();
+    if (!q) return ledgerEntriesAll;
+    return ledgerEntriesAll.filter((entry) => {
+      return (
+        String(entry.Details ?? "").toLowerCase().includes(q) ||
+        String(entry.Origin ?? "").toLowerCase().includes(q) ||
+        String(entry.OriginNo ?? "").toLowerCase().includes(q) ||
+        String(entry.Ref1 ?? "").toLowerCase().includes(q) ||
+        String(entry.Ref2 ?? "").toLowerCase().includes(q) ||
+        String(entry.Ref3 ?? "").toLowerCase().includes(q)
+      );
+    });
+  })();
+
+    const renderLedgerFilterRow = () => (
     <View style={styles.ledgerFilterCard}>
+      <View style={styles.ledgerSearchBox}>
+        <Feather name="search" size={14} color={colors.muted} />
+        <TextInput
+          style={styles.ledgerSearchInput}
+          placeholder="Search by details, origin or invoice no."
+          placeholderTextColor={colors.muted}
+          value={ledgerSearchQuery}
+          onChangeText={(text) => {
+            setLedgerSearchQuery(text);
+            setLedgerPage(0);
+          }}
+          returnKeyType="search"
+        />
+        {ledgerSearchQuery.length > 0 && (
+          <TouchableOpacity
+            onPress={() => {
+              setLedgerSearchQuery("");
+              setLedgerPage(0);
+            }}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Feather name="x" size={14} color={colors.muted} />
+          </TouchableOpacity>
+        )}
+      </View>
       <View style={styles.ledgerFilterRow}>
         <TouchableOpacity style={styles.dateField} onPress={() => setShowFromPicker(true)}>
           <Text style={styles.dateFieldLabel}>From Date</Text>
@@ -627,7 +760,7 @@ export default function DealerDetailScreen() {
         </View>
       );
     }
-    if (ledgerEntriesAll.length === 0) {
+       if (ledgerEntriesAll.length === 0) {
       return (
         <View>
           {renderLedgerFilterRow()}
@@ -640,61 +773,88 @@ export default function DealerDetailScreen() {
         </View>
       );
     }
-    const { pageItems } = paginateClientArray(ledgerEntriesAll, ledgerPage, PAGE_SIZE);
+    if (ledgerEntriesFiltered.length === 0) {
+      return (
+        <View>
+          {renderLedgerFilterRow()}
+          <View style={styles.tabContentBox}>
+            <View style={styles.tabContentIconCircle}>
+              <Feather name="search" size={26} color={colors.muted} />
+            </View>
+            <Text style={styles.tabContentTitle}>No matching entries</Text>
+          </View>
+        </View>
+      );
+    }
+    const { pageItems } = paginateClientArray(ledgerEntriesFiltered, ledgerPage, PAGE_SIZE);
     return (
       <View>
         {renderLedgerFilterRow()}
+        
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Account Balance</Text>
           <Text style={styles.balanceValue}>
-            Rs. {formatCurrency(ledgerQuery.data?.TotalCumulativeBalanceLC ?? 0)}
+            Rs. {formatCurrency(ledgerQuery.data?.AccBalance ?? 0)}
           </Text>
         </View>
+
         {pageItems.map((entry, idx) => {
-          const isDebit = Number(entry.DebitLC) > 0;
+          const invoiceNo = entry.OriginNo || entry.Ref1 || entry.Ref2 || entry.Ref3 || "-";
+          const hasInvoice = Boolean(entry.OriginDocEntry);
           return (
             <View key={idx} style={styles.ledgerCard}>
               <View style={styles.ledgerCardTop}>
                 <Text style={styles.ledgerDocName} numberOfLines={1}>
                   {entry.Origin || "Entry"}
                 </Text>
-                <View
-                  style={[
-                    styles.ledgerTypeBadge,
-                    isDebit ? styles.ledgerTypeBadgeDebit : styles.ledgerTypeBadgeCredit,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.ledgerTypeBadgeText,
-                      isDebit ? styles.ledgerTypeTextDebit : styles.ledgerTypeTextCredit,
-                    ]}
-                  >
-                    {isDebit ? "Debit" : "Credit"}
-                  </Text>
-                </View>
+                <Text style={styles.ledgerDateText}>{formatDate(entry.PostingDate)}</Text>
               </View>
               <Text style={styles.ledgerDetails} numberOfLines={2}>
                 {entry.Details}
               </Text>
               <View style={styles.ledgerDivider} />
-              <View style={styles.ledgerInfoRow}>
-                <View style={styles.ledgerInfoBlock}>
-                  <Text style={styles.ledgerInfoLabel}>Date</Text>
-                  <Text style={styles.ledgerInfoValue}>{formatDate(entry.PostingDate)}</Text>
+                            <View style={styles.ledgerAmountsRow}>
+                <View style={styles.ledgerAmountBox}>
+                  <Text style={styles.ledgerInfoLabel}>Debit</Text>
+                  <Text style={styles.ledgerAmountValue} numberOfLines={1} adjustsFontSizeToFit>
+                    Rs. {formatCurrency(entry.DebitLC)}
+                  </Text>
                 </View>
-                <View style={styles.ledgerInfoBlock}>
-                  <Text style={styles.ledgerInfoLabel}>Amount</Text>
-                  <Text style={styles.ledgerInfoValue}>
-                    Rs. {formatCurrency(isDebit ? entry.DebitLC : entry.CreditLC)}
+                <View style={styles.ledgerAmountDivider} />
+                <View style={styles.ledgerAmountBox}>
+                  <Text style={styles.ledgerInfoLabel}>Credit</Text>
+                  <Text style={styles.ledgerAmountValue} numberOfLines={1} adjustsFontSizeToFit>
+                    Rs. {formatCurrency(entry.CreditLC)}
                   </Text>
                 </View>
               </View>
               <View style={styles.ledgerBalanceRow}>
-                <Text style={styles.ledgerBalanceLabel}>Running Balance</Text>
+                <Text style={styles.ledgerBalanceLabel}>Cumulative Balance</Text>
                 <Text style={styles.ledgerBalanceValue}>
                   Rs. {formatCurrency(entry.CumulativeBalanceLC)}
                 </Text>
+              </View>
+              <View style={styles.ledgerInvoiceRow}>
+                    <View style={{ flex: 1 }}>
+                  <Text style={styles.ledgerInfoLabel}>Document Number</Text>
+                  <Text style={styles.ledgerInfoValue} numberOfLines={1}>
+                    {invoiceNo}
+                  </Text>
+                </View>
+                {hasInvoice && (
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => handleLedgerViewPdf(entry, idx)}
+                    disabled={ledgerPdfLoadingIdx === idx}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    {ledgerPdfLoadingIdx === idx ? (
+                      <ActivityIndicator size="small" color={colors.textSecondary} />
+                    ) : (
+                      <Feather name="file-text" size={15} color={colors.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           );
@@ -703,7 +863,7 @@ export default function DealerDetailScreen() {
     );
   };
 
-  const renderTabContent = () => {
+    const renderTabContent = () => {
     if (activeTab === "ledgerSummary") return renderLedgerTab();
     if (activeTab === "pendingOrders") {
       return renderClientPaginatedList(
@@ -712,6 +872,11 @@ export default function DealerDetailScreen() {
         "No pending orders",
         pendingOrdersPage,
         (item) => setSelectedPendingOrder(item as PendingOrder),
+        {
+          value: pendingOrdersSearch,
+          onChangeText: setPendingOrdersSearch,
+          placeholder: "Search by order no, customer name...",
+        },
       );
     }
     if (activeTab === "proformaInvoice") {
@@ -721,6 +886,11 @@ export default function DealerDetailScreen() {
         "No proforma invoices",
         proformaPage,
         (item) => setSelectedProforma(item as ProformaInvoice),
+        {
+          value: proformaSearch,
+          onChangeText: setProformaSearch,
+          placeholder: "Search by proforma no, customer name...",
+        },
       );
     }
     if (activeTab === "arInvoice") return renderArInvoiceTab();
@@ -731,6 +901,11 @@ export default function DealerDetailScreen() {
         "No AR credit memos",
         creditMemoPage,
         (item) => setSelectedCreditMemo(item as ArCreditMemo),
+        {
+          value: creditMemoSearch,
+          onChangeText: setCreditMemoSearch,
+          placeholder: "Search by memo no, customer name...",
+        },
       );
     }
     return null;
@@ -745,42 +920,46 @@ export default function DealerDetailScreen() {
     rangeEnd: number;
   };
 
-  const getActivePaginationMeta = (): PaginationMeta | null => {
+    const getActivePaginationMeta = (): PaginationMeta | null => {
     if (activeTab === "pendingOrders") {
       if (pendingOrdersQuery.isLoading || pendingOrdersQuery.isError) return null;
       const items = Array.isArray(pendingOrdersQuery.data) ? pendingOrdersQuery.data : [];
-      if (items.length === 0) return null;
-      const meta = paginateClientArray(items, pendingOrdersPage, PAGE_SIZE);
+      const filtered = items.filter((item) => matchesDocSearch(item, pendingOrdersSearch));
+      if (filtered.length === 0) return null;
+      const meta = paginateClientArray(filtered, pendingOrdersPage, PAGE_SIZE);
       return { page: pendingOrdersPage, setPage: setPendingOrdersPage, ...meta };
     }
     if (activeTab === "proformaInvoice") {
       if (proformaInvoiceQuery.isLoading || proformaInvoiceQuery.isError) return null;
       const items = Array.isArray(proformaInvoiceQuery.data) ? proformaInvoiceQuery.data : [];
-      if (items.length === 0) return null;
-      const meta = paginateClientArray(items, proformaPage, PAGE_SIZE);
+      const filtered = items.filter((item) => matchesDocSearch(item, proformaSearch));
+      if (filtered.length === 0) return null;
+      const meta = paginateClientArray(filtered, proformaPage, PAGE_SIZE);
       return { page: proformaPage, setPage: setProformaPage, ...meta };
     }
     if (activeTab === "arCreditMemo") {
       if (arCreditMemoQuery.isLoading || arCreditMemoQuery.isError) return null;
       const items = Array.isArray(arCreditMemoQuery.data) ? arCreditMemoQuery.data : [];
-      if (items.length === 0) return null;
-      const meta = paginateClientArray(items, creditMemoPage, PAGE_SIZE);
+      const filtered = items.filter((item) => matchesDocSearch(item, creditMemoSearch));
+      if (filtered.length === 0) return null;
+      const meta = paginateClientArray(filtered, creditMemoPage, PAGE_SIZE);
       return { page: creditMemoPage, setPage: setCreditMemoPage, ...meta };
     }
-    if (activeTab === "ledgerSummary") {
+        if (activeTab === "ledgerSummary") {
       if (ledgerQuery.isLoading || ledgerQuery.isError) return null;
-      if (ledgerEntriesAll.length === 0) return null;
-      const meta = paginateClientArray(ledgerEntriesAll, ledgerPage, PAGE_SIZE);
+      if (ledgerEntriesFiltered.length === 0) return null;
+      const meta = paginateClientArray(ledgerEntriesFiltered, ledgerPage, PAGE_SIZE);
       return { page: ledgerPage, setPage: setLedgerPage, ...meta };
     }
     if (activeTab === "arInvoice") {
       if (arInvoiceQuery.isLoading || arInvoiceQuery.isError) return null;
-      if (arInvoiceItems.length === 0) return null;
+      const filteredInvoiceItems = arInvoiceItems.filter((item) => matchesDocSearch(item, arInvoiceSearch));
+      if (filteredInvoiceItems.length === 0) return null;
       const totalPages = arInvoicePageData?.totalPages ?? 1;
       const totalItems = arInvoicePageData?.totalItems ?? arInvoiceItems.length;
       const size = arInvoicePageData?.size || arInvoiceItems.length || PAGE_SIZE;
       const rangeStart = invoicePage * size + 1;
-      const rangeEnd = Math.min(totalItems, rangeStart + arInvoiceItems.length - 1);
+      const rangeEnd = Math.min(totalItems, rangeStart + filteredInvoiceItems.length - 1);
       return { page: invoicePage, setPage: setInvoicePage, totalItems, totalPages, rangeStart, rangeEnd };
     }
     return null;
@@ -858,12 +1037,17 @@ export default function DealerDetailScreen() {
                 <View style={[styles.statIconCircle, { backgroundColor: stat.bg }]}>
                   <Feather name={stat.icon as any} size={14} color={stat.iconColor} />
                 </View>
-                <Text style={styles.statValue}>
+                                <Text style={styles.statValue}>
                   {stat.value === null ? (summaryLoading ? "..." : "--") : stat.value}
                 </Text>
                 <Text style={styles.statLabel} numberOfLines={1}>
                   {stat.label}
                 </Text>
+                {stat.amount !== null && (
+                  <Text style={styles.statAmount} numberOfLines={1}>
+                    Rs. {formatCurrency(stat.amount)}
+                  </Text>
+                )}
               </CardWrapper>
             );
           })}
@@ -1009,6 +1193,7 @@ const styles = StyleSheet.create({
   statIconCircle: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 2 },
   statValue: { fontSize: 16, fontFamily: typography.bold, color: colors.text },
   statLabel: { fontSize: 10, fontFamily: typography.semibold, color: colors.textSecondary },
+  statAmount: { fontSize: 10, fontFamily: typography.medium, color: colors.text, marginTop: 1 },
   tabBar: { marginBottom: spacing.sm },
   tabBarContent: { gap: 6 },
   tabItem: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.xl, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
@@ -1043,7 +1228,7 @@ const styles = StyleSheet.create({
   ledgerInfoValue: { fontSize: 13, fontFamily: typography.semibold, color: colors.text },
   ledgerBalanceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   ledgerBalanceLabel: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
-  ledgerBalanceValue: { fontSize: 14, fontFamily: typography.bold, color: colors.primary },
+  ledgerBalanceValue: { fontSize: 14, fontFamily: typography.bold, color: colors.text },
   fixedPaginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.sm, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
   paginationText: { flex: 1, fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary },
   paginationControls: { flexDirection: "row", alignItems: "center", gap: 5 },
@@ -1059,5 +1244,15 @@ const styles = StyleSheet.create({
   searchButton: { flex: 1, backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.primary, borderRadius: radius.sm, paddingVertical: 10, alignItems: "center" },
   searchButtonText: { fontSize: 13, fontFamily: typography.bold, color: colors.primary },
   resetButton: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingVertical: 10, alignItems: "center", backgroundColor: colors.white },
-  resetButtonText: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
+    resetButtonText: { fontSize: 13, fontFamily: typography.bold, color: colors.text },
+    ledgerSearchBox: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 4 },
+  ledgerSearchInput: { flex: 1, fontSize: 13, fontFamily: typography.medium, color: colors.text, paddingVertical: 8 },
+  docSearchBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.sm, marginBottom: spacing.md },
+  docSearchInput: { flex: 1, fontSize: 13, fontFamily: typography.medium, color: colors.text, paddingVertical: 10 },
+  ledgerDateText: { fontSize: 11, fontFamily: typography.medium, color: colors.muted },
+  ledgerAmountsRow: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, marginBottom: spacing.sm },
+  ledgerAmountBox: { flex: 1, alignItems: "center", paddingVertical: spacing.sm, paddingHorizontal: 4 },
+  ledgerAmountValue: { fontSize: 13, fontFamily: typography.bold, color: colors.text, marginTop: 2 },
+  ledgerAmountDivider: { width: 1, alignSelf: "stretch", backgroundColor: colors.border, marginVertical: spacing.xs },
+  ledgerInvoiceRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
 });

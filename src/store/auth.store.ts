@@ -91,8 +91,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         user: response,
         isAuthenticated: true,
       });
-    } catch (error) {
-      console.error("Auth hydration failed: ", error);
+        } catch (error: any) {
+      if (error?.response?.status === 401) {
+        console.warn("Auth hydration: stored session expired, logging out.");
+      } else {
+        console.error("Auth hydration failed: ", error);
+      }
 
       set({
         accessToken: null,

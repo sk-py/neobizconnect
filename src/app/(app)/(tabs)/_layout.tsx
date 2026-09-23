@@ -235,13 +235,25 @@ const TabLayout = () => {
                     />
                 </Tabs.Protected>
 
-                <Tabs.Protected guard={canAccess("Sales Manager Modules")}>
+                                <Tabs.Protected guard={canAccess("Sales Manager Modules")}>
                     <Tabs.Screen
                         name='sales-manager-modules'
                         options={{
                             title: "Sales Menu",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='menu' size={size} color={color} />
+                            )
+                        }}
+                    />
+                </Tabs.Protected>
+
+                <Tabs.Protected guard={canAccess("Notifications")}>
+                    <Tabs.Screen
+                        name='notifications'
+                        options={{
+                            title: "Notifications",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='bell' size={size} color={color} />
                             )
                         }}
                     />

@@ -18,7 +18,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
     assignSubDealerTarget,
     fetchSingleSubDealerTargetYear,
@@ -47,7 +47,8 @@ const generateFinancialYearMonths = (yearStr: string) => {
 };
 
 export const SubDealerTargetsScreen = () => {
-    const router = useRouter();
+        const router = useRouter();
+    const insets = useSafeAreaInsets();
     const queryClient = useQueryClient();
     const user = useAuthStore((state) => state.user);
         const canAssignTarget = user?.authority !== "Admin" && user?.authority !== "Super Admin";
@@ -101,7 +102,7 @@ export const SubDealerTargetsScreen = () => {
 
     const assignMutation = useMutation({
         mutationFn: async () => {
-            if (!selectedDealerId) throw new Error("Select a Sub Dealer");
+                        if (selectedDealerId === null) throw new Error("Select a Sub Dealer");
             
             const generatedMonths = generateFinancialYearMonths(formFinancialYear);
             const quotaPayload: TargetQuotaMonth[] = generatedMonths.map(month => ({
@@ -287,15 +288,17 @@ export const SubDealerTargetsScreen = () => {
 
                     </ScrollView>
 
-                    <View style={styles.formFooter}>
+                                        <View style={[styles.formFooter, { paddingBottom: Math.max(spacing.md, insets.bottom) }]}>
                         <View style={styles.totalBlock}>
                             <Text style={styles.totalLabel}>Total Quantity</Text>
-                            <Text style={styles.totalValue}>{totalQuantity.toLocaleString()}</Text>
+                            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit>
+                                {totalQuantity.toLocaleString()}
+                            </Text>
                         </View>
-                        <TouchableOpacity
-                            style={[styles.submitBtn, (assignMutation.isPending || !selectedDealerId) && styles.submitBtnDisabled]}
+                                               <TouchableOpacity
+                            style={[styles.submitBtn, (assignMutation.isPending || selectedDealerId === null) && styles.submitBtnDisabled]}
                             onPress={() => assignMutation.mutate()}
-                            disabled={assignMutation.isPending || !selectedDealerId}
+                            disabled={assignMutation.isPending || selectedDealerId === null}
                         >
                             {assignMutation.isPending ? <ActivityIndicator color={colors.white} /> : <Text style={styles.submitBtnText}>Submit Target</Text>}
                         </TouchableOpacity>
@@ -420,11 +423,11 @@ const styles = StyleSheet.create({
     targetMonthLabel: { flex: 1, fontSize: 14, fontFamily: typography.bold, color: colors.text },
     targetInput: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontFamily: typography.medium, color: colors.text, textAlign: "right" },
 
-    formFooter: { flexDirection: "row", alignItems: "center", backgroundColor: colors.white, padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-    totalBlock: { flex: 1 },
+       formFooter: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.white, paddingHorizontal: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+    totalBlock: { flexShrink: 1, maxWidth: "38%" },
     totalLabel: { fontSize: 11, fontFamily: typography.bold, color: colors.muted, marginBottom: 2 },
     totalValue: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
-    submitBtn: { flex: 1, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center" },
+    submitBtn: { flex: 1.4, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center" },
     submitBtnDisabled: { opacity: 0.5 },
     submitBtnText: { fontSize: 14, fontFamily: typography.bold, color: colors.white },
 

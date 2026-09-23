@@ -18,12 +18,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/hooks/use-auth";
 import axios from "axios";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useLogin } from "../hooks/use-auth";
 import { LoginForm, loginSchema } from "../schema";
 
 
 const LoginScreen = () => {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -57,7 +59,7 @@ const LoginScreen = () => {
 
 
   return (
-    <KeyboardAvoidingView
+            <KeyboardAvoidingView
       style={styles.keyboardView}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
@@ -173,8 +175,12 @@ const LoginScreen = () => {
               )}
             </View>
 
-            {/* Forgot password */}
-            <TouchableOpacity style={styles.forgotButton} activeOpacity={0.7}>
+                        {/* Forgot password */}
+            <TouchableOpacity
+              style={styles.forgotButton}
+              activeOpacity={0.7}
+              onPress={() => router.push("/forgot-password")}
+            >
               <Text style={styles.forgotText}>Forgot password?</Text>
             </TouchableOpacity>
 
