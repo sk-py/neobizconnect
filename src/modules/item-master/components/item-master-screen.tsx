@@ -31,9 +31,10 @@ export default function ItemMasterScreen() {
   const canSeeExtraDetails =
     user?.authority === "Admin" || user?.authority === "Super Admin";
 
-  const [brand, setBrand] = useState<ItemMasterBrand>("NEO");
+    const [brand, setBrand] = useState<ItemMasterBrand>("NEO");
   const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [stockFilter, setStockFilter] = useState<"all" | "in" | "out">("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["item-master", brand],
@@ -45,8 +46,13 @@ export default function ItemMasterScreen() {
     setPage(0);
   };
 
-  const handleSearchChange = (text: string) => {
+    const handleSearchChange = (text: string) => {
     setSearchQuery(text);
+    setPage(0);
+  };
+
+  const handleStockFilterChange = (next: "all" | "in" | "out") => {
+    setStockFilter(next);
     setPage(0);
   };
 

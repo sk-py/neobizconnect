@@ -16,8 +16,9 @@ export type LeadFormData = {
   lead_priority: string;
   type_of_query: string;
   brand_interest: string;
-  account_owner_id: string;
+    account_owner_id: string;
   sales_manager_remarks: string;
+  sales_manager_followup: string;
 };
 
 export type LeadStageEntry = {
@@ -36,6 +37,8 @@ export type LeadQuery = {
   companyid: number;
   employeeid: number;
   created_employee_id: number;
+  employee_name: string;
+  created_employee_name: string;
   lead_type: string;
   contact_id: number | null;
   account_id: number | null;

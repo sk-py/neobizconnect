@@ -47,8 +47,9 @@ const EMPTY_FORM: LeadFormData = {
   lead_priority: "",
   type_of_query: "",
   brand_interest: "",
-  account_owner_id: "",
+    account_owner_id: "",
   sales_manager_remarks: "",
+  sales_manager_followup: "",
 };
 
 export default function DealerLeadQueryCreateScreen() {
@@ -84,6 +85,13 @@ export default function DealerLeadQueryCreateScreen() {
       account_owner: name,
       account_owner_id: match ? String(match.id) : prev.account_owner_id,
     }));
+  };
+
+    const handleReset = () => {
+    setForm(EMPTY_FORM);
+    setCountryCode("+91");
+    setLocalPhone("");
+    setError(null);
   };
 
   const handleSubmit = async () => {
@@ -129,9 +137,9 @@ export default function DealerLeadQueryCreateScreen() {
         </Text>
       </View>
 
-      <KeyboardAvoidingView 
+            <KeyboardAvoidingView 
         style={{ flex: 1 }} 
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
       >
         <ScrollView 
           style={{ flex: 1 }}
@@ -287,25 +295,13 @@ export default function DealerLeadQueryCreateScreen() {
               loading={employeesLoading}
             />
 
-            <Text style={styles.label}>Customer Remarks</Text>
+                        <Text style={styles.label}>Query Manager Remark</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Enter remarks regarding the lead..."
               placeholderTextColor={colors.muted}
               value={form.remarks}
               onChangeText={(v) => updateField("remarks", v)}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-
-            <Text style={styles.label}>Remark 2</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Enter additional remarks..."
-              placeholderTextColor={colors.muted}
-              value={form.remarks2}
-              onChangeText={(v) => updateField("remarks2", v)}
               multiline
               numberOfLines={3}
               textAlignVertical="top"
@@ -321,20 +317,30 @@ export default function DealerLeadQueryCreateScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={[
+            <View style={[
         styles.footer,
         { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.md }
       ]}>
-        <TouchableOpacity
-          style={[styles.submitBtn, saving && styles.submitBtnDisabled]}
-          onPress={handleSubmit}
-          disabled={saving}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.submitBtnText}>
-            {saving ? "Creating..." : "Create Lead"}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.footerRow}>
+          <TouchableOpacity
+            style={styles.resetBtn}
+            onPress={handleReset}
+            disabled={saving}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.resetBtnText}>Reset Form</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.submitBtn, styles.submitBtnFlex, saving && styles.submitBtnDisabled]}
+            onPress={handleSubmit}
+            disabled={saving}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.submitBtnText}>
+              {saving ? "Saving..." : "Save & Assign Lead"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -476,6 +482,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
   },
+    footerRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  resetBtn: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 15,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  resetBtnText: {
+    fontSize: 14,
+    fontFamily: typography.bold,
+    color: colors.text,
+  },
   submitBtn: {
     backgroundColor: colors.primary,
     borderRadius: 10,
@@ -486,6 +510,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 5,
     elevation: 3,
+  },
+  submitBtnFlex: {
+    flex: 2,
   },
   submitBtnDisabled: {
     opacity: 0.5,
