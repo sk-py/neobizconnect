@@ -28,7 +28,7 @@ export type AppModuleName =
   | "Notifications";
 
 export const MODULES: Record<AppModuleName, readonly UserRole[]> = {
-  Tracker: ["Sales Manager"],
+  Tracker: ["None"],
   Dashboard: [
     "Sales Manager",
     "Dealer",
