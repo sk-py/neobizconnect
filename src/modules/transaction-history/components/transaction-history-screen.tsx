@@ -135,15 +135,13 @@ export default function TransactionHistoryScreen() {
           </View>
         </View>
 
-        {isAdmin && (
-          <TouchableOpacity
-            style={styles.actionRow}
-            onPress={() => setSelectedTxn(item)}
-          >
-            <Feather name="eye" size={14} color={colors.textSecondary} />
-            <Text style={styles.actionText}>View</Text>
-          </TouchableOpacity>
-        )}
+                <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => setSelectedTxn(item)}
+        >
+          <Feather name="eye" size={14} color={colors.textSecondary} />
+          <Text style={styles.actionText}>View</Text>
+        </TouchableOpacity>
       </View>
     );
   };

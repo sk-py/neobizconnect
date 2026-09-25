@@ -1053,10 +1053,15 @@ export default function DealerDetailScreen() {
                 <Text style={styles.statLabel} numberOfLines={1}>
                   {stat.label}
                 </Text>
-                {stat.amount !== null && (
-                  <Text style={styles.statAmount} numberOfLines={1}>
-                    Rs. {formatCurrency(stat.amount)}
-                  </Text>
+                                {stat.amount !== null && (
+                  <View style={styles.statAmountBlock}>
+                    <Text style={styles.statAmountLabel} numberOfLines={1}>
+                      Amount
+                    </Text>
+                    <Text style={styles.statAmount} numberOfLines={1}>
+                      Rs. {formatCurrency(stat.amount)}
+                    </Text>
+                  </View>
                 )}
               </CardWrapper>
             );
@@ -1203,7 +1208,9 @@ const styles = StyleSheet.create({
   statIconCircle: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 2 },
   statValue: { fontSize: 16, fontFamily: typography.bold, color: colors.text },
   statLabel: { fontSize: 10, fontFamily: typography.semibold, color: colors.textSecondary },
-  statAmount: { fontSize: 10, fontFamily: typography.medium, color: colors.text, marginTop: 1 },
+    statAmount: { fontSize: 10, fontFamily: typography.medium, color: colors.text, marginTop: 1 },
+  statAmountBlock: { marginTop: 2 },
+  statAmountLabel: { fontSize: 9, fontFamily: typography.medium, color: colors.muted },
   tabBar: { marginBottom: spacing.sm },
   tabBarContent: { gap: 6 },
   tabItem: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.xl, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
