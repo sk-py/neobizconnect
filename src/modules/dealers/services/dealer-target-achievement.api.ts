@@ -10,10 +10,13 @@ export type DealerTargetAchievement = {
   credit_limit: string;
   pending_order_count: number;
   pending_order_amount: string;
+  pending_order_quantity: number;
   performa_invoice_count: number;
   performa_invoice_amount: string;
+  performa_invoice_quantity: number;
   ar_invoice_count: number;
   ar_invoice_amount: string;
+  ar_invoice_quantity: number;
   ar_credit_count: number;
   ar_credit_amount: string;
   target_assigned_anount: number;
