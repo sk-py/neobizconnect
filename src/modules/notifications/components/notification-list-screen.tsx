@@ -1,21 +1,19 @@
 import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
 import { fetchNotifications, NotificationListItem } from "@/modules/notifications/services/notifications-api";
 import { Feather } from "@react-native-vector-icons/feather/static";
-import { Image } from "expo-image";
 import { useQuery } from "@tanstack/react-query";
 import {
-  FlatList,
   RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { LegendList } from "@legendapp/list/react-native";
 
-const TITLE_KEYS = ["title", "Title", "notification_title"];
-const MESSAGE_KEYS = ["message", "Message", "body", "description"];
-const DATE_KEYS = ["createdDate", "created_date", "CreatedDate", "date", "PostingDate", "created_at"];
-const IMAGE_KEYS = ["imageUrl", "image_url", "ImageUrl", "file", "File", "attachment"];
+const TITLE_KEYS = ["name", "title", "Title", "notification_title"];
+const MESSAGE_KEYS = ["description", "message", "Message", "body"];
+const DATE_KEYS = ["created_at", "createdDate", "created_date", "CreatedDate", "date", "PostingDate"];
 
 const pick = (obj: any, keys: string[]): any => {
   for (const k of keys) {
@@ -42,10 +40,9 @@ const formatDate = (value: string | null | undefined) => {
 };
 
 function NotificationCard({ item }: { item: NotificationListItem }) {
-  const title = pick(item, TITLE_KEYS) || "Notification";
-  const message = pick(item, MESSAGE_KEYS);
+    const title = pick(item, TITLE_KEYS) || "Notification";
+    const message = pick(item, MESSAGE_KEYS);
   const date = pick(item, DATE_KEYS);
-  const imageUrl = pick(item, IMAGE_KEYS);
 
   return (
     <View style={styles.card}>
@@ -59,12 +56,8 @@ function NotificationCard({ item }: { item: NotificationListItem }) {
         </View>
       </View>
 
-      {message ? (
+            {message ? (
         <Text style={styles.cardMessage} numberOfLines={3}>{message}</Text>
-      ) : null}
-
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.cardImage} contentFit="cover" />
       ) : null}
     </View>
   );
@@ -104,23 +97,26 @@ export default function NotificationListScreen() {
         <Text style={styles.headerTitle}>Sent Notifications</Text>
       </View>
 
-      <FlatList
-        data={items}
-        keyExtractor={(item, idx) => String(item.id ?? idx)}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => <NotificationCard item={item} />}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={[colors.primary]} />
-        }
-        ListEmptyComponent={
-          <View style={styles.centerBox}>
-            <View style={styles.emptyIconCircle}>
-              <Feather name="inbox" size={26} color={colors.muted} />
-            </View>
-            <Text style={styles.centerText}>No notifications sent yet</Text>
+            {items.length === 0 ? (
+        <View style={styles.centerBox}>
+          <View style={styles.emptyIconCircle}>
+            <Feather name="inbox" size={26} color={colors.muted} />
           </View>
-        }
-      />
+          <Text style={styles.centerText}>No notifications sent yet</Text>
+        </View>
+      ) : (
+        <LegendList
+          data={items}
+          keyExtractor={(item: NotificationListItem, idx: number) => String(item.id ?? idx)}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }: { item: NotificationListItem }) => <NotificationCard item={item} />}
+          estimatedItemSize={110}
+          recycleItems
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={[colors.primary]} />
+          }
+        />
+      )}
     </View>
   );
 }

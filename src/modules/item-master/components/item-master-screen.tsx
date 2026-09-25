@@ -1,3 +1,4 @@
+import { FieldSelect } from "@/components/custom/field-select";
 import { SkeletonList } from "@/components/custom/skeleton";
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
@@ -16,6 +17,12 @@ const BRANDS: { label: string; value: ItemMasterBrand }[] = [
   { label: "Zetta", value: "ZETTA" },
 ];
 
+const STOCK_FILTER_LABELS: Record<"all" | "in" | "out", string> = {
+  all: "All",
+  in: "In Stock",
+  out: "Out of Stock",
+};
+
 const PAGE_SIZE = 20;
 
 const formatDueDate = (isoString: string | null) => {
@@ -31,9 +38,10 @@ export default function ItemMasterScreen() {
   const canSeeExtraDetails =
     user?.authority === "Admin" || user?.authority === "Super Admin";
 
-  const [brand, setBrand] = useState<ItemMasterBrand>("NEO");
+    const [brand, setBrand] = useState<ItemMasterBrand>("NEO");
   const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [stockFilter, setStockFilter] = useState<"all" | "in" | "out">("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["item-master", brand],
@@ -45,23 +53,37 @@ export default function ItemMasterScreen() {
     setPage(0);
   };
 
-  const handleSearchChange = (text: string) => {
+    const handleSearchChange = (text: string) => {
     setSearchQuery(text);
     setPage(0);
   };
 
-  const filteredData = useMemo(() => {
+  const handleStockFilterChange = (next: "all" | "in" | "out") => {
+    setStockFilter(next);
+    setPage(0);
+  };
+
+    const filteredData = useMemo(() => {
     if (!data) return [];
-    if (!searchQuery.trim()) return data;
+
+    let result = data;
+
+    if (!canSeeExtraDetails && stockFilter !== "all") {
+      result = result.filter((item) =>
+        stockFilter === "in" ? item.inStockQty >= 4 : item.inStockQty < 4,
+      );
+    }
+
+    if (!searchQuery.trim()) return result;
 
     const query = searchQuery.toLowerCase();
-    return data.filter(
+    return result.filter(
       (item) =>
         item.itemName?.toLowerCase().includes(query) ||
         item.itemCode?.toLowerCase().includes(query) ||
         item.wheelSize?.toLowerCase().includes(query),
     );
-  }, [data, searchQuery]);
+  }, [data, searchQuery, stockFilter, canSeeExtraDetails]);
 
   const totalItems = filteredData.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
@@ -92,12 +114,12 @@ export default function ItemMasterScreen() {
               <Text style={styles.metaText}>{item.wheelSize}&quot;</Text>
             </View>
           </View>
-          <View style={[styles.stockBadge, salesManagerOutOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
+                    <View style={[styles.stockBadge, salesManagerOutOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
             <Text
               style={[styles.stockBadgeText, salesManagerOutOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}
               numberOfLines={1}
             >
-              {salesManagerOutOfStock ? "Out of Stock" : item.inStockQty}
+              {salesManagerOutOfStock ? "Out of Stock" : `${item.inStockQty} In stock`}
             </Text>
           </View>
         </View>
@@ -203,13 +225,29 @@ export default function ItemMasterScreen() {
               value={searchQuery}
               onChangeText={handleSearchChange}
             />
-            {searchQuery.length > 0 && (
+                        {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
                 <Feather name="x-circle" size={13} color={colors.muted} />
               </TouchableOpacity>
             )}
           </View>
         </View>
+
+                {!canSeeExtraDetails && (
+          <View style={styles.stockFilterRow}>
+            <FieldSelect
+              label="Stock"
+              value={STOCK_FILTER_LABELS[stockFilter]}
+              options={["All", "In Stock", "Out of Stock"]}
+              onChange={(label) =>
+                handleStockFilterChange(
+                  label === "In Stock" ? "in" : label === "Out of Stock" ? "out" : "all",
+                )
+              }
+              placeholder="All"
+            />
+          </View>
+        )}
       </View>
 
       {isLoading ? (
@@ -283,7 +321,12 @@ const styles = StyleSheet.create({
   brandPillText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
   brandPillTextActive: { color: colors.white },
 
-  searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 32 },
+    searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 32 },
+    stockFilterRow: { marginTop: 8, width: 160 },
+  stockFilterPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  stockFilterPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  stockFilterPillText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
+  stockFilterPillTextActive: { color: colors.white },
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 2 },
