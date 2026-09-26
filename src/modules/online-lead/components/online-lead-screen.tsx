@@ -2,6 +2,7 @@ import { colors, radius, spacing, typography, txtSize } from "@/constants/theme"
 import {
   fetchAssignedToOptions,
   fetchOnlineLeads,
+  fetchQueryManagerOptions,
   transferOnlineLead,
   updateOnlineLead,
 } from "@/modules/online-lead/services/online-lead.api";
@@ -39,7 +40,9 @@ export default function OnlineLeadScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   // Edit modal state
   const [editingLead, setEditingLead] = useState<OnlineLead | null>(null);
@@ -53,15 +56,17 @@ export default function OnlineLeadScreen() {
   const [transferring, setTransferring] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
 
+  const isAdminUser = user?.authority === "Admin" || user?.authority === "Super Admin";
+
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["online-leads"],
     queryFn: fetchOnlineLeads,
   });
 
   const { data: employees, isLoading: employeesLoading } = useQuery({
-    queryKey: ["employees-by-authority", user?.groupid],
-    queryFn: () => fetchAssignedToOptions(user!.groupid),
-    enabled: !!user?.groupid,
+    queryKey: isAdminUser ? ["query-managers"] : ["employees-by-authority", user?.groupid],
+    queryFn: () => (isAdminUser ? fetchQueryManagerOptions() : fetchAssignedToOptions(user!.groupid)),
+    enabled: isAdminUser || !!user?.groupid,
   });
 
   const employeeNames = useMemo(() => (employees || []).map((e: EmployeeOption) => e.name), [employees]);
@@ -81,6 +86,29 @@ export default function OnlineLeadScreen() {
       );
     });
   }, [data, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredData.slice(start, start + PAGE_SIZE);
+  }, [filteredData, currentPage]);
+
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    setCurrentPage(1);
+  };
+
+    const goToPage = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
+  const goToFirstPage = () => goToPage(1);
+  const goToLastPage = () => goToPage(totalPages);
+
+  const paginationStart = filteredData.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const paginationEnd = Math.min(currentPage * PAGE_SIZE, filteredData.length);
 
   // --- Edit modal handlers ---
   const openEditModal = (lead: OnlineLead) => {
@@ -164,13 +192,15 @@ export default function OnlineLeadScreen() {
                 <Text style={styles.statusBadgeText} numberOfLines={1}>{form.lead_status}</Text>
               </View>
             )}
-            <TouchableOpacity
-              style={styles.editIconBtn}
-              onPress={() => openEditModal(item)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="edit-2" size={14} color={colors.primary} />
-            </TouchableOpacity>
+                        {!isAdminUser && (
+              <TouchableOpacity
+                style={styles.editIconBtn}
+                onPress={() => openEditModal(item)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="edit-2" size={14} color={colors.primary} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={styles.transferIconBtn}
               onPress={() => openTransferModal(item)}
@@ -231,26 +261,28 @@ export default function OnlineLeadScreen() {
         <View style={styles.titleRow}>
           <Text style={styles.title}>Online Lead</Text>
           <View style={{ flex: 1 }} />
-          <TouchableOpacity
-            style={styles.createBtn}
-            onPress={() => router.push("/online-lead-create")}
-          >
-            <Feather name="plus" size={14} color={colors.white} />
-            <Text style={styles.createBtnText}>Create</Text>
-          </TouchableOpacity>
+                    {!isAdminUser && (
+            <TouchableOpacity
+              style={styles.createBtn}
+              onPress={() => router.push("/online-lead-create")}
+            >
+              <Feather name="plus" size={14} color={colors.white} />
+              <Text style={styles.createBtnText}>Create</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.searchContainer}>
           <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
-          <TextInput
+                    <TextInput
             style={styles.searchInput}
             placeholder="Search name, phone, city, model..."
             placeholderTextColor={colors.muted}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearchChange}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
+            <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
               <Feather name="x-circle" size={13} color={colors.muted} />
             </TouchableOpacity>
           )}
@@ -273,15 +305,57 @@ export default function OnlineLeadScreen() {
           <Feather name="inbox" size={32} color={colors.muted} />
           <Text style={styles.emptyText}>No online leads found</Text>
         </View>
-      ) : (
-        <LegendList
-          data={filteredData}
-          keyExtractor={(item: OnlineLead) => String(item.id)}
-          renderItem={renderRow}
-          contentContainerStyle={styles.listContent}
-          estimatedItemSize={180}
-          recycleItems
-        />
+            ) : (
+        <>
+          <LegendList
+            data={paginatedData}
+            keyExtractor={(item: OnlineLead) => String(item.id)}
+            renderItem={renderRow}
+            contentContainerStyle={styles.listContent}
+            estimatedItemSize={180}
+            recycleItems
+          />
+                    {filteredData.length > 0 && (
+            <View style={styles.paginationBar}>
+              <Text style={styles.paginationInfo}>
+                Showing {paginationStart} to {paginationEnd} of {filteredData.length} entries
+              </Text>
+              <View style={styles.paginationControls}>
+                <TouchableOpacity
+                  style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
+                  onPress={goToFirstPage}
+                  disabled={currentPage === 1}
+                >
+                  <Feather name="chevrons-left" size={14} color={currentPage === 1 ? colors.muted : colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
+                  onPress={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <Feather name="chevron-left" size={14} color={currentPage === 1 ? colors.muted : colors.primary} />
+                </TouchableOpacity>
+                <View style={styles.pageIndicator}>
+                  <Text style={styles.pageIndicatorText}>{currentPage} / {totalPages}</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.pageBtn, currentPage === totalPages && styles.pageBtnDisabled]}
+                  onPress={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <Feather name="chevron-right" size={14} color={currentPage === totalPages ? colors.muted : colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pageBtn, currentPage === totalPages && styles.pageBtnDisabled]}
+                  onPress={goToLastPage}
+                  disabled={currentPage === totalPages}
+                >
+                  <Feather name="chevrons-right" size={14} color={currentPage === totalPages ? colors.muted : colors.primary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </>
       )}
 
       {/* EDIT MODAL — "Online Lead Form" */}
@@ -464,14 +538,14 @@ export default function OnlineLeadScreen() {
                 </Text>
               </View>
 
-              <Text style={styles.fieldLabel}>Assign Employee</Text>
+                            <Text style={styles.fieldLabel}>{isAdminUser ? "Assign Query Manager" : "Assign Employee"}</Text>
               <FieldSelect
-                label="Assign Employee"
+                label={isAdminUser ? "Assign Query Manager" : "Assign Employee"}
                 value={selectedEmployee}
                 options={employeeNames}
                 onChange={setSelectedEmployee}
                 searchable
-                placeholder="Select Employee"
+                placeholder={isAdminUser ? "Select Query Manager" : "Select Employee"}
                 loading={employeesLoading}
               />
 
@@ -545,6 +619,14 @@ const styles = StyleSheet.create({
 
   remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   remarkText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flex: 1, lineHeight: 16 },
+
+  paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
+  paginationInfo: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flexShrink: 1 },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pageBtn: { width: 28, height: 28, borderRadius: 6, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  pageBtnDisabled: { opacity: 0.4 },
+  pageIndicator: { paddingHorizontal: 10, height: 28, borderRadius: 6, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
+  pageIndicatorText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.text },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
   emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },

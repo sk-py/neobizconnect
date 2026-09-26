@@ -13,6 +13,13 @@ export const fetchAssignedToOptions = async (groupId: number): Promise<EmployeeO
   return res.data;
 };
 
+export const fetchQueryManagerOptions = async (): Promise<EmployeeOption[]> => {
+  const res = await api.get<EmployeeOption[]>("/Employee/Details/By/Authority/V2", {
+    params: { id: 6 },
+  });
+  return res.data;
+};
+
 export const createOnlineLead = async (
   formData: OnlineLeadFormData,
   companyId: number,
