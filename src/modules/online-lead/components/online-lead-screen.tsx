@@ -94,12 +94,7 @@ export default function OnlineLeadScreen() {
     return filteredData.slice(start, start + PAGE_SIZE);
   }, [filteredData, currentPage]);
 
-  const handleSearchChange = (text: string) => {
-    setSearchQuery(text);
-    setCurrentPage(1);
-  };
-
-    const goToPage = (page: number) => {
+      const goToPage = (page: number) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
   };
@@ -274,15 +269,24 @@ export default function OnlineLeadScreen() {
 
         <View style={styles.searchContainer}>
           <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
-                    <TextInput
+                            <TextInput
             style={styles.searchInput}
             placeholder="Search name, phone, city, model..."
             placeholderTextColor={colors.muted}
             value={searchQuery}
-            onChangeText={handleSearchChange}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              setCurrentPage(1);
+            }}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery("");
+                setCurrentPage(1);
+              }}
+              style={styles.clearSearchBtn}
+            >
               <Feather name="x-circle" size={13} color={colors.muted} />
             </TouchableOpacity>
           )}
@@ -315,7 +319,7 @@ export default function OnlineLeadScreen() {
             estimatedItemSize={180}
             recycleItems
           />
-                    {filteredData.length > 0 && (
+                              {filteredData.length > 0 && (
             <View style={styles.paginationBar}>
               <Text style={styles.paginationInfo}>
                 Showing {paginationStart} to {paginationEnd} of {filteredData.length} entries
@@ -326,31 +330,28 @@ export default function OnlineLeadScreen() {
                   onPress={goToFirstPage}
                   disabled={currentPage === 1}
                 >
-                  <Feather name="chevrons-left" size={14} color={currentPage === 1 ? colors.muted : colors.primary} />
+                  <Feather name="chevrons-left" size={14} color={currentPage === 1 ? colors.muted : colors.text} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
                   onPress={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
                 >
-                  <Feather name="chevron-left" size={14} color={currentPage === 1 ? colors.muted : colors.primary} />
+                  <Feather name="chevron-left" size={14} color={currentPage === 1 ? colors.muted : colors.text} />
                 </TouchableOpacity>
-                <View style={styles.pageIndicator}>
-                  <Text style={styles.pageIndicatorText}>{currentPage} / {totalPages}</Text>
-                </View>
                 <TouchableOpacity
                   style={[styles.pageBtn, currentPage === totalPages && styles.pageBtnDisabled]}
                   onPress={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
                 >
-                  <Feather name="chevron-right" size={14} color={currentPage === totalPages ? colors.muted : colors.primary} />
+                  <Feather name="chevron-right" size={14} color={currentPage === totalPages ? colors.muted : colors.text} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.pageBtn, currentPage === totalPages && styles.pageBtnDisabled]}
                   onPress={goToLastPage}
                   disabled={currentPage === totalPages}
                 >
-                  <Feather name="chevrons-right" size={14} color={currentPage === totalPages ? colors.muted : colors.primary} />
+                  <Feather name="chevrons-right" size={14} color={currentPage === totalPages ? colors.muted : colors.text} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -623,10 +624,8 @@ const styles = StyleSheet.create({
   paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
   paginationInfo: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flexShrink: 1 },
   paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
-  pageBtn: { width: 28, height: 28, borderRadius: 6, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+    pageBtn: { width: 28, height: 28, borderRadius: 6, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   pageBtnDisabled: { opacity: 0.4 },
-  pageIndicator: { paddingHorizontal: 10, height: 28, borderRadius: 6, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
-  pageIndicatorText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.text },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
   emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
