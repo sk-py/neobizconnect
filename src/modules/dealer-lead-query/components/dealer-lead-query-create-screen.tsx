@@ -1,7 +1,7 @@
 import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
 import {
   createLeadQuery,
-  fetchAssignedToOptions,
+  fetchSalesManagerOptions,
 } from "@/modules/dealer-lead-query/services/dealer-lead-query.api";
 import {
   BRAND_INTEREST_OPTIONS,
@@ -47,7 +47,7 @@ const EMPTY_FORM: LeadFormData = {
   lead_priority: "",
   type_of_query: "",
   brand_interest: "",
-    account_owner_id: "",
+  account_owner_id: "",
   sales_manager_remarks: "",
   sales_manager_followup: "",
 };
@@ -64,15 +64,15 @@ export default function DealerLeadQueryCreateScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const { data: employees, isLoading: employeesLoading } = useQuery({
-    queryKey: ["employees-create", user?.groupid],
-    queryFn: () => fetchAssignedToOptions(user!.groupid),
-    enabled: !!user?.groupid,
+    queryKey: ["employees-create-sm"],
+    queryFn: fetchSalesManagerOptions,
   });
 
   const employeeNames = useMemo(
     () => (employees || []).map((e: EmployeeOption) => e.name),
     [employees]
   );
+
 
   const updateField = (key: keyof LeadFormData, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -87,7 +87,7 @@ export default function DealerLeadQueryCreateScreen() {
     }));
   };
 
-    const handleReset = () => {
+  const handleReset = () => {
     setForm(EMPTY_FORM);
     setCountryCode("+91");
     setLocalPhone("");
@@ -95,8 +95,12 @@ export default function DealerLeadQueryCreateScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!form.customer_name.trim() || !localPhone.trim()) {
+        if (!form.customer_name.trim() || !localPhone.trim()) {
       setError("Customer Name and Mobile Number are required.");
+      return;
+    }
+    if (!form.account_owner_id) {
+      setError("Please select an Assigned To (Sales Manager).");
       return;
     }
     if (!user?.companyid) {
@@ -137,19 +141,19 @@ export default function DealerLeadQueryCreateScreen() {
         </Text>
       </View>
 
-            <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
         behavior="padding"
       >
-        <ScrollView 
+        <ScrollView
           style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ 
-            padding: spacing.md, 
-            paddingBottom: 100 
+          contentContainerStyle={{
+            padding: spacing.md,
+            paddingBottom: 100
           }}
         >
-          
+
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <View style={styles.stepNum}>
@@ -255,7 +259,7 @@ export default function DealerLeadQueryCreateScreen() {
             />
           </View>
 
-          <View style={styles.section}>
+                    <View style={styles.section}>
             <View style={styles.sectionHead}>
               <View style={styles.stepNum}>
                 <Text style={styles.stepNumTxt}>3</Text>
@@ -275,7 +279,7 @@ export default function DealerLeadQueryCreateScreen() {
               placeholder="Select type of query"
             />
 
-            <Text style={styles.label}>Lead Priority</Text>
+                        <Text style={styles.label}>Lead Priority</Text>
             <FieldSelect
               label="Priority"
               value={form.lead_priority}
@@ -294,8 +298,13 @@ export default function DealerLeadQueryCreateScreen() {
               placeholder="Select employee"
               loading={employeesLoading}
             />
+            {!employeesLoading && employeeNames.length === 0 ? (
+              <Text style={styles.helperWarning}>
+                No Sales Managers found for your company. Contact your admin to have Sales Managers added.
+              </Text>
+            ) : null}
 
-                        <Text style={styles.label}>Query Manager Remark</Text>
+            <Text style={styles.label}>Query Manager Remark</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Enter remarks regarding the lead..."
@@ -317,7 +326,7 @@ export default function DealerLeadQueryCreateScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-            <View style={[
+      <View style={[
         styles.footer,
         { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.md }
       ]}>
@@ -351,7 +360,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.surface,
   },
-  
+
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -428,12 +437,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  label: {
+    label: {
     fontSize: 11,
     fontFamily: typography.semibold,
     color: colors.textSecondary,
     marginBottom: 6,
     marginTop: 8,
+  },
+  helperWarning: {
+    fontSize: 11,
+    fontFamily: typography.medium,
+    color: colors.error,
+    marginTop: 4,
   },
   input: {
     backgroundColor: colors.surface,
@@ -482,7 +497,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
   },
-    footerRow: {
+  footerRow: {
     flexDirection: "row",
     gap: 10,
   },
