@@ -219,10 +219,10 @@ export default function OnlineLeadScreen() {
               <Text style={styles.dateBadgeText}>{formatDate((item as any).createdDate)}</Text>
             </View>
           </View>
-          <View style={styles.cardTopRight}>
+                    <View style={styles.cardTopRight}>
             {!!form?.lead_status && (
               <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText} numberOfLines={1}>{form.lead_status}</Text>
+                <Text style={styles.statusBadgeText}>{form.lead_status}</Text>
               </View>
             )}
                                                 <TouchableOpacity
@@ -427,13 +427,12 @@ export default function OnlineLeadScreen() {
             {editForm && isAdminUser && (
               <ScrollView style={styles.modalBody}>
                 <View style={styles.modalSection}>
-                  <View style={styles.modalSectionHeader}>
+                                    <View style={styles.modalSectionHeader}>
                     <View style={styles.modalStepBadge}>
                       <Text style={styles.modalStepBadgeText}>1</Text>
                     </View>
                     <View>
                       <Text style={styles.modalSectionTitle}>Assign Query Manager</Text>
-                      <Text style={styles.modalSectionSubtitle}>Reassign this lead to a different query manager.</Text>
                     </View>
                   </View>
 
@@ -687,14 +686,14 @@ const styles = StyleSheet.create({
   listContent: { padding: spacing.md },
 
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
-  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: spacing.sm },
+    cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: spacing.sm },
   cardTopRight: { flexDirection: "row", alignItems: "center", gap: 6 },
   customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
   nameDateRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
   dateBadge: { alignSelf: "center", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
   dateBadgeText: { fontSize: 10, fontFamily: typography.semibold, color: "#1D4ED8" },
 
-  statusBadge: { maxWidth: 110, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, backgroundColor: "#FEF2F2" },
+    statusBadge: { maxWidth: 130, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, backgroundColor: "#FEF2F2" },
   statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.primary },
 
   editIconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FCA5A5" },
@@ -735,7 +734,7 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   modalSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
-  modalBody: { padding: spacing.md },
+  modalBody: { flex: 1, padding: spacing.md },
   transferBody: { padding: spacing.md },
 
   customerCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md },
