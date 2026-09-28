@@ -285,10 +285,10 @@ export default function OnlineLeadScreen() {
           </View>
         </View>
 
-        {!!form?.remark && (
-          <View style={styles.remarkRow}>
-            <Feather name="message-circle" size={12} color={colors.textSecondary} />
-            <Text style={styles.remarkText} numberOfLines={2}>{form.remark}</Text>
+                {!!form?.remark && (
+          <View style={[styles.remarkRow, styles.remarkRowQm]}>
+            <Feather name="message-square" size={12} color="#7C3AED" />
+            <Text style={[styles.remarkText, styles.remarkTextQm]} numberOfLines={2}>{form.remark}</Text>
           </View>
         )}
       </View>
@@ -712,7 +712,9 @@ const styles = StyleSheet.create({
   infoValue: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text },
 
   remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  remarkRowQm: { backgroundColor: "#F5F3FF", borderRadius: radius.sm, padding: 6, borderTopWidth: 0, marginTop: spacing.sm },
   remarkText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flex: 1, lineHeight: 16 },
+  remarkTextQm: { color: "#6D28D9" },
 
   paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
   paginationInfo: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flexShrink: 1 },
