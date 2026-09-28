@@ -43,6 +43,7 @@ export type TargetQuotaListV2Item = {
   neo_subdealer_id: number;
   year: string;
   card_code: string;
+  card_name: string;
   neo_subdealer_name: string;
   location: string;
   previousMonth_1_name: string;

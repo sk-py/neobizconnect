@@ -20,6 +20,13 @@ export const fetchQueryManagerOptions = async (): Promise<EmployeeOption[]> => {
   return res.data;
 };
 
+export const fetchSalesManagerOptions = async (): Promise<EmployeeOption[]> => {
+  const res = await api.get<EmployeeOption[]>("/Employee/Details/By/Authority", {
+    params: { id: 7 },
+  });
+  return res.data;
+};
+
 export const createLeadQuery = async (
   formData: LeadFormData,
   companyId: number,

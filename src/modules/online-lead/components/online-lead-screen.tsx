@@ -2,6 +2,7 @@ import { colors, radius, spacing, typography, txtSize } from "@/constants/theme"
 import {
   fetchAssignedToOptions,
   fetchOnlineLeads,
+  fetchQueryManagerOptions,
   transferOnlineLead,
   updateOnlineLead,
 } from "@/modules/online-lead/services/online-lead.api";
@@ -35,11 +36,20 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const formatDate = (isoDate?: string) => {
+  if (!isoDate) return "-";
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+};
+
 export default function OnlineLeadScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   // Edit modal state
   const [editingLead, setEditingLead] = useState<OnlineLead | null>(null);
@@ -47,11 +57,15 @@ export default function OnlineLeadScreen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Transfer modal state
+    // Transfer modal state
   const [transferringLead, setTransferringLead] = useState<OnlineLead | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [transferring, setTransferring] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
+
+      const [reassignName, setReassignName] = useState("");
+
+  const isAdminUser = user?.authority === "Admin" || user?.authority === "Super Admin";
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["online-leads"],
@@ -59,9 +73,9 @@ export default function OnlineLeadScreen() {
   });
 
   const { data: employees, isLoading: employeesLoading } = useQuery({
-    queryKey: ["employees-by-authority", user?.groupid],
-    queryFn: () => fetchAssignedToOptions(user!.groupid),
-    enabled: !!user?.groupid,
+    queryKey: isAdminUser ? ["query-managers"] : ["employees-by-authority", user?.groupid],
+    queryFn: () => (isAdminUser ? fetchQueryManagerOptions() : fetchAssignedToOptions(user!.groupid)),
+    enabled: isAdminUser || !!user?.groupid,
   });
 
   const employeeNames = useMemo(() => (employees || []).map((e: EmployeeOption) => e.name), [employees]);
@@ -82,22 +96,56 @@ export default function OnlineLeadScreen() {
     });
   }, [data, searchQuery]);
 
-  // --- Edit modal handlers ---
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredData.slice(start, start + PAGE_SIZE);
+  }, [filteredData, currentPage]);
+
+      const goToPage = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
+  const goToFirstPage = () => goToPage(1);
+  const goToLastPage = () => goToPage(totalPages);
+
+  const paginationStart = filteredData.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const paginationEnd = Math.min(currentPage * PAGE_SIZE, filteredData.length);
+
+     // --- Edit modal handlers ---
   const openEditModal = (lead: OnlineLead) => {
     const form = lead.formJson?.[0];
     setEditingLead(lead);
     setEditForm(form ? { ...form } : null);
     setSaveError(null);
+    setReassignName(isAdminUser ? (form as any)?.account_owner || "" : "");
   };
 
   const closeEditModal = () => {
     setEditingLead(null);
     setEditForm(null);
     setSaveError(null);
+    setReassignName("");
   };
 
   const updateField = (key: keyof OnlineLeadFormData, value: string) => {
     setEditForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  const handleReassign = (name: string) => {
+    const match = employees?.find((e: EmployeeOption) => e.name === name);
+    setReassignName(name);
+    setEditForm((prev) =>
+      prev
+        ? {
+            ...prev,
+            account_owner: name,
+            account_owner_id: match ? String(match.id) : (prev as any).account_owner_id,
+          }
+        : prev,
+    );
   };
 
   const handleUpdate = async () => {
@@ -108,7 +156,14 @@ export default function OnlineLeadScreen() {
       const originalForm = editingLead.formJson?.[0];
       if (!originalForm) throw new Error("Original lead data missing — cannot update.");
 
-      await updateOnlineLead(editingLead.id, editingLead.companyid, originalForm, editForm);
+      const updates: Partial<OnlineLeadFormData> = isAdminUser
+        ? {
+            account_owner: (editForm as any).account_owner,
+            account_owner_id: (editForm as any).account_owner_id,
+          }
+        : editForm;
+
+      await updateOnlineLead(editingLead.id, editingLead.companyid, originalForm, updates);
       closeEditModal();
       refetch();
     } catch (err: any) {
@@ -149,35 +204,43 @@ export default function OnlineLeadScreen() {
     }
   };
 
-  const renderRow = ({ item }: { item: OnlineLead }) => {
+      const renderRow = ({ item }: { item: OnlineLead }) => {
     const form = item.formJson?.[0];
+    const queryOwner = (item as any).employee_name || form?.account_owner || "-";
 
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
-          <Text style={styles.customerName} numberOfLines={1}>
-            {form?.customer_name || "-"}
-          </Text>
+          <View style={styles.nameDateRow}>
+            <Text style={styles.customerName} numberOfLines={1}>
+              {form?.customer_name || "-"}
+            </Text>
+            <View style={styles.dateBadge}>
+              <Text style={styles.dateBadgeText}>{formatDate((item as any).createdDate)}</Text>
+            </View>
+          </View>
           <View style={styles.cardTopRight}>
             {!!form?.lead_status && (
               <View style={styles.statusBadge}>
                 <Text style={styles.statusBadgeText} numberOfLines={1}>{form.lead_status}</Text>
               </View>
             )}
-            <TouchableOpacity
+                                                <TouchableOpacity
               style={styles.editIconBtn}
               onPress={() => openEditModal(item)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Feather name="edit-2" size={14} color={colors.primary} />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.transferIconBtn}
-              onPress={() => openTransferModal(item)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="arrow-right-circle" size={16} color="#16A34A" />
-            </TouchableOpacity>
+            {!isAdminUser && (
+              <TouchableOpacity
+                style={styles.transferIconBtn}
+                onPress={() => openTransferModal(item)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="arrow-right-circle" size={16} color="#16A34A" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -204,7 +267,7 @@ export default function OnlineLeadScreen() {
           </View>
         </View>
 
-        <View style={styles.infoRow}>
+                <View style={styles.infoRow}>
           <View style={styles.infoBlock}>
             <Text style={styles.infoLabel}>Brand</Text>
             <Text style={styles.infoValue}>{form?.brand_interest || "-"}</Text>
@@ -215,10 +278,17 @@ export default function OnlineLeadScreen() {
           </View>
         </View>
 
-        {!!form?.remark && (
-          <View style={styles.remarkRow}>
-            <Feather name="message-circle" size={12} color={colors.textSecondary} />
-            <Text style={styles.remarkText} numberOfLines={2}>{form.remark}</Text>
+        <View style={styles.infoRow}>
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Query Owner</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{queryOwner}</Text>
+          </View>
+        </View>
+
+                {!!form?.remark && (
+          <View style={[styles.remarkRow, styles.remarkRowQm]}>
+            <Feather name="message-square" size={12} color="#7C3AED" />
+            <Text style={[styles.remarkText, styles.remarkTextQm]} numberOfLines={2}>{form.remark}</Text>
           </View>
         )}
       </View>
@@ -231,26 +301,37 @@ export default function OnlineLeadScreen() {
         <View style={styles.titleRow}>
           <Text style={styles.title}>Online Lead</Text>
           <View style={{ flex: 1 }} />
-          <TouchableOpacity
-            style={styles.createBtn}
-            onPress={() => router.push("/online-lead-create")}
-          >
-            <Feather name="plus" size={14} color={colors.white} />
-            <Text style={styles.createBtnText}>Create</Text>
-          </TouchableOpacity>
+                    {!isAdminUser && (
+            <TouchableOpacity
+              style={styles.createBtn}
+              onPress={() => router.push("/online-lead-create")}
+            >
+              <Feather name="plus" size={14} color={colors.white} />
+              <Text style={styles.createBtnText}>Create</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.searchContainer}>
           <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
-          <TextInput
+                            <TextInput
             style={styles.searchInput}
             placeholder="Search name, phone, city, model..."
             placeholderTextColor={colors.muted}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              setCurrentPage(1);
+            }}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery("");
+                setCurrentPage(1);
+              }}
+              style={styles.clearSearchBtn}
+            >
               <Feather name="x-circle" size={13} color={colors.muted} />
             </TouchableOpacity>
           )}
@@ -273,32 +354,111 @@ export default function OnlineLeadScreen() {
           <Feather name="inbox" size={32} color={colors.muted} />
           <Text style={styles.emptyText}>No online leads found</Text>
         </View>
-      ) : (
-        <LegendList
-          data={filteredData}
-          keyExtractor={(item: OnlineLead) => String(item.id)}
-          renderItem={renderRow}
-          contentContainerStyle={styles.listContent}
-          estimatedItemSize={180}
-          recycleItems
-        />
+            ) : (
+        <>
+          <LegendList
+            data={paginatedData}
+            keyExtractor={(item: OnlineLead) => String(item.id)}
+            renderItem={renderRow}
+            contentContainerStyle={styles.listContent}
+            estimatedItemSize={180}
+            recycleItems
+          />
+                              {filteredData.length > 0 && (
+            <View style={styles.paginationBar}>
+              <Text style={styles.paginationInfo}>
+                Showing {paginationStart} to {paginationEnd} of {filteredData.length} entries
+              </Text>
+              <View style={styles.paginationControls}>
+                <TouchableOpacity
+                  style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
+                  onPress={goToFirstPage}
+                  disabled={currentPage === 1}
+                >
+                  <Feather name="chevrons-left" size={14} color={currentPage === 1 ? colors.muted : colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
+                  onPress={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <Feather name="chevron-left" size={14} color={currentPage === 1 ? colors.muted : colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pageBtn, currentPage === totalPages && styles.pageBtnDisabled]}
+                  onPress={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <Feather name="chevron-right" size={14} color={currentPage === totalPages ? colors.muted : colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pageBtn, currentPage === totalPages && styles.pageBtnDisabled]}
+                  onPress={goToLastPage}
+                  disabled={currentPage === totalPages}
+                >
+                  <Feather name="chevrons-right" size={14} color={currentPage === totalPages ? colors.muted : colors.text} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </>
       )}
 
       {/* EDIT MODAL — "Online Lead Form" */}
       <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
         <Pressable style={styles.modalOverlay} onPress={closeEditModal}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
+                                          <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>Online Lead Form</Text>
-                <Text style={styles.modalSubtitle}>Update the details of the online lead.</Text>
+                <Text style={styles.modalTitle}>
+                  {isAdminUser ? "Online Lead" : "Online Lead Form"}
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  {isAdminUser
+                    ? "Reassign this online lead to a different query manager."
+                    : "Update the details of the online lead."}
+                </Text>
               </View>
               <TouchableOpacity onPress={closeEditModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="x" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
 
-            {editForm && (
+            {editForm && isAdminUser && (
+              <ScrollView style={styles.modalBody}>
+                <View style={styles.modalSection}>
+                  <View style={styles.modalSectionHeader}>
+                    <View style={styles.modalStepBadge}>
+                      <Text style={styles.modalStepBadgeText}>1</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.modalSectionTitle}>Assign Query Manager</Text>
+                      <Text style={styles.modalSectionSubtitle}>Reassign this lead to a different query manager.</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.fieldLabel}>Query Manager</Text>
+                  <FieldSelect
+                    label="Query Manager"
+                    value={reassignName}
+                    options={employeeNames}
+                    onChange={handleReassign}
+                    searchable
+                    placeholder="Select query manager"
+                    loading={employeesLoading}
+                  />
+                </View>
+
+                {saveError && (
+                  <View style={styles.saveErrorBox}>
+                    <Feather name="alert-triangle" size={14} color={colors.error} />
+                    <Text style={styles.saveErrorText}>{saveError}</Text>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+
+            {editForm && !isAdminUser && (
               <ScrollView style={styles.modalBody}>
                 <View style={styles.modalSection}>
                   <View style={styles.modalSectionHeader}>
@@ -417,7 +577,7 @@ export default function OnlineLeadScreen() {
                   />
                 </View>
 
-                {saveError && (
+                                {saveError && (
                   <View style={styles.saveErrorBox}>
                     <Feather name="alert-triangle" size={14} color={colors.error} />
                     <Text style={styles.saveErrorText}>{saveError}</Text>
@@ -430,19 +590,24 @@ export default function OnlineLeadScreen() {
               <TouchableOpacity style={styles.cancelBtn} onPress={closeEditModal}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.updateBtn, saving && styles.updateBtnDisabled]}
+                              <TouchableOpacity
+                style={[
+                  styles.updateBtn,
+                  (saving || (isAdminUser && !reassignName)) && styles.updateBtnDisabled,
+                ]}
                 onPress={handleUpdate}
-                disabled={saving}
+                disabled={saving || (isAdminUser && !reassignName)}
               >
-                <Text style={styles.updateBtnText}>{saving ? "Updating..." : "Update Query"}</Text>
+                <Text style={styles.updateBtnText}>
+                  {saving ? "Saving..." : isAdminUser ? "Reassign" : "Update Query"}
+                </Text>
               </TouchableOpacity>
             </View>
           </Pressable>
         </Pressable>
       </Modal>
 
-      {/* TRANSFER MODAL — "Transfer to Lead / Query" */}
+      {/* TRANSFER MODAL — "Transfer to Lead / Query" (Query Manager → Sales Manager only) */}
       <Modal visible={!!transferringLead} transparent animationType="fade" onRequestClose={closeTransferModal}>
         <Pressable style={styles.modalOverlay} onPress={closeTransferModal}>
           <Pressable style={styles.transferCard} onPress={(e) => e.stopPropagation()}>
@@ -464,14 +629,14 @@ export default function OnlineLeadScreen() {
                 </Text>
               </View>
 
-              <Text style={styles.fieldLabel}>Assign Employee</Text>
+                            <Text style={styles.fieldLabel}>{isAdminUser ? "Assign Query Manager" : "Assign Employee"}</Text>
               <FieldSelect
-                label="Assign Employee"
+                label={isAdminUser ? "Assign Query Manager" : "Assign Employee"}
                 value={selectedEmployee}
                 options={employeeNames}
                 onChange={setSelectedEmployee}
                 searchable
-                placeholder="Select Employee"
+                placeholder={isAdminUser ? "Select Query Manager" : "Select Employee"}
                 loading={employeesLoading}
               />
 
@@ -524,7 +689,10 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: spacing.sm },
   cardTopRight: { flexDirection: "row", alignItems: "center", gap: 6 },
-  customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flex: 1 },
+  customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
+  nameDateRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  dateBadge: { alignSelf: "center", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
+  dateBadgeText: { fontSize: 10, fontFamily: typography.semibold, color: "#1D4ED8" },
 
   statusBadge: { maxWidth: 110, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, backgroundColor: "#FEF2F2" },
   statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.primary },
@@ -544,7 +712,15 @@ const styles = StyleSheet.create({
   infoValue: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text },
 
   remarkRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  remarkRowQm: { backgroundColor: "#F5F3FF", borderRadius: radius.sm, padding: 6, borderTopWidth: 0, marginTop: spacing.sm },
   remarkText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flex: 1, lineHeight: 16 },
+  remarkTextQm: { color: "#6D28D9" },
+
+  paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
+  paginationInfo: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flexShrink: 1 },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
+    pageBtn: { width: 28, height: 28, borderRadius: 6, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  pageBtnDisabled: { opacity: 0.4 },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: spacing.xl },
   emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },

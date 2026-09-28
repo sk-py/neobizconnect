@@ -13,6 +13,13 @@ export const fetchAssignedToOptions = async (groupId: number): Promise<EmployeeO
   return res.data;
 };
 
+export const fetchQueryManagerOptions = async (): Promise<EmployeeOption[]> => {
+  const res = await api.get<EmployeeOption[]>("/Employee/Details/By/Authority/V2", {
+    params: { id: 6 },
+  });
+  return res.data;
+};
+
 export const createOnlineLead = async (
   formData: OnlineLeadFormData,
   companyId: number,
@@ -30,12 +37,12 @@ export const updateOnlineLead = async (
   originalFormData: OnlineLeadFormData,
   updates: Partial<OnlineLeadFormData>,
 ): Promise<void> => {
-  const mergedForm = { ...originalFormData, ...updates };
+  const mergedForm: any = { ...originalFormData, ...updates, id: leadId };
   if (mergedForm.account_owner_id !== undefined) {
     mergedForm.account_owner_id = String(mergedForm.account_owner_id);
   }
 
-  await api.post("/Neo/Online/Lead/Query", {
+  await api.post("/Update/Neo/Online/Lead/Query", {
     formJson: [mergedForm],
     id: leadId,
     companyid: companyId,
