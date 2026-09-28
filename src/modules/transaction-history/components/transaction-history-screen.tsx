@@ -36,6 +36,10 @@ const getWarehouse = (item: Transaction) => {
   return (item as any)?.pay_product_type || "-";
 };
 
+const getWarehouseCode = (lines: Transaction["documentLines"]) => {
+  return lines?.[0]?.WarehouseCode || "-";
+};
+
 const formatDate = (isoDate: string) => {
   if (!isoDate) return "-";
   return new Date(isoDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -93,14 +97,15 @@ export default function TransactionHistoryScreen() {
     const statusStyle = getStatusStyle(item.u_DealerStatus);
     const amount = calcAmount(item.documentLines);
     const qty = calcQty(item.documentLines);
-    const stock = getWarehouse(item);
+       const stock = getWarehouse(item);
+    const warehouseCode = getWarehouseCode(item.documentLines);
 
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
-          <View style={styles.soBadge}>
+                    <View style={styles.soBadge}>
             <Feather name="hash" size={11} color={colors.text} />
-            <Text style={styles.soNo}>SO-{item.series}</Text>
+            <Text style={styles.soNo}>SN-{item.series}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
             <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>
@@ -121,9 +126,13 @@ export default function TransactionHistoryScreen() {
             <Text style={styles.statLabel}>Date</Text>
             <Text style={styles.statValue}>{formatDate(item.docDate)}</Text>
           </View>
-          <View style={styles.statBlock}>
+                    <View style={styles.statBlock}>
             <Text style={styles.statLabel}>Stock</Text>
             <Text style={styles.statValue}>{stock}</Text>
+          </View>
+          <View style={styles.statBlock}>
+            <Text style={styles.statLabel}>Warehouse Code</Text>
+            <Text style={styles.statValue}>{warehouseCode}</Text>
           </View>
           <View style={styles.statBlock}>
             <Text style={styles.statLabel}>Qty</Text>
@@ -215,8 +224,8 @@ export default function TransactionHistoryScreen() {
             {selectedTxn && (
               <>
                 <View style={styles.modalSummaryBox}>
-                  <View style={styles.modalSummaryRow}>
-                    <Text style={styles.modalSummaryLabel}>SO No</Text>
+                                    <View style={styles.modalSummaryRow}>
+                    <Text style={styles.modalSummaryLabel}>SN No</Text>
                     <Text style={styles.modalSummaryValue}>{selectedTxn.series}</Text>
                   </View>
                   <View style={styles.modalSummaryRow}>
