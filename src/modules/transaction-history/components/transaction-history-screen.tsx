@@ -32,8 +32,8 @@ const calcQty = (lines: Transaction["documentLines"]) => {
   return lines.reduce((sum, line) => sum + (line.Quantity || 0), 0);
 };
 
-const getWarehouse = (lines: Transaction["documentLines"]) => {
-  return lines?.[0]?.WarehouseCode || "-";
+const getWarehouse = (item: Transaction) => {
+  return (item as any)?.pay_product_type || "-";
 };
 
 const formatDate = (isoDate: string) => {
@@ -93,7 +93,7 @@ export default function TransactionHistoryScreen() {
     const statusStyle = getStatusStyle(item.u_DealerStatus);
     const amount = calcAmount(item.documentLines);
     const qty = calcQty(item.documentLines);
-    const stock = getWarehouse(item.documentLines);
+    const stock = getWarehouse(item);
 
     return (
       <View style={styles.card}>

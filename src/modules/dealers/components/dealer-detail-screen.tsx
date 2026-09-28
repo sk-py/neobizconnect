@@ -227,6 +227,16 @@ const matchesDocSearch = (item: any, query: string) => {
   return docNo.includes(q) || cardName.includes(q) || cardCode.includes(q);
 };
 
+const matchesDateRange = (item: any, from?: string, to?: string) => {
+  if (!from && !to) return true;
+  const rawDate = pick(item, DATE_KEYS);
+  if (!rawDate) return false;
+  const dateStr = String(rawDate).split("T")[0];
+  if (from && dateStr < from) return false;
+  if (to && dateStr > to) return false;
+  return true;
+};
+
 const paginateClientArray = <T,>(items: T[], page: number, size: number) => {
   const totalItems = items.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / size));
@@ -383,11 +393,18 @@ export default function DealerDetailScreen() {
   const [arInvoiceSearch, setArInvoiceSearch] = useState("");
   const [creditMemoSearch, setCreditMemoSearch] = useState("");
 
-  const [ledgerFromDate, setLedgerFromDate] = useState<Date | null>(null);
+    const [ledgerFromDate, setLedgerFromDate] = useState<Date | null>(null);
   const [ledgerToDate, setLedgerToDate] = useState<Date | null>(null);
   const [appliedLedgerFromDate, setAppliedLedgerFromDate] = useState<string | undefined>(undefined);
   const [appliedLedgerToDate, setAppliedLedgerToDate] = useState<string | undefined>(undefined);
   const [activeDatePicker, setActiveDatePicker] =
+    useState<"from" | "to" | null>(null);
+
+  const [invoiceFromDate, setInvoiceFromDate] = useState<Date | null>(null);
+  const [invoiceToDate, setInvoiceToDate] = useState<Date | null>(null);
+  const [appliedInvoiceFromDate, setAppliedInvoiceFromDate] = useState<string | undefined>(undefined);
+  const [appliedInvoiceToDate, setAppliedInvoiceToDate] = useState<string | undefined>(undefined);
+  const [activeInvoiceDatePicker, setActiveInvoiceDatePicker] =
     useState<"from" | "to" | null>(null);
   const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
   const [ledgerPdfLoadingIdx, setLedgerPdfLoadingIdx] = useState<number | null>(null);
@@ -472,13 +489,27 @@ export default function DealerDetailScreen() {
     setLedgerPage(0);
   };
 
-    const handleLedgerReset = () => {
+        const handleLedgerReset = () => {
     setLedgerFromDate(null);
     setLedgerToDate(null);
     setAppliedLedgerFromDate(undefined);
     setAppliedLedgerToDate(undefined);
     setLedgerSearchQuery("");
     setLedgerPage(0);
+  };
+
+  const handleInvoiceDateSearch = () => {
+    setAppliedInvoiceFromDate(invoiceFromDate ? toApiDateString(invoiceFromDate) : undefined);
+    setAppliedInvoiceToDate(invoiceToDate ? toApiDateString(invoiceToDate) : undefined);
+    setInvoicePage(0);
+  };
+
+  const handleInvoiceDateReset = () => {
+    setInvoiceFromDate(null);
+    setInvoiceToDate(null);
+    setAppliedInvoiceFromDate(undefined);
+    setAppliedInvoiceToDate(undefined);
+    setInvoicePage(0);
   };
 
       const STAT_CARDS = [
@@ -515,38 +546,113 @@ export default function DealerDetailScreen() {
   const arInvoicePageData = arInvoiceQuery.data;
   const arInvoiceItems = arInvoicePageData?.content ?? [];
 
+    const renderInvoiceFilterRow = () => (
+    <View style={styles.ledgerFilterCard}>
+      <View style={styles.ledgerFilterRow}>
+        <TouchableOpacity
+          style={styles.dateField}
+          onPress={() => setActiveInvoiceDatePicker("from")}
+        >
+          <Text style={styles.dateFieldLabel}>From Date</Text>
+          <Text style={styles.dateFieldValue}>
+            {invoiceFromDate ? formatPickerDate(invoiceFromDate) : "Select date"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.dateField}
+          onPress={() => setActiveInvoiceDatePicker("to")}
+        >
+          <Text style={styles.dateFieldLabel}>To Date</Text>
+          <Text style={styles.dateFieldValue}>
+            {invoiceToDate ? formatPickerDate(invoiceToDate) : "Select date"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.ledgerFilterButtonRow}>
+        <TouchableOpacity style={styles.searchButton} onPress={handleInvoiceDateSearch}>
+          <Text style={styles.searchButtonText}>Search</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.resetButton} onPress={handleInvoiceDateReset}>
+          <Text style={styles.resetButtonText}>Reset</Text>
+        </TouchableOpacity>
+      </View>
+      {activeInvoiceDatePicker && (
+        <DateTimePicker
+          value={
+            activeInvoiceDatePicker === "from"
+              ? invoiceFromDate ?? new Date()
+              : invoiceToDate ?? new Date()
+          }
+          mode="date"
+          display={Platform.OS === "ios" ? "inline" : "default"}
+          maximumDate={new Date()}
+          themeVariant="light"
+          onChange={(event, selectedDate) => {
+            if (event.type === "dismissed") {
+              setActiveInvoiceDatePicker(null);
+              return;
+            }
+
+            if (!selectedDate) return;
+
+            if (activeInvoiceDatePicker === "from") {
+              setInvoiceFromDate(selectedDate);
+            } else {
+              setInvoiceToDate(selectedDate);
+            }
+
+            setActiveInvoiceDatePicker(null);
+          }}
+        />
+      )}
+    </View>
+  );
+
   const renderArInvoiceTab = () => {
-    if (arInvoiceQuery.isLoading) {
+       if (arInvoiceQuery.isLoading) {
       return (
-        <View style={styles.tabContentBox}>
-          <Text style={styles.tabContentTitle}>Loading...</Text>
+        <View>
+          {renderInvoiceFilterRow()}
+          <View style={styles.tabContentBox}>
+            <Text style={styles.tabContentTitle}>Loading...</Text>
+          </View>
         </View>
       );
     }
     if (arInvoiceQuery.isError) {
       return (
-        <View style={styles.tabContentBox}>
-          <Feather name="alert-triangle" size={26} color={colors.error} />
-          <Text style={styles.tabContentTitle}>Couldn't load data</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => arInvoiceQuery.refetch()}>
-            <Text style={styles.retryBtnText}>Retry</Text>
-          </TouchableOpacity>
+        <View>
+          {renderInvoiceFilterRow()}
+          <View style={styles.tabContentBox}>
+            <Feather name="alert-triangle" size={26} color={colors.error} />
+            <Text style={styles.tabContentTitle}>Couldn't load data</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => arInvoiceQuery.refetch()}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
         if (arInvoiceItems.length === 0) {
       return (
-        <View style={styles.tabContentBox}>
-          <View style={styles.tabContentIconCircle}>
-            <Feather name="inbox" size={26} color={colors.muted} />
+        <View>
+          {renderInvoiceFilterRow()}
+          <View style={styles.tabContentBox}>
+            <View style={styles.tabContentIconCircle}>
+              <Feather name="inbox" size={26} color={colors.muted} />
+            </View>
+            <Text style={styles.tabContentTitle}>No AR invoices</Text>
           </View>
-          <Text style={styles.tabContentTitle}>No AR invoices</Text>
         </View>
       );
     }
-    const filteredInvoiceItems = arInvoiceItems.filter((item) => matchesDocSearch(item, arInvoiceSearch));
+    const filteredInvoiceItems = arInvoiceItems
+      .filter((item) => matchesDocSearch(item, arInvoiceSearch))
+      .filter((item) => matchesDateRange(item, appliedInvoiceFromDate, appliedInvoiceToDate));
     return (
       <View>
+        {renderInvoiceFilterRow()}
         <TabSearchBox
           value={arInvoiceSearch}
           onChangeText={setArInvoiceSearch}
@@ -955,9 +1061,11 @@ export default function DealerDetailScreen() {
       const meta = paginateClientArray(ledgerEntriesFiltered, ledgerPage, PAGE_SIZE);
       return { page: ledgerPage, setPage: setLedgerPage, ...meta };
     }
-    if (activeTab === "arInvoice") {
+        if (activeTab === "arInvoice") {
       if (arInvoiceQuery.isLoading || arInvoiceQuery.isError) return null;
-      const filteredInvoiceItems = arInvoiceItems.filter((item) => matchesDocSearch(item, arInvoiceSearch));
+      const filteredInvoiceItems = arInvoiceItems
+        .filter((item) => matchesDocSearch(item, arInvoiceSearch))
+        .filter((item) => matchesDateRange(item, appliedInvoiceFromDate, appliedInvoiceToDate));
       if (filteredInvoiceItems.length === 0) return null;
       const totalPages = arInvoicePageData?.totalPages ?? 1;
       const totalItems = arInvoicePageData?.totalItems ?? arInvoiceItems.length;

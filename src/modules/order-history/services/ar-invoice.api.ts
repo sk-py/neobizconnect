@@ -32,8 +32,8 @@ export const downloadInvoicePdf = async (
       },
     );
 
-    // Intercept JSON errors hidden inside the ArrayBuffer
-    const contentType = response.headers["content-type"] || "";
+      // Intercept JSON errors hidden inside the ArrayBuffer
+    const contentType = String(response.headers["content-type"] || "");
     if (contentType.includes("application/json")) {
       const textDecoder = new TextDecoder("utf-8");
       const errorText = textDecoder.decode(new Uint8Array(response.data));
