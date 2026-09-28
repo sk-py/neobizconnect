@@ -211,36 +211,36 @@ export default function OnlineLeadScreen() {
     return (
       <View style={styles.card}>
                 <View style={styles.cardTop}>
-          <Text style={styles.customerName}>
-            {form?.customer_name || "-"}
-          </Text>
-          <View style={styles.cardMetaRow}>
+          <View style={styles.nameDateRow}>
+            <Text style={styles.customerName} numberOfLines={1}>
+              {form?.customer_name || "-"}
+            </Text>
             <View style={styles.dateBadge}>
               <Text style={styles.dateBadgeText}>{formatDate((item as any).createdDate)}</Text>
             </View>
-            <View style={styles.cardTopRight}>
-              {!!form?.lead_status && (
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusBadgeText} numberOfLines={1}>{form.lead_status}</Text>
-                </View>
-              )}
+          </View>
+          <View style={styles.cardTopRight}>
+            {!!form?.lead_status && (
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusBadgeText} numberOfLines={1}>{form.lead_status}</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.editIconBtn}
+              onPress={() => openEditModal(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="edit-2" size={14} color={colors.primary} />
+            </TouchableOpacity>
+            {!isAdminUser && (
               <TouchableOpacity
-                style={styles.editIconBtn}
-                onPress={() => openEditModal(item)}
+                style={styles.transferIconBtn}
+                onPress={() => openTransferModal(item)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Feather name="edit-2" size={14} color={colors.primary} />
+                <Feather name="arrow-right-circle" size={16} color="#16A34A" />
               </TouchableOpacity>
-              {!isAdminUser && (
-                <TouchableOpacity
-                  style={styles.transferIconBtn}
-                  onPress={() => openTransferModal(item)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Feather name="arrow-right-circle" size={16} color="#16A34A" />
-                </TouchableOpacity>
-              )}
-            </View>
+            )}
           </View>
         </View>
 
@@ -686,10 +686,10 @@ const styles = StyleSheet.create({
   listContent: { padding: spacing.md },
 
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
-  cardTop: { marginBottom: 6 },
-  cardMetaRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: spacing.sm },
+  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: spacing.sm },
   cardTopRight: { flexDirection: "row", alignItems: "center", gap: 6 },
-  customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
+  customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
+  nameDateRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, minWidth: 0 },
   dateBadge: { alignSelf: "center", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
   dateBadgeText: { fontSize: 10, fontFamily: typography.semibold, color: "#1D4ED8" },
 
