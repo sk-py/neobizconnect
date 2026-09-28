@@ -37,12 +37,12 @@ export const updateOnlineLead = async (
   originalFormData: OnlineLeadFormData,
   updates: Partial<OnlineLeadFormData>,
 ): Promise<void> => {
-  const mergedForm = { ...originalFormData, ...updates };
+  const mergedForm: any = { ...originalFormData, ...updates, id: leadId };
   if (mergedForm.account_owner_id !== undefined) {
     mergedForm.account_owner_id = String(mergedForm.account_owner_id);
   }
 
-  await api.post("/Neo/Online/Lead/Query", {
+  await api.post("/Update/Neo/Online/Lead/Query", {
     formJson: [mergedForm],
     id: leadId,
     companyid: companyId,
