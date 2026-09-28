@@ -75,11 +75,13 @@ export const SubDealerTargetsScreen = () => {
     const [isDealerModalOpen, setIsDealerModalOpen] = useState(false);
 
     // --- Queries ---
-    const { data: listData, isLoading: listLoading, refetch: refetchList } = useQuery({
+        const { data: listData, isLoading: listLoading, refetch: refetchList } = useQuery({
         queryKey: ["sub-dealer-targets", groupCompanyName, filterYear, filterMonth],
         queryFn: () => fetchSubDealerTargetsList(groupCompanyName, filterYear, [filterMonth]),
         enabled: Boolean(groupCompanyName),
     });
+
+    console.log("RAW TARGET LIST ITEM:", JSON.stringify(listData?.[0], null, 2));
 
     const { data: subDealers } = useQuery({
         queryKey: ["sub-dealers", groupCompanyName],
@@ -152,7 +154,7 @@ export const SubDealerTargetsScreen = () => {
             <View style={styles.cardHeader}>
                                 <View style={{ flex: 1 }}>
                     <Text style={styles.dealerName}>{item.neo_subdealer_name}</Text>
-                    <Text style={styles.dealerMeta}>Card Code: {item.card_code}</Text>
+                    <Text style={styles.dealerMeta}>Dealer: {item.card_name}</Text>
                     <Text style={styles.dealerMeta}>{item.location ? item.location.charAt(0).toUpperCase() + item.location.slice(1).toLowerCase() : "-"}</Text>
                 </View>
                 <TouchableOpacity style={styles.editBtn} onPress={() => handleEdit(item)}>
@@ -234,6 +236,7 @@ export const SubDealerTargetsScreen = () => {
                         />
                     )}
                 </>
+                
             ) : (
                 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
                     <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
