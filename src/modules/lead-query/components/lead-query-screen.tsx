@@ -415,8 +415,8 @@ export default function LeadQueryScreen() {
                 <Text style={styles.modalTitle}>
                   {isAdmin ? "View Lead / Query" : "Update Lead / Query"}
                 </Text>
-                <Text style={styles.modalSubtitle}>
-                  {isAdmin ? "View status and remarks. Reassign if needed." : "Update lead status and remarks."}
+                                <Text style={styles.modalSubtitle}>
+                  {isAdmin ? "Reassign this lead to a different query manager." : "Update lead status and remarks."}
                 </Text>
               </View>
               <TouchableOpacity onPress={closeEditModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -426,7 +426,7 @@ export default function LeadQueryScreen() {
 
                         {editForm && (
               <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
-                {isAdmin ? (
+                                {isAdmin ? (
                   <>
                     <View style={styles.modalSection}>
                       <View style={styles.modalSectionHeader}>
@@ -434,46 +434,11 @@ export default function LeadQueryScreen() {
                           <Text style={styles.modalStepBadgeText}>1</Text>
                         </View>
                         <View>
-                          <Text style={styles.modalSectionTitle}>Lead Status</Text>
-                          <Text style={styles.modalSectionSubtitle}>View only</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.fieldLabel}>Status</Text>
-                      <View style={styles.readOnlyBox}>
-                        <Text style={styles.readOnlyText}>{editForm.status || "-"}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.modalSection}>
-                      <View style={styles.modalSectionHeader}>
-                        <View style={styles.modalStepBadge}>
-                          <Text style={styles.modalStepBadgeText}>2</Text>
-                        </View>
-                        <View>
-                          <Text style={styles.modalSectionTitle}>Remarks</Text>
-                          <Text style={styles.modalSectionSubtitle}>View only</Text>
-                        </View>
-                      </View>
-                      {[editForm.remarks, editForm.sales_manager_remarks, editForm.remarks2, editForm.sales_manager_followup]
-                        .filter((r) => r?.trim())
-                        .map((r, idx) => (
-                          <View key={idx} style={styles.readOnlyBox}>
-                            <Text style={styles.readOnlyText}>{r}</Text>
-                          </View>
-                        ))}
-                    </View>
-
-                    <View style={styles.modalSection}>
-                      <View style={styles.modalSectionHeader}>
-                        <View style={styles.modalStepBadge}>
-                          <Text style={styles.modalStepBadgeText}>3</Text>
-                        </View>
-                        <View>
-                                                    <Text style={styles.modalSectionTitle}>Assign Query Manager</Text>
+                          <Text style={styles.modalSectionTitle}>Assign Query Manager</Text>
                           <Text style={styles.modalSectionSubtitle}>Reassign this lead to a different query manager.</Text>
                         </View>
                       </View>
-                                            <Text style={styles.fieldLabel}>Query Manager</Text>
+                      <Text style={styles.fieldLabel}>Query Manager</Text>
                       <FieldSelect
                         label="Query Manager"
                         value={reassignName}
@@ -485,7 +450,7 @@ export default function LeadQueryScreen() {
                       />
                     </View>
                   </>
-                ) : (
+                               ) : (
                   <>
                     <View style={styles.modalSection}>
                       <View style={styles.modalSectionHeader}>
@@ -578,10 +543,13 @@ export default function LeadQueryScreen() {
               <TouchableOpacity style={styles.cancelBtn} onPress={closeEditModal}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-                            <TouchableOpacity
-                style={[styles.updateBtn, saving && styles.updateBtnDisabled]}
+                                                       <TouchableOpacity
+                style={[
+                  styles.updateBtn,
+                  (saving || (isAdmin && !reassignName)) && styles.updateBtnDisabled,
+                ]}
                 onPress={handleUpdate}
-                disabled={saving}
+                disabled={saving || (isAdmin && !reassignName)}
               >
                 <Text style={styles.updateBtnText}>
                   {saving ? "Saving..." : isAdmin ? "Reassign" : "Update Query"}
