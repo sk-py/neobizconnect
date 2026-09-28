@@ -212,7 +212,7 @@ export default function OnlineLeadScreen() {
       <View style={styles.card}>
         <View style={styles.cardTop}>
           <View style={styles.nameDateRow}>
-            <Text style={styles.customerName} numberOfLines={1}>
+                        <Text style={styles.customerName}>
               {form?.customer_name || "-"}
             </Text>
             <View style={styles.dateBadge}>
@@ -222,7 +222,7 @@ export default function OnlineLeadScreen() {
                     <View style={styles.cardTopRight}>
             {!!form?.lead_status && (
               <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText}>{form.lead_status}</Text>
+                <Text style={styles.statusBadgeText} numberOfLines={1}>{form.lead_status}</Text>
               </View>
             )}
                                                 <TouchableOpacity
@@ -689,12 +689,12 @@ const styles = StyleSheet.create({
     cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: spacing.sm },
   cardTopRight: { flexDirection: "row", alignItems: "center", gap: 6 },
   customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
-  nameDateRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  nameDateRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, flex: 1 },
   dateBadge: { alignSelf: "center", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
   dateBadgeText: { fontSize: 10, fontFamily: typography.semibold, color: "#1D4ED8" },
 
-    statusBadge: { maxWidth: 130, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, backgroundColor: "#FEF2F2" },
-  statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.primary },
+    statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: "center", alignSelf: "flex-start" },
+  statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.white, textAlign: "center", lineHeight: 14 },
 
   editIconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FCA5A5" },
   transferIconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#86EFAC" },
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   modalSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
-  modalBody: { flex: 1, padding: spacing.md },
+    modalBody: { flexGrow: 0, flexShrink: 1, padding: spacing.md },
   transferBody: { padding: spacing.md },
 
   customerCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md },
