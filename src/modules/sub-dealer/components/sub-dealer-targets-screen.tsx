@@ -26,7 +26,8 @@ import {
     fetchSubDealerTargetsList
 } from "../services/sub-dealers-api";
 import { TargetQuotaListV2Item, TargetQuotaMonth } from "../types";
-
+const capitalize = (s?: string) =>
+    s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "-";
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 // Utility to generate financial year strings (e.g. Apr-27)
@@ -149,9 +150,10 @@ export const SubDealerTargetsScreen = () => {
     const renderListCard = ({ item }: { item: TargetQuotaListV2Item }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
+                                <View style={{ flex: 1 }}>
                     <Text style={styles.dealerName}>{item.neo_subdealer_name}</Text>
-                    <Text style={styles.dealerMeta}>{item.card_code} • {item.location}</Text>
+                    <Text style={styles.dealerMeta}>Card Code: {item.card_code}</Text>
+                    <Text style={styles.dealerMeta}>{item.location ? item.location.charAt(0).toUpperCase() + item.location.slice(1).toLowerCase() : "-"}</Text>
                 </View>
                 <TouchableOpacity style={styles.editBtn} onPress={() => handleEdit(item)}>
                     <Feather name="edit-2" size={14} color={colors.primary} />

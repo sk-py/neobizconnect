@@ -532,12 +532,10 @@ export default function LeadQueryScreen() {
                       </View>
                     )}
 
-                    {!showSalesManagerRemarkBox && !canQueryManagerFollowup && (
+                                        {!isSalesManager && !showSalesManagerRemarkBox && !canQueryManagerFollowup && (
                       <View style={styles.modalSection}>
                         <Text style={styles.modalSectionSubtitle}>
-                          {isSalesManager
-                            ? "You've already replied to this round — you can only update the status now."
-                            : "Waiting for the sales manager's remark before you can follow up."}
+                          Waiting for the sales manager's remark before you can follow up.
                         </Text>
                       </View>
                     )}
