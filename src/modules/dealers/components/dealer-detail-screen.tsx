@@ -18,12 +18,14 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Linking,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -373,6 +375,10 @@ export default function DealerDetailScreen() {
   const insets = useSafeAreaInsets();
   const { cardCode } = useLocalSearchParams<{ cardCode: string }>();
 
+    const scrollViewRef = useRef<ScrollView>(null);
+  const tabBarScrollRef = useRef<ScrollView>(null);
+  const [tabBarY, setTabBarY] = useState(0);
+  const [tabLayouts, setTabLayouts] = useState<Record<string, { x: number; width: number }>>({});
   const [activeTab, setActiveTab] = useState<TabKey>("pendingOrders");
   const [selectedInvoice, setSelectedInvoice] = useState<ArInvoice | null>(null);
   const [selectedLrInvoice, setSelectedLrInvoice] = useState<ArInvoice | null>(null);
@@ -393,12 +399,13 @@ export default function DealerDetailScreen() {
   const [arInvoiceSearch, setArInvoiceSearch] = useState("");
   const [creditMemoSearch, setCreditMemoSearch] = useState("");
 
-    const [ledgerFromDate, setLedgerFromDate] = useState<Date | null>(null);
+  const [ledgerFromDate, setLedgerFromDate] = useState<Date | null>(null);
   const [ledgerToDate, setLedgerToDate] = useState<Date | null>(null);
   const [appliedLedgerFromDate, setAppliedLedgerFromDate] = useState<string | undefined>(undefined);
   const [appliedLedgerToDate, setAppliedLedgerToDate] = useState<string | undefined>(undefined);
   const [activeDatePicker, setActiveDatePicker] =
     useState<"from" | "to" | null>(null);
+  const [ledgerFilterModalVisible, setLedgerFilterModalVisible] = useState(false);
 
   const [invoiceFromDate, setInvoiceFromDate] = useState<Date | null>(null);
   const [invoiceToDate, setInvoiceToDate] = useState<Date | null>(null);
@@ -406,6 +413,7 @@ export default function DealerDetailScreen() {
   const [appliedInvoiceToDate, setAppliedInvoiceToDate] = useState<string | undefined>(undefined);
   const [activeInvoiceDatePicker, setActiveInvoiceDatePicker] =
     useState<"from" | "to" | null>(null);
+  const [invoiceFilterModalVisible, setInvoiceFilterModalVisible] = useState(false);
   const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
   const [ledgerPdfLoadingIdx, setLedgerPdfLoadingIdx] = useState<number | null>(null);
 
@@ -546,67 +554,108 @@ export default function DealerDetailScreen() {
   const arInvoicePageData = arInvoiceQuery.data;
   const arInvoiceItems = arInvoicePageData?.content ?? [];
 
-    const renderInvoiceFilterRow = () => (
-    <View style={styles.ledgerFilterCard}>
-      <View style={styles.ledgerFilterRow}>
-        <TouchableOpacity
-          style={styles.dateField}
-          onPress={() => setActiveInvoiceDatePicker("from")}
-        >
-          <Text style={styles.dateFieldLabel}>From Date</Text>
-          <Text style={styles.dateFieldValue}>
-            {invoiceFromDate ? formatPickerDate(invoiceFromDate) : "Select date"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.dateField}
-          onPress={() => setActiveInvoiceDatePicker("to")}
-        >
-          <Text style={styles.dateFieldLabel}>To Date</Text>
-          <Text style={styles.dateFieldValue}>
-            {invoiceToDate ? formatPickerDate(invoiceToDate) : "Select date"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.ledgerFilterButtonRow}>
-        <TouchableOpacity style={styles.searchButton} onPress={handleInvoiceDateSearch}>
-          <Text style={styles.searchButtonText}>Search</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.resetButton} onPress={handleInvoiceDateReset}>
-          <Text style={styles.resetButtonText}>Reset</Text>
-        </TouchableOpacity>
-      </View>
-      {activeInvoiceDatePicker && (
-        <DateTimePicker
-          value={
-            activeInvoiceDatePicker === "from"
-              ? invoiceFromDate ?? new Date()
-              : invoiceToDate ?? new Date()
-          }
-          mode="date"
-          display={Platform.OS === "ios" ? "inline" : "default"}
-          maximumDate={new Date()}
-          themeVariant="light"
-          onChange={(event, selectedDate) => {
-            if (event.type === "dismissed") {
-              setActiveInvoiceDatePicker(null);
-              return;
-            }
-
-            if (!selectedDate) return;
-
-            if (activeInvoiceDatePicker === "from") {
-              setInvoiceFromDate(selectedDate);
-            } else {
-              setInvoiceToDate(selectedDate);
-            }
-
-            setActiveInvoiceDatePicker(null);
-          }}
-        />
+      const renderInvoiceFilterRow = () => (
+    <View style={styles.invoiceFilterTriggerRow}>
+      {(appliedInvoiceFromDate || appliedInvoiceToDate) && (
+        <Text style={styles.invoiceFilterAppliedText} numberOfLines={1}>
+          {invoiceFromDate ? formatPickerDate(invoiceFromDate) : "Any"} -{" "}
+          {invoiceToDate ? formatPickerDate(invoiceToDate) : "Any"}
+        </Text>
       )}
+      <View style={{ flex: 1 }} />
+      <TouchableOpacity
+        style={styles.calendarIconBtn}
+        onPress={() => setInvoiceFilterModalVisible(true)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Feather name="calendar" size={18} color={colors.primary} />
+      </TouchableOpacity>
     </View>
+  );
+
+  const renderInvoiceFilterModal = () => (
+    <Modal
+      visible={invoiceFilterModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setInvoiceFilterModalVisible(false)}
+    >
+      <Pressable style={styles.filterModalOverlay} onPress={() => setInvoiceFilterModalVisible(false)}>
+        <Pressable style={styles.filterModalCard} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.filterModalHeader}>
+            <Text style={styles.filterModalTitle}>Filter Invoice</Text>
+            <TouchableOpacity
+              onPress={() => setInvoiceFilterModalVisible(false)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="x" size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.filterModalDivider} />
+
+          <Text style={styles.filterFieldLabel}>From Date</Text>
+          <TouchableOpacity style={styles.filterDateInput} onPress={() => setActiveInvoiceDatePicker("from")}>
+            <Feather name="calendar" size={16} color={colors.error} />
+            <Text style={invoiceFromDate ? styles.filterDateValueText : styles.filterDatePlaceholder}>
+              {invoiceFromDate ? formatPickerDate(invoiceFromDate) : "DD/MM/YYYY"}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.filterFieldLabel, { marginTop: spacing.md }]}>To Date</Text>
+          <TouchableOpacity style={styles.filterDateInput} onPress={() => setActiveInvoiceDatePicker("to")}>
+            <Feather name="calendar" size={16} color={colors.error} />
+            <Text style={invoiceToDate ? styles.filterDateValueText : styles.filterDatePlaceholder}>
+              {invoiceToDate ? formatPickerDate(invoiceToDate) : "DD/MM/YYYY"}
+            </Text>
+          </TouchableOpacity>
+
+          {activeInvoiceDatePicker && (
+            <DateTimePicker
+              value={
+                activeInvoiceDatePicker === "from"
+                  ? invoiceFromDate ?? new Date()
+                  : invoiceToDate ?? new Date()
+              }
+              mode="date"
+              display={Platform.OS === "ios" ? "inline" : "default"}
+              maximumDate={new Date()}
+              themeVariant="light"
+              onChange={(event, selectedDate) => {
+                if (event.type === "dismissed") {
+                  setActiveInvoiceDatePicker(null);
+                  return;
+                }
+
+                if (!selectedDate) return;
+
+                if (activeInvoiceDatePicker === "from") {
+                  setInvoiceFromDate(selectedDate);
+                } else {
+                  setInvoiceToDate(selectedDate);
+                }
+
+                setActiveInvoiceDatePicker(null);
+              }}
+            />
+          )}
+
+          <View style={styles.filterModalButtonRow}>
+            <TouchableOpacity style={styles.filterResetBtn} onPress={handleInvoiceDateReset}>
+              <Text style={styles.filterResetBtnText}>Reset</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.filterApplyBtn}
+              onPress={() => {
+                handleInvoiceDateSearch();
+                setInvoiceFilterModalVisible(false);
+              }}
+            >
+              <Text style={styles.filterApplyBtnText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 
   const renderArInvoiceTab = () => {
@@ -652,12 +701,31 @@ export default function DealerDetailScreen() {
       .filter((item) => matchesDateRange(item, appliedInvoiceFromDate, appliedInvoiceToDate));
     return (
       <View>
-        {renderInvoiceFilterRow()}
-        <TabSearchBox
-          value={arInvoiceSearch}
-          onChangeText={setArInvoiceSearch}
-          placeholder="Search by invoice no, customer name..."
-        />
+                      <View style={styles.invoiceSearchFilterRow}>
+          <View style={styles.invoiceSearchBox}>
+            <Feather name="search" size={14} color={colors.muted} />
+            <TextInput
+              style={styles.invoiceSearchInput}
+              placeholder="Search by invoice no, customer name..."
+              placeholderTextColor={colors.muted}
+              value={arInvoiceSearch}
+              onChangeText={setArInvoiceSearch}
+              returnKeyType="search"
+            />
+            {arInvoiceSearch.length > 0 && (
+              <TouchableOpacity onPress={() => setArInvoiceSearch("")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Feather name="x" size={14} color={colors.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.calendarIconBtn}
+            onPress={() => setInvoiceFilterModalVisible(true)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="calendar" size={18} color={colors.error} />
+          </TouchableOpacity>
+        </View>
         {filteredInvoiceItems.length === 0 ? (
           <View style={styles.tabContentBox}>
             <View style={styles.tabContentIconCircle}>
@@ -757,12 +825,12 @@ export default function DealerDetailScreen() {
     });
   })();
 
-    const renderLedgerFilterRow = () => (
-    <View style={styles.ledgerFilterCard}>
-      <View style={styles.ledgerSearchBox}>
+      const renderLedgerFilterRow = () => (
+    <View style={styles.invoiceSearchFilterRow}>
+      <View style={styles.invoiceSearchBox}>
         <Feather name="search" size={14} color={colors.muted} />
         <TextInput
-          style={styles.ledgerSearchInput}
+          style={styles.invoiceSearchInput}
           placeholder="Search by details, origin or invoice no."
           placeholderTextColor={colors.muted}
           value={ledgerSearchQuery}
@@ -784,65 +852,99 @@ export default function DealerDetailScreen() {
           </TouchableOpacity>
         )}
       </View>
-      <View style={styles.ledgerFilterRow}>
-        <TouchableOpacity
-          style={styles.dateField}
-          onPress={() => setActiveDatePicker("from")}
-        >
-          <Text style={styles.dateFieldLabel}>From Date</Text>
-          <Text style={styles.dateFieldValue}>
-            {ledgerFromDate ? formatPickerDate(ledgerFromDate) : "Select date"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.dateField}
-          onPress={() => setActiveDatePicker("to")}
-        >
-          <Text style={styles.dateFieldLabel}>To Date</Text>
-          <Text style={styles.dateFieldValue}>
-            {ledgerToDate ? formatPickerDate(ledgerToDate) : "Select date"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.ledgerFilterButtonRow}>
-        <TouchableOpacity style={styles.searchButton} onPress={handleLedgerSearch}>
-          <Text style={styles.searchButtonText}>Search</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.resetButton} onPress={handleLedgerReset}>
-          <Text style={styles.resetButtonText}>Reset</Text>
-        </TouchableOpacity>
-      </View>
-      {activeDatePicker && (
-        <DateTimePicker
-          value={
-            activeDatePicker === "from"
-              ? ledgerFromDate ?? new Date()
-              : ledgerToDate ?? new Date()
-          }
-          mode="date"
-          display={Platform.OS === "ios" ? "inline" : "default"}
-          maximumDate={new Date()}
-          themeVariant="light"
-          onChange={(event, selectedDate) => {
-            if (event.type === "dismissed") {
-              setActiveDatePicker(null);
-              return;
-            }
-
-            if (!selectedDate) return;
-
-            if (activeDatePicker === "from") {
-              setLedgerFromDate(selectedDate);
-            } else {
-              setLedgerToDate(selectedDate);
-            }
-
-            setActiveDatePicker(null);
-          }}
-        />
-      )}
+      <TouchableOpacity
+        style={styles.calendarIconBtn}
+        onPress={() => setLedgerFilterModalVisible(true)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Feather name="calendar" size={18} color={colors.error} />
+      </TouchableOpacity>
     </View>
+  );
+
+  const renderLedgerFilterModal = () => (
+    <Modal
+      visible={ledgerFilterModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setLedgerFilterModalVisible(false)}
+    >
+      <Pressable style={styles.filterModalOverlay} onPress={() => setLedgerFilterModalVisible(false)}>
+        <Pressable style={styles.filterModalCard} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.filterModalHeader}>
+            <Text style={styles.filterModalTitle}>Filter Ledger</Text>
+            <TouchableOpacity
+              onPress={() => setLedgerFilterModalVisible(false)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="x" size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.filterModalDivider} />
+
+          <Text style={styles.filterFieldLabel}>From Date</Text>
+          <TouchableOpacity style={styles.filterDateInput} onPress={() => setActiveDatePicker("from")}>
+            <Feather name="calendar" size={16} color={colors.error} />
+            <Text style={ledgerFromDate ? styles.filterDateValueText : styles.filterDatePlaceholder}>
+              {ledgerFromDate ? formatPickerDate(ledgerFromDate) : "DD/MM/YYYY"}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.filterFieldLabel, { marginTop: spacing.md }]}>To Date</Text>
+          <TouchableOpacity style={styles.filterDateInput} onPress={() => setActiveDatePicker("to")}>
+            <Feather name="calendar" size={16} color={colors.error} />
+            <Text style={ledgerToDate ? styles.filterDateValueText : styles.filterDatePlaceholder}>
+              {ledgerToDate ? formatPickerDate(ledgerToDate) : "DD/MM/YYYY"}
+            </Text>
+          </TouchableOpacity>
+
+          {activeDatePicker && (
+            <DateTimePicker
+              value={
+                activeDatePicker === "from"
+                  ? ledgerFromDate ?? new Date()
+                  : ledgerToDate ?? new Date()
+              }
+              mode="date"
+              display={Platform.OS === "ios" ? "inline" : "default"}
+              maximumDate={new Date()}
+              themeVariant="light"
+              onChange={(event, selectedDate) => {
+                if (event.type === "dismissed") {
+                  setActiveDatePicker(null);
+                  return;
+                }
+
+                if (!selectedDate) return;
+
+                if (activeDatePicker === "from") {
+                  setLedgerFromDate(selectedDate);
+                } else {
+                  setLedgerToDate(selectedDate);
+                }
+
+                setActiveDatePicker(null);
+              }}
+            />
+          )}
+
+          <View style={styles.filterModalButtonRow}>
+            <TouchableOpacity style={styles.filterResetBtn} onPress={handleLedgerReset}>
+              <Text style={styles.filterResetBtnText}>Reset</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.filterApplyBtn}
+              onPress={() => {
+                handleLedgerSearch();
+                setLedgerFilterModalVisible(false);
+              }}
+            >
+              <Text style={styles.filterApplyBtnText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 
   const renderLedgerTab = () => {
@@ -1119,7 +1221,8 @@ export default function DealerDetailScreen() {
         </View>
       </View>
 
-      <ScrollView
+            <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={[
           styles.scrollContent,
           paginationMeta && { paddingBottom: spacing.xl * 2 },
@@ -1142,8 +1245,18 @@ export default function DealerDetailScreen() {
               <CardWrapper
                 key={stat.key}
                 style={styles.statCard}
-                {...(tabKeyForStat
-                  ? { onPress: () => setActiveTab(tabKeyForStat), activeOpacity: 0.7 }
+                            {...(tabKeyForStat
+                  ? {
+                      onPress: () => {
+                        setActiveTab(tabKeyForStat);
+                        scrollViewRef.current?.scrollTo({ y: tabBarY, animated: true });
+                        const layout = tabLayouts[tabKeyForStat];
+                        if (layout) {
+                          tabBarScrollRef.current?.scrollTo({ x: Math.max(0, layout.x - 12), animated: true });
+                        }
+                      },
+                      activeOpacity: 0.7,
+                    }
                   : {})}
               >
                 <View style={[styles.statIconCircle, { backgroundColor: stat.bg }]}>
@@ -1180,19 +1293,32 @@ export default function DealerDetailScreen() {
           })}
         </View>
 
-        <ScrollView
+                <ScrollView
+          ref={tabBarScrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.tabBar}
           contentContainerStyle={styles.tabBarContent}
+          onLayout={(e) => setTabBarY(e.nativeEvent.layout.y)}
         >
           {TABS.map((tab) => {
             const active = activeTab === tab.key;
             return (
-              <TouchableOpacity
+                                        <TouchableOpacity
                 key={tab.key}
                 style={[styles.tabItem, active && styles.tabItemActive]}
-                onPress={() => setActiveTab(tab.key)}
+                onLayout={(e) => {
+                  const { x, width } = e.nativeEvent.layout;
+                  setTabLayouts((prev) => ({ ...prev, [tab.key]: { x, width } }));
+                }}
+                onPress={() => {
+                  setActiveTab(tab.key);
+                  scrollViewRef.current?.scrollTo({ y: tabBarY, animated: true });
+                  const layout = tabLayouts[tab.key];
+                  if (layout) {
+                    tabBarScrollRef.current?.scrollTo({ x: Math.max(0, layout.x - 12), animated: true });
+                  }
+                }}
                 activeOpacity={0.7}
                 hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
               >
@@ -1285,12 +1411,14 @@ export default function DealerDetailScreen() {
         visible={selectedCreditMemo !== null}
         onClose={() => setSelectedCreditMemo(null)}
       />
-      <PdfViewerModal
+              <PdfViewerModal
         visible={Boolean(pdfUri)}
         uri={pdfUri}
         title="Invoice PDF"
         onClose={() => setPdfUri(null)}
       />
+      {renderInvoiceFilterModal()}
+      {renderLedgerFilterModal()}
     </SafeAreaView>
   );
 }
@@ -1365,6 +1493,26 @@ const styles = StyleSheet.create({
   pageButtonDisabled: { opacity: 0.45 },
   pageText: { minWidth: 40, textAlign: "center", fontSize: 11, fontFamily: typography.semibold, color: colors.text },
   ledgerFilterCard: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md, gap: spacing.sm },
+    invoiceFilterTriggerRow: { flexDirection: "row", alignItems: "center", marginBottom: spacing.md },
+  invoiceSearchFilterRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
+  invoiceSearchBox: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.sm, height: 44 },
+  invoiceSearchInput: { flex: 1, fontSize: 13, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
+  invoiceFilterAppliedText: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, flexShrink: 1 },
+  calendarIconBtn: { width: 44, height: 44, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, alignItems: "center", justifyContent: "center" },
+  filterModalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: spacing.md },
+  filterModalCard: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.lg },
+  filterModalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  filterModalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
+  filterModalDivider: { height: 1, backgroundColor: colors.border, marginTop: spacing.md, marginBottom: spacing.md },
+  filterFieldLabel: { fontSize: 13, fontFamily: typography.medium, color: colors.text, marginBottom: 8 },
+  filterDateInput: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surface, paddingHorizontal: spacing.sm, paddingVertical: 12 },
+  filterDateValueText: { fontSize: 14, fontFamily: typography.medium, color: colors.text },
+  filterDatePlaceholder: { fontSize: 14, fontFamily: typography.medium, color: colors.muted },
+  filterModalButtonRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
+  filterResetBtn: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingVertical: 14, alignItems: "center", backgroundColor: colors.white },
+  filterResetBtnText: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
+  filterApplyBtn: { flex: 1, borderRadius: radius.sm, paddingVertical: 14, alignItems: "center", backgroundColor: colors.error },
+  filterApplyBtnText: { fontSize: 15, fontFamily: typography.bold, color: colors.white },
   ledgerFilterRow: { flexDirection: "row", gap: spacing.sm },
   dateField: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 8, gap: 2 },
   dateFieldLabel: { fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary },
