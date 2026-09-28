@@ -17,6 +17,7 @@ const isValidValue = (val?: string | null) => {
   return normalized !== "" && normalized !== "NA" && normalized !== "N/A" && normalized !== "NULL";
 };
 
+
 export const ProfileScreen = () => {
   const router = useRouter();
   const { user, clearSession } = useAuth();
@@ -29,6 +30,12 @@ export const ProfileScreen = () => {
     enabled: Boolean(groupCompanyName),
   });
 
+  const handleLogout = async () => {
+    const tokenData = await getDevicePushTokenAsync();
+    await AsyncStorage.setItem("pushEnabled", "false");
+    await removePushToken(user?.user_id!, tokenData.data);
+    clearSession()
+  }
   // Hydrate the toggle state when the screen mounts
   useEffect(() => {
     AsyncStorage.getItem("pushEnabled").then((val) => {
@@ -41,7 +48,7 @@ export const ProfileScreen = () => {
   const handlePushToggle = async (value: boolean) => {
     setPushEnabled(value);
     try {
-      
+
       if (value) {
 
         const { status: existingStatus } = await getPermissionsAsync();
@@ -64,7 +71,7 @@ export const ProfileScreen = () => {
           );
           return; // Abort execution
         }
-        
+
         const tokenData = await getDevicePushTokenAsync();
         const token = tokenData.data;
 
@@ -173,7 +180,7 @@ export const ProfileScreen = () => {
           </View>
         </View>
 
-                <Pressable
+        <Pressable
           onPress={() => router.push("/change-password")}
           style={({ pressed, hovered }: any) => [
             styles.logoutButton,
@@ -191,7 +198,7 @@ export const ProfileScreen = () => {
         </Pressable>
 
         <Pressable
-          onPress={clearSession}
+          onPress={handleLogout}
           style={({ pressed, hovered }: any) => [
             styles.logoutButton,
             (pressed || hovered) && { backgroundColor: colors.primary }
