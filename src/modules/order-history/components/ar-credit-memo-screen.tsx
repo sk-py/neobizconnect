@@ -88,21 +88,20 @@ export default function ArCreditMemoScreen() {
   const renderCard = ({ item }: { item: ArCreditMemoDocument }) => {
     return (
       <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View>
-            <Text numberOfLines={1} style={styles.docNo}>{item.customer_name}</Text>
+                <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <Text numberOfLines={2} style={styles.docNo}>{item.customer_name}</Text>
             <Text style={styles.docDate}>Credit Memo #{item.arcreditmemono}</Text>
             {canSeeClientCode && (
               <Text style={styles.clientCode}>Client Code: {item.customer_code}</Text>
             )}
           </View>
-          <View>
-
-          <View style={[styles.statusBadge, item.status === "Closed" && styles.statusClosed]}>
-            <Text style={[styles.statusBadgeText, item.status === "Closed" && styles.statusTextClosed]}>
-              {item.status}
-            </Text>
-          </View>
+          <View style={styles.cardHeaderRight}>
+            <View style={[styles.statusBadge, item.status === "Closed" && styles.statusClosed]}>
+              <Text numberOfLines={1} style={[styles.statusBadgeText, item.status === "Closed" && styles.statusTextClosed]}>
+                {item.status}
+              </Text>
+            </View>
             <Text style={styles.docDate}>{formatDate(item.posting_date)}</Text>
           </View>
         </View>
@@ -134,17 +133,17 @@ export default function ArCreditMemoScreen() {
     <View style={styles.safeArea}>
       <View style={styles.listHeader} />
       <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
+                <View style={[styles.statCard, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
           <Text style={styles.statLabel}>Total Credit Memos</Text>
           {statsLoading ? <ActivityIndicator size="small" /> : (
-            <Text style={styles.statValue}>{stats?.total_arcreditmemo || 0}</Text>
+            <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>{stats?.total_arcreditmemo || 0}</Text>
           )}
           <Feather name="shopping-cart" size={20} color="#3B82F6" style={styles.statIcon} />
         </View>
         <View style={[styles.statCard, { backgroundColor: "#F0FDF4", borderColor: "#BBF7D0" }]}>
           <Text style={styles.statLabel}>Total Amount</Text>
           {statsLoading ? <ActivityIndicator size="small" /> : (
-            <Text style={styles.statValue}>₹{parseFloat(stats?.total_arcreditmemo_amount || "0").toLocaleString("en-IN")}</Text>
+            <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>₹{parseFloat(stats?.total_arcreditmemo_amount || "0").toLocaleString("en-IN")}</Text>
           )}
           <Feather name="file-text" size={20} color="#22C55E" style={styles.statIcon} />
         </View>
@@ -342,7 +341,7 @@ const styles = StyleSheet.create({
   statsContainer: { flexDirection: "row", padding: spacing.md, gap: spacing.md },
   statCard: { flex: 1, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, position: "relative", overflow: "hidden" },
   statLabel: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 4 },
-  statValue: { fontSize: 22, fontFamily: typography.bold, color: colors.text },
+    statValue: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
   statIcon: { position: "absolute", top: 16, right: 16, opacity: 0.2 },
   listHeader: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
   listTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
@@ -360,8 +359,10 @@ const styles = StyleSheet.create({
   pageIndicator: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
   listContent: { padding: spacing.md, gap: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
-  docNo: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
+    cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.sm, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  cardHeaderLeft: { flex: 1, marginRight: spacing.sm },
+  cardHeaderRight: { alignItems: "flex-end", flexShrink: 0, maxWidth: 130 },
+  docNo: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
   docDate: { fontSize: 12, fontFamily: typography.regular, color: colors.muted, marginTop: 2 },
   clientCode: { fontSize: 11, fontFamily: typography.semibold, color: "#1D4ED8", marginTop: 2 },
   statusBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl },
