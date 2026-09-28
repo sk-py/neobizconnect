@@ -210,37 +210,37 @@ export default function OnlineLeadScreen() {
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardTop}>
-          <View style={styles.nameDateRow}>
-                        <Text style={styles.customerName}>
-              {form?.customer_name || "-"}
-            </Text>
+                <View style={styles.cardTop}>
+          <Text style={styles.customerName}>
+            {form?.customer_name || "-"}
+          </Text>
+          <View style={styles.cardMetaRow}>
             <View style={styles.dateBadge}>
               <Text style={styles.dateBadgeText}>{formatDate((item as any).createdDate)}</Text>
             </View>
-          </View>
-                    <View style={styles.cardTopRight}>
-            {!!form?.lead_status && (
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText} numberOfLines={1}>{form.lead_status}</Text>
-              </View>
-            )}
-                                                <TouchableOpacity
-              style={styles.editIconBtn}
-              onPress={() => openEditModal(item)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="edit-2" size={14} color={colors.primary} />
-            </TouchableOpacity>
-            {!isAdminUser && (
+            <View style={styles.cardTopRight}>
+              {!!form?.lead_status && (
+                <View style={styles.statusBadge}>
+                  <Text style={styles.statusBadgeText} numberOfLines={1}>{form.lead_status}</Text>
+                </View>
+              )}
               <TouchableOpacity
-                style={styles.transferIconBtn}
-                onPress={() => openTransferModal(item)}
+                style={styles.editIconBtn}
+                onPress={() => openEditModal(item)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Feather name="arrow-right-circle" size={16} color="#16A34A" />
+                <Feather name="edit-2" size={14} color={colors.primary} />
               </TouchableOpacity>
-            )}
+              {!isAdminUser && (
+                <TouchableOpacity
+                  style={styles.transferIconBtn}
+                  onPress={() => openTransferModal(item)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather name="arrow-right-circle" size={16} color="#16A34A" />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
 
@@ -408,8 +408,8 @@ export default function OnlineLeadScreen() {
       <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
         <Pressable style={styles.modalOverlay} onPress={closeEditModal}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-                                          <View style={styles.modalHeader}>
-              <View>
+                             <View style={styles.modalHeader}>
+              <View style={{ flex: 1, marginRight: spacing.sm }}>
                 <Text style={styles.modalTitle}>
                   {isAdminUser ? "Online Lead" : "Online Lead Form"}
                 </Text>
@@ -419,7 +419,7 @@ export default function OnlineLeadScreen() {
                     : "Update the details of the online lead."}
                 </Text>
               </View>
-              <TouchableOpacity onPress={closeEditModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity style={styles.closeButton} onPress={closeEditModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="x" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
@@ -686,10 +686,10 @@ const styles = StyleSheet.create({
   listContent: { padding: spacing.md },
 
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
-    cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: spacing.sm },
+  cardTop: { marginBottom: 6 },
+  cardMetaRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: spacing.sm },
   cardTopRight: { flexDirection: "row", alignItems: "center", gap: 6 },
-  customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
-  nameDateRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, flex: 1 },
+  customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
   dateBadge: { alignSelf: "center", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
   dateBadgeText: { fontSize: 10, fontFamily: typography.semibold, color: "#1D4ED8" },
 
@@ -732,6 +732,7 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: colors.white, borderRadius: radius.lg, maxHeight: "88%", overflow: "hidden" },
   transferCard: { backgroundColor: colors.white, borderRadius: radius.lg, overflow: "hidden" },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  closeButton: { padding: 4, marginLeft: 4 },
   modalTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   modalSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
     modalBody: { flexGrow: 0, flexShrink: 1, padding: spacing.md },
