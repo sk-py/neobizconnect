@@ -210,21 +210,14 @@ export default function OnlineLeadScreen() {
 
     return (
       <View style={styles.card}>
-                <View style={styles.cardTop}>
-          <View style={styles.nameDateRow}>
-            <Text style={styles.customerName} numberOfLines={1}>
-              {form?.customer_name || "-"}
-            </Text>
+              <View style={styles.cardTop}>
+          <Text style={styles.customerName} numberOfLines={1}>
+            {form?.customer_name || "-"}
+          </Text>
+          <View style={styles.cardTopRight}>
             <View style={styles.dateBadge}>
               <Text style={styles.dateBadgeText}>{formatDate((item as any).createdDate)}</Text>
             </View>
-          </View>
-          <View style={styles.cardTopRight}>
-            {!!form?.lead_status && (
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText} numberOfLines={1}>{form.lead_status}</Text>
-              </View>
-            )}
             <TouchableOpacity
               style={styles.editIconBtn}
               onPress={() => openEditModal(item)}
@@ -278,10 +271,20 @@ export default function OnlineLeadScreen() {
           </View>
         </View>
 
-        <View style={styles.infoRow}>
+              <View style={styles.infoRow}>
           <View style={styles.infoBlock}>
             <Text style={styles.infoLabel}>Query Owner</Text>
             <Text style={styles.infoValue} numberOfLines={1}>{queryOwner}</Text>
+          </View>
+                   <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Status</Text>
+            {!!form?.lead_status ? (
+              <View style={styles.statusValueBadge}>
+                <Text style={styles.statusValueBadgeText} numberOfLines={1}>{form.lead_status}</Text>
+              </View>
+            ) : (
+              <Text style={styles.infoValue}>-</Text>
+            )}
           </View>
         </View>
 
@@ -686,15 +689,19 @@ const styles = StyleSheet.create({
   listContent: { padding: spacing.md },
 
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
-  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: spacing.sm },
+  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm, gap: spacing.sm },
+  statusRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: spacing.sm },
   cardTopRight: { flexDirection: "row", alignItems: "center", gap: 6 },
-  customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
-  nameDateRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, minWidth: 0 },
-  dateBadge: { alignSelf: "center", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
+  customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flexShrink: 1, flexBasis: 0, flexGrow: 1 },
+  nameDateRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, flex: 1 },
+  dateBadge: { alignSelf: "flex-start", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
   dateBadgeText: { fontSize: 10, fontFamily: typography.semibold, color: "#1D4ED8" },
 
-    statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: "center", alignSelf: "flex-start" },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: "center", alignSelf: "flex-start" },
   statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.white, textAlign: "center", lineHeight: 14 },
+
+  statusValueBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, backgroundColor: "#F0FDF4", alignItems: "center", alignSelf: "flex-start" },
+  statusValueBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: "#16A34A", textAlign: "center", lineHeight: 14 },
 
   editIconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FCA5A5" },
   transferIconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#86EFAC" },
