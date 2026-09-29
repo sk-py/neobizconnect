@@ -68,7 +68,7 @@ export default function ItemMasterScreen() {
 
     let result = data;
 
-    if (!canSeeExtraDetails && stockFilter !== "all") {
+        if (stockFilter !== "all") {
       result = result.filter((item) =>
         stockFilter === "in" ? item.inStockQty >= 4 : item.inStockQty < 4,
       );
@@ -235,21 +235,19 @@ export default function ItemMasterScreen() {
           </View>
         </View>
 
-                {!canSeeExtraDetails && (
-          <View style={styles.stockFilterRow}>
-            <FieldSelect
-              label="Stock"
-              value={STOCK_FILTER_LABELS[stockFilter]}
-              options={["All", "In Stock", "Out of Stock"]}
-              onChange={(label) =>
-                handleStockFilterChange(
-                  label === "In Stock" ? "in" : label === "Out of Stock" ? "out" : "all",
-                )
-              }
-              placeholder="All"
-            />
-          </View>
-        )}
+                         <View style={styles.stockFilterRow}>
+          <FieldSelect
+            label="Stock"
+            value={STOCK_FILTER_LABELS[stockFilter]}
+            options={["All", "In Stock", "Out of Stock"]}
+            onChange={(label) =>
+              handleStockFilterChange(
+                label === "In Stock" ? "in" : label === "Out of Stock" ? "out" : "all",
+              )
+            }
+            placeholder="All"
+          />
+        </View>
       </View>
 
       {isLoading ? (
