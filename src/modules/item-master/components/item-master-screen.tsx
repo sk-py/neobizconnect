@@ -98,7 +98,7 @@ export default function ItemMasterScreen() {
   const rangeEnd = Math.min(totalItems, (safePage + 1) * PAGE_SIZE);
 
   const renderRow = ({ item }: { item: ItemMasterEntry }) => {
-    const outOfStock = item.inStockQty <= 0;
+       const outOfStock = item.inStockQty < 4;
 
         if (!canSeeExtraDetails) {
       const salesManagerOutOfStock = item.inStockQty < 4;
@@ -114,7 +114,8 @@ export default function ItemMasterScreen() {
               <Text style={styles.metaText}>{item.wheelSize}&quot;</Text>
             </View>
           </View>
-                    <View style={[styles.stockBadge, salesManagerOutOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
+                                <View style={[styles.stockBadge, salesManagerOutOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
+            <View style={[styles.stockDot, { backgroundColor: salesManagerOutOfStock ? colors.error : colors.success }]} />
             <Text
               style={[styles.stockBadgeText, salesManagerOutOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}
               numberOfLines={1}
@@ -140,12 +141,13 @@ export default function ItemMasterScreen() {
             </View>
           </View>
 
-          <View style={[styles.stockBadgeLg, outOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
-            <Text style={[styles.stockBadgeTextLg, outOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}>
-              {item.inStockQty}
-            </Text>
-            <Text style={[styles.stockBadgeLabel, outOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}>
-              in stock
+                    <View style={[styles.stockBadgeLg, outOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
+            <View style={[styles.stockDot, { backgroundColor: outOfStock ? colors.error : colors.success }]} />
+            <Text
+              style={[styles.stockBadgeTextLg, outOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}
+              numberOfLines={1}
+            >
+              {outOfStock ? "out of stock" : `${item.inStockQty} in stock`}
             </Text>
           </View>
         </View>
@@ -353,16 +355,17 @@ const styles = StyleSheet.create({
   attachmentLink: { flexDirection: "row", alignItems: "center", gap: 4 },
   attachmentLinkText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
 
-    stockBadge: { minWidth: 34, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+      stockBadge: { flexDirection: "row", alignItems: "center", gap: 5, minWidth: 34, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.xl, justifyContent: "center", flexShrink: 0 },
   stockBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold },
 
-  stockBadgeLg: { minWidth: 56, paddingHorizontal: 10, paddingVertical: 8, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
-  stockBadgeTextLg: { fontSize: txtSize.body, fontFamily: typography.bold },
+  stockBadgeLg: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 56, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.xl, justifyContent: "center" },
+  stockBadgeTextLg: { fontSize: txtSize.small, fontFamily: typography.bold },
   stockBadgeAvailable: { backgroundColor: "#F0FDF4" },
   stockBadgeEmpty: { backgroundColor: "#FEF2F2" },
   stockBadgeLabel: { fontSize: 10, fontFamily: typography.medium, marginTop: 1 },
   stockTextAvailable: { color: colors.success },
   stockTextEmpty: { color: colors.error },
+  stockDot: { width: 6, height: 6, borderRadius: 3 },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6 },
   emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
