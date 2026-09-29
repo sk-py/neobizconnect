@@ -39,14 +39,14 @@ const RootNavigator = () => {
   return (
     <>
       <StatusBar barStyle={"dark-content"} />
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={isAuthenticated}  >
-        <Stack.Screen name="(app)" />
-      </Stack.Protected>
-      <Stack.Protected guard={!isAuthenticated}  >
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-    </Stack>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={isAuthenticated}  >
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
+        <Stack.Protected guard={!isAuthenticated}  >
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
     </>
   )
 }

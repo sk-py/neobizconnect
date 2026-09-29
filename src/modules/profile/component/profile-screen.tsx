@@ -17,7 +17,6 @@ const isValidValue = (val?: string | null) => {
   return normalized !== "" && normalized !== "NA" && normalized !== "N/A" && normalized !== "NULL";
 };
 
-
 export const ProfileScreen = () => {
   const router = useRouter();
   const { user, clearSession } = useAuth();
@@ -34,9 +33,9 @@ export const ProfileScreen = () => {
     const tokenData = await getDevicePushTokenAsync();
     await AsyncStorage.setItem("pushEnabled", "false");
     await removePushToken(user?.user_id!, tokenData.data);
-    clearSession()
-  }
-  // Hydrate the toggle state when the screen mounts
+    clearSession();
+  };
+
   useEffect(() => {
     AsyncStorage.getItem("pushEnabled").then((val) => {
       if (val === "false") {
@@ -48,9 +47,7 @@ export const ProfileScreen = () => {
   const handlePushToggle = async (value: boolean) => {
     setPushEnabled(value);
     try {
-
       if (value) {
-
         const { status: existingStatus } = await getPermissionsAsync();
         let finalStatus = existingStatus;
 
@@ -60,7 +57,7 @@ export const ProfileScreen = () => {
         }
 
         if (finalStatus !== "granted") {
-          setPushEnabled(false); // Revert switch
+          setPushEnabled(false);
           Alert.alert(
             "Permission Required",
             "Push notifications are blocked. Please enable them in your device settings.",
@@ -69,22 +66,18 @@ export const ProfileScreen = () => {
               { text: "Open Settings", onPress: () => Linking.openSettings() }
             ]
           );
-          return; // Abort execution
+          return; 
         }
 
         const tokenData = await getDevicePushTokenAsync();
-        const token = tokenData.data;
-
-        await AsyncStorage.setItem("pushEnabled", value ? "true" : "false");
-        await syncPushToken(user?.user_id!, token);
+        await AsyncStorage.setItem("pushEnabled", "true");
+        await syncPushToken(user?.user_id!, tokenData.data);
       } else {
         const tokenData = await getDevicePushTokenAsync();
         await AsyncStorage.setItem("pushEnabled", "false");
         await removePushToken(user?.user_id!, tokenData.data);
       }
-
     } catch (error) {
-      // Revert the UI switch and storage if the backend fails
       setPushEnabled(!value);
       await AsyncStorage.setItem("pushEnabled", !value ? "true" : "false");
       Alert.alert("Error", "Failed to update notification settings.");
@@ -99,26 +92,42 @@ export const ProfileScreen = () => {
     );
   }
 
-  const primaryBillTo = profile.bill_to?.[0];
-  const primaryShipTo = profile.ship_to?.[0];
+  // Grab the first available GSTIN to represent the business
+  const gstin = profile.bill_to?.[0]?.bill_to_gstin || profile.ship_to?.[0]?.ship_to_gstin || "";
 
-  const gstin = primaryBillTo?.bill_to_gstin || primaryShipTo?.ship_to_gstin || "";
+  // Dynamically map all billing and shipping addresses
+  const addressFields: any[] = [];
+  
+  profile.bill_to?.forEach((bill: any, index: number) => {
+    const addr = `${bill.bill_to_buildingfloorroom ? bill.bill_to_buildingfloorroom + " " : ""}${bill.bill_to_address}`;
+    if (isValidValue(addr)) {
+      addressFields.push({
+        id: `billing_${index}`,
+        icon: "map-pin",
+        label: profile.bill_to.length > 1 ? `Billing Address ${index + 1}` : "Billing Address",
+        value: addr
+      });
+    }
+  });
 
-  const billToAddressStr = primaryBillTo
-    ? `${primaryBillTo.bill_to_buildingfloorroom ? primaryBillTo.bill_to_buildingfloorroom + " " : ""}${primaryBillTo.bill_to_address}`
-    : "";
-
-  const shipToAddressStr = primaryShipTo
-    ? `${primaryShipTo.ship_to_buildingfloorroom ? primaryShipTo.ship_to_buildingfloorroom + " " : ""}${primaryShipTo.ship_to_address}`
-    : "";
+  profile.ship_to?.forEach((ship: any, index: number) => {
+    const addr = `${ship.ship_to_buildingfloorroom ? ship.ship_to_buildingfloorroom + " " : ""}${ship.ship_to_address}`;
+    if (isValidValue(addr)) {
+      addressFields.push({
+        id: `shipping_${index}`,
+        icon: "truck",
+        label: profile.ship_to.length > 1 ? `Shipping Address ${index + 1}` : "Shipping Address",
+        value: addr
+      });
+    }
+  });
 
   const displayFields = [
     { id: "contact", icon: "user", label: "Contact Person", value: profile.contact_person },
     { id: "phone", icon: "phone", label: "Phone No.", value: profile.phone_no },
     { id: "email", icon: "mail", label: "Email Address", value: profile.email },
     { id: "gstin", icon: "file-text", label: "GST Number", value: gstin },
-    { id: "billing", icon: "map-pin", label: "Billing Address", value: billToAddressStr },
-    { id: "shipping", icon: "truck", label: "Shipping Address", value: shipToAddressStr },
+    ...addressFields // Append dynamic addresses here
   ].filter(field => isValidValue(field.value));
 
   const InfoRow = ({ icon, label, value, isLast = false }: { icon: string; label: string; value: string; isLast?: boolean }) => (
@@ -135,90 +144,87 @@ export const ProfileScreen = () => {
     <View style={styles.safeArea} >
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
+        {/* 1. Identity Header (Row Layout) */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarCircle}>
-            <Feather name="briefcase" size={32} color={colors.primary} />
+            <Feather name="briefcase" size={28} color={colors.primary} />
           </View>
-          <View style={styles.nameRow}>
-            <Text selectable style={styles.dealerName}>{profile.dealer_name}</Text>
-            <Feather name="check-circle" size={18} color={colors.success} />
+          <View style={styles.headerTextContainer}>
+            <View style={styles.nameRow}>
+              <Text selectable style={styles.dealerName} numberOfLines={2}>
+                {profile.dealer_name}
+              </Text>
+              <Feather name="check-circle" size={16} color={colors.success} style={styles.verifiedIcon} />
+            </View>
+            {isValidValue(profile.dealer_code) && (
+              <Text selectable style={styles.dealerCode}>Code/Id: {profile.dealer_code}</Text>
+            )}
           </View>
-          {isValidValue(profile.dealer_code) && (
-            <Text selectable style={styles.dealerCode}>Dealer Code: {profile.dealer_code}</Text>
-          )}
         </View>
 
+        {/* 2. Business Information */}
         {displayFields.length > 0 && (
-          <View style={styles.sectionCard}>
-            {displayFields.map((field, index) => (
-              <InfoRow
-                key={field.id}
-                icon={field.icon}
-                label={field.label}
-                value={field.value}
-                isLast={index === displayFields.length - 1}
-              />
-            ))}
+          <View style={styles.sectionGroup}>
+            <Text style={styles.sectionTitle}>Business Details</Text>
+            <View style={styles.sectionCard}>
+              {displayFields.map((field, index) => (
+                <InfoRow
+                  key={field.id}
+                  icon={field.icon}
+                  label={field.label}
+                  value={field.value}
+                  isLast={index === displayFields.length - 1}
+                />
+              ))}
+            </View>
           </View>
         )}
 
-        {/* New Settings Section */}
-        <View style={[styles.sectionCard, { marginTop: spacing.lg }]}>
-          <View style={[styles.infoRow, styles.infoRowLast, { alignItems: "center" }]}>
-            <Feather name="bell" size={18} color={colors.textSecondary} style={styles.infoIcon} />
-            <View style={styles.infoTextContainer}>
-              <Text style={styles.infoValue}>Push Notifications</Text>
-              <Text style={styles.infoLabel}>Receive alerts and order updates</Text>
+        {/* 3. Settings & Preferences */}
+        <View style={styles.sectionGroup}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+          <View style={styles.sectionCard}>
+            
+            <View style={styles.infoRow}>
+              <Feather name="bell" size={18} color={colors.textSecondary} style={styles.infoIcon} />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoValue}>Push Notifications</Text>
+                <Text style={styles.infoLabel}>Receive alerts and order updates</Text>
+              </View>
+              <Switch
+                value={pushEnabled}
+                onValueChange={handlePushToggle}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.white}
+                ios_backgroundColor={colors.border}
+              />
             </View>
-            <Switch
-              value={pushEnabled}
-              onValueChange={handlePushToggle}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.white}
-              ios_backgroundColor={colors.border}
-            />
+
+            <Pressable 
+              style={({ pressed }) => [styles.infoRow, styles.infoRowLast, pressed && styles.pressedRow]} 
+              onPress={() => router.push("/change-password")}
+            >
+              <Feather name="lock" size={18} color={colors.textSecondary} style={styles.infoIcon} />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoValue}>Change Password</Text>
+                <Text style={styles.infoLabel}>Update your account security</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color={colors.muted} />
+            </Pressable>
+
           </View>
         </View>
 
-        <Pressable
-          onPress={() => router.push("/change-password")}
-          style={({ pressed, hovered }: any) => [
-            styles.logoutButton,
-            (pressed || hovered) && { backgroundColor: colors.primary }
-          ]}
-        >
-          {({ pressed, hovered }: any) => (
-            <>
-              <Feather name="lock" size={18} color={(pressed || hovered) ? colors.white : colors.primary} />
-              <Text style={[styles.logoutText, (pressed || hovered) && { color: colors.white }]}>
-                Change Password
-              </Text>
-            </>
-          )}
-        </Pressable>
-
+        {/* 4. Destructive Action (Logout) */}
         <Pressable
           onPress={handleLogout}
-          style={({ pressed, hovered }: any) => [
+          style={({ pressed }) => [
             styles.logoutButton,
-            (pressed || hovered) && { backgroundColor: colors.primary }
+            pressed && { opacity: 0.7 }
           ]}
         >
-          {({ pressed, hovered }: any) => (
-            <>
-              <Feather
-                name="log-out"
-                size={18}
-                color={(pressed || hovered) ? colors.white : colors.primary}
-              />
-              <Text style={[
-                styles.logoutText,
-                (pressed || hovered) && { color: colors.white }
-              ]}>
-                Logout
-              </Text>
-            </>
-          )}
+          <Feather name="log-out" size={18} color="#EF4444" />
+          <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
 
       </ScrollView>
@@ -241,18 +247,20 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl
   },
   profileHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.md,
+    // paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.xl,
   },
   avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.white,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.md,
+    marginRight: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
     shadowColor: "#000",
@@ -261,21 +269,42 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  headerTextContainer: {
+    flex: 1,
+    justifyContent: "center",
+  },
   nameRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    alignItems: "flex-start",
     marginBottom: 4,
   },
   dealerName: {
-    fontSize: 22,
+    flexShrink: 1, // Ensures long names wrap instead of pushing the icon off-screen
+    fontSize: 20,
     fontFamily: typography.bold,
     color: colors.text,
+    lineHeight: 24,
+  },
+  verifiedIcon: {
+    marginLeft: 6,
+    marginTop: 4, // Aligns with the first line of text
   },
   dealerCode: {
     fontSize: txtSize.small,
     fontFamily: typography.medium,
     color: colors.textSecondary,
+  },
+  sectionGroup: {
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontFamily: typography.bold,
+    color: colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
   },
   sectionCard: {
     backgroundColor: colors.white,
@@ -289,13 +318,15 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.surface,
-    alignItems: "flex-start",
+    alignItems: "center", 
   },
   infoRowLast: {
     borderBottomWidth: 0,
   },
+  pressedRow: {
+    backgroundColor: colors.surface,
+  },
   infoIcon: {
-    marginTop: 2,
     marginRight: spacing.md,
   },
   infoTextContainer: {
@@ -305,7 +336,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: typography.medium,
     color: colors.muted,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   infoValue: {
     fontSize: 14,
@@ -318,15 +349,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    marginTop: spacing.xl,
-    paddingVertical: 14,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: "transparent",
+    marginTop: spacing.sm,
+    paddingVertical: 16,
+    borderRadius: radius.lg,
+    backgroundColor: "#FEF2F2",
   },
   logoutText: {
-    color: colors.primary,
+    color: "#EF4444",
     fontFamily: typography.bold,
     fontSize: 16,
   },

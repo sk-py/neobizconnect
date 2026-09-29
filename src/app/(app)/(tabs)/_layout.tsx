@@ -17,20 +17,20 @@ const TabLayout = () => {
     const { initializePush } = usePushNotifications(user?.user_id);
 
     useEffect(() => {
-    const setupPush = async () => {
-      if (!user?.user_id) return;
-      
-      const pushEnabled = await AsyncStorage.getItem("pushEnabled");
-      
-      // Default to true. Only skip if the user explicitly toggled it off.
-      if (pushEnabled !== "false") {
-        await initializePush();
-      }
-    };
+        const setupPush = async () => {
+            if (!user?.user_id) return;
 
-    setupPush();
-  }, [user?.user_id, initializePush]);
-    
+            const pushEnabled = await AsyncStorage.getItem("pushEnabled");
+
+            // Default to true. Only skip if the user explicitly toggled it off.
+            if (pushEnabled !== "false") {
+                await initializePush();
+            }
+        };
+
+        setupPush();
+    }, [user?.user_id, initializePush]);
+
     const canAccess = (moduleName: AppModuleName) => hasModuleAccess(moduleName, userRole);
 
     return (
@@ -63,10 +63,70 @@ const TabLayout = () => {
                     <Tabs.Screen
                         name='dashboard'
                         options={{
-                            title: "Dashboard",
+                            title: "NeoBizConnect",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='bar-chart' size={size} color={color} />
                             )
+                        }}
+                    />
+                </Tabs.Protected>
+                <Tabs.Protected guard={canAccess("User Setup")}>
+                    <Tabs.Screen
+                        name='user-setup'
+                        options={{
+                            title: "User Setup",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='users' size={size} color={color} />
+                            ),
+                            href: userRole === "Admin" ? "/user-setup" : null
+                        }}
+                    />
+                </Tabs.Protected>
+                <Tabs.Protected guard={canAccess("Admin Leads & Queries")}>
+                    <Tabs.Screen
+                        name='leads-and-queries-screen'
+                        options={{
+                            title: "Leads & Queries",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='message-square' size={size} color={color} />
+                            ),
+                            href: userRole === "Admin" ? "/leads-and-queries-screen" : null
+                        }}
+                    />
+                </Tabs.Protected>
+                <Tabs.Protected guard={canAccess("Admin Sales Screen")}>
+                    <Tabs.Screen
+                        name='admin-sales-screen'
+                        options={{
+                            title: "Sales",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='shopping-bag' size={size} color={color} />
+                            ),
+                            href: userRole === "Admin" ? "/admin-sales-screen" : null
+                        }}
+                    />
+                </Tabs.Protected>
+                <Tabs.Protected guard={canAccess("Admin Inventory")}>
+                    <Tabs.Screen
+                        name='admin-inventory'
+                        options={{
+                            title: "Inventory",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='package' size={size} color={color} />
+                            ),
+                            href: userRole === "Admin" ? "/admin-inventory" : null
+                        }}
+                    />
+                </Tabs.Protected>
+                <Tabs.Protected guard={canAccess("Finances")}>
+                    <Tabs.Screen
+                        name='finances'
+                        options={{
+                            title: "Finances",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='dollar-sign' size={size} color={color} />
+                            ),
+                            href: userRole === "Admin" ? "/finances" : null
                         }}
                     />
                 </Tabs.Protected>
@@ -80,7 +140,8 @@ const TabLayout = () => {
                         name='dealers'
                         options={{
                             title: "Dealers",
-                            tabBarIcon: ({ color, size }) => (<Feather name='briefcase' color={color} size={size} />)
+                            tabBarIcon: ({ color, size }) => (<Feather name='briefcase' color={color} size={size} />),
+                            href: userRole === "Admin" ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -90,7 +151,8 @@ const TabLayout = () => {
                         name='sales-managers'
                         options={{
                             title: "Sales Manager",
-                            tabBarIcon: ({ color, size }) => (<Feather name='user-check' color={color} size={size} />)
+                            tabBarIcon: ({ color, size }) => (<Feather name='user-check' color={color} size={size} />),
+                            href: userRole === "Admin" ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -102,7 +164,8 @@ const TabLayout = () => {
                             title: "Stock",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='package' color={color} size={size} />
-                            )
+                            ),
+                            href: userRole === "Admin" ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -115,7 +178,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='repeat' color={color} size={size} />
                             ),
-                            href: user?.authority === "Sales Manager" ? null : "/transaction-history"
+                            href: user?.authority === "Sales Manager" || userRole === "Admin" ? null : "/transaction-history"
                         }}
                     />
                 </Tabs.Protected>
@@ -140,7 +203,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='rotate-ccw' size={size} color={color} />
                             ),
-                            href: user?.authority === "Sales Manager" ? null : "/order-history"
+                            href: user?.authority === "Sales Manager" || userRole === "Admin" ? null : "/order-history"
                         }}
                     />
                 </Tabs.Protected>
@@ -153,7 +216,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size, focused }) => (
                                 <Feather name={focused ? 'book-open' : 'book'} size={size} color={color} />
                             ),
-                            href: user?.authority === "Sales Manager" ? null : "/customer-ledger"
+                            href: user?.authority === "Sales Manager" || userRole === "Admin" ? null : "/customer-ledger"
                         }}
                     />
                 </Tabs.Protected>
@@ -165,16 +228,17 @@ const TabLayout = () => {
                             title: "Queries",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='message-square' size={size} color={color} />
-                            )
+                            ),
+                            href: userRole === "Admin" ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
 
-                        <Tabs.Protected guard={canAccess("Sub Dealers")}>
+                <Tabs.Protected guard={canAccess("Sub Dealers")}>
                     <Tabs.Screen
                         name='sub-dealer'
                         options={{
-                                                       title: "Sub Dealers",
+                            title: "Sub Dealers",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='users' size={size} color={color} />
                             )
@@ -189,7 +253,8 @@ const TabLayout = () => {
                             title: "Sub Dealer List",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='users' size={size} color={color} />
-                            )
+                            ),
+                            href: userRole === "Admin" ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -201,7 +266,8 @@ const TabLayout = () => {
                             title: "Sub Dealer Sales Target",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='target' size={size} color={color} />
-                            )
+                            ),
+                            href: userRole === "Admin" ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -226,7 +292,8 @@ const TabLayout = () => {
                             title: "Leads & Queries",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='message-square' size={size} color={color} />
-                            )
+                            ),
+                            href: userRole === "Admin" ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -250,12 +317,13 @@ const TabLayout = () => {
                             title: "Online Lead",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='inbox' size={size} color={color} />
-                            )
+                            ),
+                            href: userRole === "Admin" ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
 
-                                <Tabs.Protected guard={canAccess("Sales Manager Modules")}>
+                <Tabs.Protected guard={canAccess("Sales Manager Modules")}>
                     <Tabs.Screen
                         name='sales-manager-modules'
                         options={{
@@ -267,7 +335,7 @@ const TabLayout = () => {
                     />
                 </Tabs.Protected>
 
-                <Tabs.Protected guard={canAccess("Notifications")}>
+                {/* <Tabs.Protected guard={canAccess("Notifications")}>
                     <Tabs.Screen
                         name='notifications'
                         options={{
@@ -277,7 +345,7 @@ const TabLayout = () => {
                             )
                         }}
                     />
-                </Tabs.Protected>
+                </Tabs.Protected> */}
             </Tabs>
 
             {/* Custom Branding Footer */}

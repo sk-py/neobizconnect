@@ -1,5 +1,9 @@
+import { FieldSelect } from "@/components/custom/field-select";
+import { INDIAN_STATES } from "@/constants/indian-states";
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
+import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { useAuthStore } from "@/store/auth.store";
+import { generateExcelLocally } from "@/utils/generate-excel";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
@@ -23,9 +27,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 import { createSubDealer, fetchSubDealers, updateSubDealer } from "../services/sub-dealers-api";
-import { fetchDealers } from "@/modules/dealers/services/dealers.api";
-import { FieldSelect } from "@/components/custom/field-select";
-import { INDIAN_STATES } from "@/constants/indian-states";
 import { SubDealer } from "../types";
 
 const formSchema = z.object({
@@ -108,7 +109,7 @@ export const SubDealerScreen = () => {
         setSelectedDealerCode(match ? match[1] : null);
     };
 
-        // --- Data Fetching ---
+    // --- Data Fetching ---
     const { data: dealers, isLoading, isRefetching, refetch } = useQuery({
         queryKey: ["sub-dealers", groupCompanyName],
         queryFn: () => fetchSubDealers(groupCompanyName),
@@ -201,6 +202,10 @@ export const SubDealerScreen = () => {
         }
     };
 
+    const handleExportToExcel = async () => {
+        await generateExcelLocally(listData!)
+    }
+
     // --- Renders ---
     const renderCard = ({ item }: { item: SubDealer }) => {
         const isActive = item.subDealerStatus === "Active";
@@ -242,7 +247,7 @@ export const SubDealerScreen = () => {
         );
     };
 
-        const FormField = ({ control, name, label, placeholder, isTextArea = false, isNumeric = false, required = true }: any) => (
+    const FormField = ({ control, name, label, placeholder, isTextArea = false, isNumeric = false, required = true }: any) => (
         <Controller
             control={control}
             name={name}
@@ -275,7 +280,7 @@ export const SubDealerScreen = () => {
     const renderFormContent = (control: any, isEditing: boolean = false) => (
         <>
             <FormSection title="1. Shop Details">
-                                <FormField control={control} name="shopName" label="Shop Name" placeholder="Enter shop name" />
+                <FormField control={control} name="shopName" label="Shop Name" placeholder="Enter shop name" />
                 <Controller
                     control={control}
                     name="businessType"
@@ -323,7 +328,7 @@ export const SubDealerScreen = () => {
 
             <FormSection title="2. Contact Details">
                 <View style={styles.row}>
-                                        <View style={styles.colHalf}><FormField control={control} name="firstName" label="Dealer First Name / Contact Person" placeholder="Contact first name" /></View>
+                    <View style={styles.colHalf}><FormField control={control} name="firstName" label="Dealer First Name / Contact Person" placeholder="Contact first name" /></View>
                     <View style={styles.colHalf}><FormField control={control} name="lastName" label="Dealer Last Name / Contact Person" placeholder="Contact last name" /></View>
                 </View>
                 <FormField control={control} name="phone" label="Phone Number" placeholder="Enter phone number" isNumeric />
@@ -332,7 +337,7 @@ export const SubDealerScreen = () => {
             </FormSection>
 
             <FormSection title="3. Business Potential">
-                                <FormField control={control} name="brandsCurrentlySold" label="Brands Currently Sold" placeholder="Enter current brands" />
+                <FormField control={control} name="brandsCurrentlySold" label="Brands Currently Sold" placeholder="Enter current brands" />
 
                 <Controller
                     control={control}
@@ -388,10 +393,10 @@ export const SubDealerScreen = () => {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Feather name="arrow-left" size={24} color={colors.text} />
                 </TouchableOpacity>
-                     <Text style={styles.headerTitle}>{screenTitle}</Text>
+                <Text style={styles.headerTitle}>{screenTitle}</Text>
             </View>
 
-                        {canRegister && (
+            {canRegister && (
                 <View style={styles.tabContainer}>
                     <TouchableOpacity style={[styles.tabBtn, activeTab === "list" && styles.tabBtnActive]} onPress={() => setActiveTab("list")}>
                         <Feather name="list" size={16} color={activeTab === "list" ? colors.primary : colors.muted} />
@@ -404,7 +409,7 @@ export const SubDealerScreen = () => {
                 </View>
             )}
 
-                        {activeTab === "list" ? (
+            {activeTab === "list" ? (
                 <>
                     {isAdminView && (
                         <View style={styles.dealerPickerContainer}>
@@ -419,6 +424,12 @@ export const SubDealerScreen = () => {
                             />
                         </View>
                     )}
+
+                    {/* <Pressable onPress={handleExportToExcel} style={{ alignSelf: "center", backgroundColor: colors.primary, padding: 6, paddingHorizontal: 16 }}>
+                        <Text style={{ color: colors.white }}>
+                            Export to excel
+                        </Text>
+                    </Pressable> */}
 
                     {isAdminView && !selectedDealerCode ? (
                         <View style={styles.centerBox}>
@@ -447,7 +458,7 @@ export const SubDealerScreen = () => {
                     )}
                 </>
             ) : (
-                                <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
+                <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
                     {renderFormContent(createForm.control, false)}
                     <View style={styles.actionRow}>
                         <TouchableOpacity
@@ -455,7 +466,7 @@ export const SubDealerScreen = () => {
                             onPress={() => createForm.reset(defaultFormValues)}
                             disabled={createMutation.isPending}
                         >
-                                                        <Text style={styles.resetBtnText} numberOfLines={1}>Reset Form</Text>
+                            <Text style={styles.resetBtnText} numberOfLines={1}>Reset Form</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.submitBtn, styles.submitBtnFlex, createMutation.isPending && styles.submitBtnDisabled]}
@@ -508,7 +519,7 @@ const styles = StyleSheet.create({
     backButton: { padding: 4, marginRight: spacing.sm },
     headerTitle: { fontSize: 20, fontFamily: typography.bold, color: colors.text },
 
-       tabContainer: { flexDirection: "row", backgroundColor: colors.surface, padding: spacing.sm, marginHorizontal: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
+    tabContainer: { flexDirection: "row", backgroundColor: colors.surface, padding: spacing.sm, marginHorizontal: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
     dealerPickerContainer: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
     tabBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 10, borderRadius: radius.sm },
     tabBtnActive: { backgroundColor: colors.white, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
@@ -554,10 +565,10 @@ const styles = StyleSheet.create({
     textArea: { height: 60 },
     errorText: { color: colors.error, fontSize: 11, fontFamily: typography.medium, marginTop: 4 },
 
-    systemDetailsBox:{ backgroundColor: colors.surface, padding: 12, borderRadius: radius.sm },
+    systemDetailsBox: { backgroundColor: colors.surface, padding: 12, borderRadius: radius.sm },
     systemDetailsText: { fontSize: 13, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 4 },
 
-        submitBtn: { backgroundColor: colors.primary, paddingVertical: 10, borderRadius: radius.sm, alignItems: "center", marginBottom: spacing.xxl },
+    submitBtn: { backgroundColor: colors.primary, paddingVertical: 10, borderRadius: radius.sm, alignItems: "center", marginBottom: spacing.xxl },
     submitBtnFlex: { flex: 1, marginBottom: 0, paddingHorizontal: 4 },
     submitBtnDisabled: { opacity: 0.7 },
     submitBtnText: { color: colors.white, fontSize: 16, fontFamily: typography.bold },
