@@ -5,7 +5,7 @@ import { Text as SkiaText, useFont } from "@shopify/react-native-skia";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BarGroup, CartesianChart, Pie, PolarChart } from "victory-native";
@@ -60,7 +60,6 @@ interface DealerTargetItem {
 }
 
 interface DashboardData {
-    // KPI-style scalars
     total_pending_quantity?: number;
     total_pi_oip_quantity?: number;
     total_invoice_quantity?: number;
@@ -78,7 +77,6 @@ interface DashboardData {
         salesmanager_quantity?: number;
     };
 
-    // Query Manager fields
     total_online_lead_query?: number;
     total_lead_query?: number;
     Status_of_online_query?: StatusOfQuery[];
@@ -88,17 +86,14 @@ interface DashboardData {
     sales_manager_lead_count?: SalesManagerLeadCount[];
     month_lead_count?: MonthLeadCount[];
 
-    // Admin target arrays
     dealers_monthly_target_and_quantity_table?: DealersMonthlyTargetAndQuantityTable[];
     assigned_amount_and_achieved_amount?: TargetSeriesItem[];
     assigned_quantity_and_achieved_quantity?: TargetSeriesItem[];
     salesmanager_target_vs_achieved_quantity?: TargetSeriesItem[];
 
-    // Chart-shaped series
     target_vs_achievement?: TargetSeriesItem[];
     monthly_target_vs_collection_of_quantity?: TargetSeriesItem[];
 
-    // Bar-list-shaped series
     top_selling_design?: Array<{ design: string; total_quantity: number }>;
     top_selling_sku?: Array<{ item_description: string; total_quantity: number }>;
     sales_mix_by_wheel_size?: Array<{ wheel_size: string; total_quantity: number; sales_mix_percentage: number }>;
@@ -144,7 +139,6 @@ type CustomSection = {
 type SectionConfig = KPISection | ChartSection | BarListSection | CustomSection;
 
 const DASHBOARD_SECTIONS: SectionConfig[] = [
-    // --- KPIs ---
     { kind: "kpi", id: "total_online_lead_query", title: "TOTAL ONLINE LEAD QUERIES", getValue: (d) => d.total_online_lead_query },
     { kind: "kpi", id: "total_lead_query", title: "TOTAL LEAD QUERIES", getValue: (d) => d.total_lead_query },
     { kind: "kpi", id: "total_pending_quantity", title: "Total Pending Qty", getValue: (d) => d.total_pending_quantity },
@@ -161,26 +155,24 @@ const DASHBOARD_SECTIONS: SectionConfig[] = [
     { kind: "kpi", id: "annual_target_dealer", title: "Annual Dealer Target", getValue: (d) => d.annual_target_distribution?.dealer_quantity },
     { kind: "kpi", id: "annual_target_sm", title: "Annual SM Target", getValue: (d) => d.annual_target_distribution?.salesmanager_quantity },
 
-    // --- Query Manager Donut Charts ---
-    { 
-        kind: "custom", 
+    {
+        kind: "custom",
         id: "Status_of_online_query",
-        getValue: (d) => d.Status_of_online_query, 
-        render: (value: any) => <DonutChartCard title="Online Query Status" data={value} labelKey="lead_status" valueKey="count" /> 
+        getValue: (d) => d.Status_of_online_query,
+        render: (value: any) => <DonutChartCard title="Online Query Status" data={value} labelKey="lead_status" valueKey="count" />
     },
-    { 
-        kind: "custom", 
+    {
+        kind: "custom",
         id: "status_of_lead_query",
-        getValue: (d) => d.status_of_lead_query, 
-        render: (value: any) => <DonutChartCard title="Lead Query Status" data={value} labelKey="lead_status" valueKey="count" /> 
+        getValue: (d) => d.status_of_lead_query,
+        render: (value: any) => <DonutChartCard title="Lead Query Status" data={value} labelKey="lead_status" valueKey="count" />
     },
 
-   // --- Query Manager Grouped Trend Chart ---
     {
         kind: "custom",
         id: "month_lead_count",
         getValue: (d) => {
-            if (!d.month_lead_count) return undefined; // Return undefined instead of []
+            if (!d.month_lead_count) return undefined;
             const grouped = d.month_lead_count.reduce((acc: any, curr) => {
                 const m = curr.month_name;
                 if (!acc[m]) acc[m] = { month_name: m, lead_query: 0, online_lead_query: 0 };
@@ -193,21 +185,20 @@ const DASHBOARD_SECTIONS: SectionConfig[] = [
         render: (value: any, font: any) => <GroupedTrendChart title="Monthly Lead Queries Trend" data={value} font={font} />
     },
 
-    // --- Query Manager Flat Tables ---
     {
         kind: "custom",
         id: "sales_manager_lead_count",
         getValue: (d) => d.sales_manager_lead_count,
         render: (value: any) => (
-            <FlatDataTable 
-                title="Lead Queries by Sales Manager" 
-                data={value} 
+            <FlatDataTable
+                title="Lead Queries by Sales Manager"
+                data={value}
                 columns={[
                     { key: "employee_name", label: "SALES MANAGER", flex: 1.5 },
                     { key: "month_name", label: "MONTH", flex: 1 },
                     { key: "financial_year", label: "FINANCIAL YEAR", flex: 1.2 },
                     { key: "lead_count", label: "LEAD COUNT", flex: 1 }
-                ]} 
+                ]}
             />
         )
     },
@@ -216,15 +207,15 @@ const DASHBOARD_SECTIONS: SectionConfig[] = [
         id: "online_lead_query_detail",
         getValue: (d) => d.online_lead_query_detail,
         render: (value: any) => (
-            <FlatDataTable 
-                title="Online Lead Query Details" 
-                data={value} 
+            <FlatDataTable
+                title="Online Lead Query Details"
+                data={value}
                 columns={[
                     { key: "customer_name", label: "CUSTOMER NAME", flex: 1.5 },
                     { key: "lead_status", label: "STATUS", flex: 1 },
                     { key: "city", label: "CITY", flex: 1 },
                     { key: "source", label: "SOURCE", flex: 1 }
-                ]} 
+                ]}
             />
         )
     },
@@ -233,30 +224,27 @@ const DASHBOARD_SECTIONS: SectionConfig[] = [
         id: "lead_query_detail",
         getValue: (d) => d.lead_query_detail,
         render: (value: any) => (
-            <FlatDataTable 
-                title="Lead Query Details" 
-                data={value} 
+            <FlatDataTable
+                title="Lead Query Details"
+                data={value}
                 columns={[
                     { key: "customer_name", label: "CUSTOMER NAME", flex: 1.5 },
                     { key: "lead_status", label: "STATUS", flex: 1 },
                     { key: "city", label: "CITY", flex: 1 }
-                ]} 
+                ]}
             />
         )
     },
 
-    // --- Dealer / General Charts ---
     { kind: "chart", id: "target_vs_achievement", title: "Target vs Achievement", getValue: (d) => d.target_vs_achievement },
     { kind: "chart", id: "monthly_target_vs_collection_of_quantity", title: "Monthly Target vs Collection", getValue: (d) => d.monthly_target_vs_collection_of_quantity },
     { kind: "chart", id: "assigned_amount_and_achieved_amount", title: "Assigned vs Achieved Amount", getValue: (d) => d.assigned_amount_and_achieved_amount },
     { kind: "chart", id: "assigned_quantity_and_achieved_quantity", title: "Assigned vs Achieved Qty", getValue: (d) => d.assigned_quantity_and_achieved_quantity },
 
-    // --- Bar lists ---
     { kind: "barlist", id: "top_selling_design", title: "Top Selling Design", labelKey: "design", valueKey: "total_quantity", icon: "layers", getValue: (d) => d.top_selling_design },
     { kind: "barlist", id: "top_selling_sku", title: "Top Selling SKU's", labelKey: "item_description", valueKey: "total_quantity", icon: "box", getValue: (d) => d.top_selling_sku },
     { kind: "barlist", id: "sales_mix_by_wheel_size", title: "Sales Mix by Wheel Size", labelKey: "wheel_size", valueKey: "total_quantity", secondaryKey: "sales_mix_percentage", secondaryLabel: "% MIX", secondarySuffix: "%", icon: "pie-chart", getValue: (d) => d.sales_mix_by_wheel_size },
 
-    // --- Admin & Dealer Custom Summaries ---
     {
         kind: "custom",
         id: "salesmanager_target_vs_achieved_quantity",
@@ -266,19 +254,22 @@ const DASHBOARD_SECTIONS: SectionConfig[] = [
     {
         kind: "custom",
         id: "dealers_monthly_target_and_quantity",
-        getValue: (d) => d.dealers_monthly_target_and_quantity_table?.map(x => ({
-            name: x.name,
-            month: x.month_date,
-            target_quantity: x.target_quantity,
-            achieved_quantity: x.quantity
-        })),
-        render: (value: DealerTargetItem[]) => <DealersSummaryTable data={value} />
+        getValue: (d) => {
+            if (!d.dealers_monthly_target_and_quantity_table) return undefined;
+            return d.dealers_monthly_target_and_quantity_table.map(x => ({
+                name: x.name,
+                month: x.month_date,
+                target_quantity: x.target_quantity,
+                achieved_quantity: x.quantity
+            }));
+        },
+        render: (value: DealerTargetItem[], font: any) => <DealersDetailedTargetChart data={value} font={font} />
     },
     {
         kind: "custom",
         id: "dealers_target_vs_achieved_quantity",
         getValue: (d) => d.dealers_target_vs_achieved_quantity,
-        render: (value: DealerTargetItem[]) => <DealersSummaryTable data={value} />,
+        render: (value: DealerTargetItem[], font: any) => <DealersDetailedTargetChart data={value} font={font} />,
     },
 ];
 
@@ -398,12 +389,12 @@ const DashboardBodySkeleton = () => (
 const getInitialFilters = () => {
     const today = new Date();
     const year = today.getFullYear();
-    const isJanToMar = today.getMonth() < 3; 
+    const isJanToMar = today.getMonth() < 3;
     const currentFY = isJanToMar ? `${year - 1}-${year}` : `${year}-${year + 1}`;
 
     return {
         financial_year: currentFY,
-        month: "", 
+        month: "",
     };
 };
 
@@ -430,7 +421,7 @@ const DonutChartCard = ({ title, data, labelKey, valueKey }: any) => {
     }
 
     const total = data.reduce((sum: number, item: any) => sum + (item[valueKey] || 0), 0);
-    
+
     const pieData = data.map((item: any, i: number) => ({
         value: item[valueKey] || 0,
         label: item[labelKey] || "Unknown",
@@ -509,7 +500,7 @@ const GroupedTrendChart = ({ title, data, font }: any) => {
                         domainPadding={{ left: 30, right: 30, top: 40 }}
                         axisOptions={{
                             font,
-                            tickCount: 5,
+                            tickCount: data.length,
                             lineColor: colors.border,
                             labelColor: colors.textSecondary,
                         }}
@@ -520,7 +511,7 @@ const GroupedTrendChart = ({ title, data, font }: any) => {
                                     <BarGroup.Bar points={points.lead_query} color="#8B5CF6" animate={{ type: "timing", duration: 600 }} />
                                     <BarGroup.Bar points={points.online_lead_query} color="#3B82F6" animate={{ type: "timing", duration: 600 }} />
                                 </BarGroup>
-                                
+
                                 {points.lead_query.map((p, i) => (
                                     p.yValue > 0 && <SkiaText key={`lq-${i}`} x={p.x - 12} y={p.y - 8} text={p.yValue.toString()} font={font} color={colors.textSecondary} />
                                 ))}
@@ -652,7 +643,7 @@ const TargetChart = ({ title, data, animatedData, font }: { title: string; data:
                         domainPadding={{ left: 30, right: 30, top: 40 }}
                         axisOptions={{
                             font,
-                            tickCount: 12,
+                            tickCount: animatedData.length > 0 ? animatedData.length : 1,
                             lineColor: colors.border,
                             labelColor: colors.textSecondary,
                             formatYLabel: (val) => `${val}`,
@@ -695,42 +686,149 @@ const TargetChart = ({ title, data, animatedData, font }: { title: string; data:
     </View>
 );
 
-const DealersSummaryTable = ({ data }: { data: DealerTargetItem[] }) => {
-    if (!data || data.length === 0) {
+const DealersDetailedTargetChart = ({ data, font }: { data: DealerTargetItem[], font: any }) => {
+    const uniqueDealers = React.useMemo(() => {
+        return Array.from(new Set((data || []).map(d => d.name).filter(Boolean)));
+    }, [data]);
+
+    const [selectedDealer, setSelectedDealer] = useState<string | null>(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    React.useEffect(() => {
+        if (uniqueDealers.length > 0 && (!selectedDealer || !uniqueDealers.includes(selectedDealer))) {
+            setSelectedDealer(uniqueDealers[0]);
+        }
+    }, [uniqueDealers, selectedDealer]);
+
+    if (!data || data.length === 0 || !font) {
         return (
             <View style={styles.chartCard}>
                 <View style={styles.chartHeader}>
-                    <Text style={styles.chartTitle}>Dealer Target vs Achieved</Text>
+                    <Text style={styles.chartTitle}>Dealer Monthly Target vs Achieved</Text>
                 </View>
                 <EmptyChartState icon="users" />
             </View>
         );
     }
 
-    const totalsByDealer = data.reduce<Record<string, { achieved: number; target: number }>>((acc, item) => {
-        const bucket = acc[item.name] ?? { achieved: 0, target: 0 };
-        bucket.achieved += item.achieved_quantity;
-        bucket.target += item.target_quantity;
-        acc[item.name] = bucket;
-        return acc;
-    }, {});
-
-    const rows = Object.entries(totalsByDealer).map(([name, totals]) => ({
-        name,
-        total_achieved: totals.achieved,
-        total_target: totals.target,
-    }));
+    const chartData = data.filter(d => d.name === selectedDealer);
+    const filteredDealers = uniqueDealers.filter(d => d.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
-        <BarListTable
-            title="Dealer Target vs Achieved"
-            data={rows}
-            labelKey="name"
-            valueKey="total_achieved"
-            secondaryKey="total_target"
-            secondaryLabel="TARGET"
-            icon="users"
-        />
+        <View style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+                <Text style={styles.chartTitle}>Dealer Monthly Target vs Achieved</Text>
+                <View style={styles.chartLegendRow}>
+                    <View style={[styles.legendDot, { backgroundColor: "#F97316" }]} />
+                    <Text style={styles.legendText}>Achieved</Text>
+                    <View style={[styles.legendDot, { backgroundColor: "#3B82F6", marginLeft: 12 }]} />
+                    <Text style={styles.legendText}>Target</Text>
+                </View>
+            </View>
+
+            {/* Dropdown Trigger */}
+            {uniqueDealers.length > 0 && (
+                <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, marginBottom: 16 }}
+                    onPress={() => setIsDropdownOpen(true)}
+                >
+                    <Text style={{ fontSize: 13, fontFamily: typography.medium, color: colors.text }} numberOfLines={1}>
+                        {selectedDealer || "Select Dealer"}
+                    </Text>
+                    <Feather name="chevron-down" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+            )}
+
+            {chartData.length === 0 ? (
+                <EmptyChartState icon="bar-chart-2" />
+            ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ height: 300, width: Math.max(350, chartData.length * 80) }}>
+                        <CartesianChart
+                            data={chartData}
+                            xKey="month"
+                            yKeys={["achieved_quantity", "target_quantity"]}
+                            domainPadding={{ left: 30, right: 20, top: 40 }}
+                            axisOptions={{
+                                font,
+                                tickCount: chartData.length,
+                                lineColor: colors.border,
+                                labelColor: colors.textSecondary,
+                            }}
+                        >
+                            {({ points, chartBounds }) => (
+                                <>
+                                    <BarGroup chartBounds={chartBounds} betweenGroupPadding={0.3} withinGroupPadding={0.1}>
+                                        <BarGroup.Bar points={points.achieved_quantity} color="#F97316" animate={{ type: "timing", duration: 600 }} />
+                                        <BarGroup.Bar points={points.target_quantity} color="#3B82F6" animate={{ type: "timing", duration: 600 }} />
+                                    </BarGroup>
+
+                                    {points.achieved_quantity.map((p, i) => (
+                                        p.yValue > 0 && <SkiaText key={`ach-${i}`} x={p.x - 20} y={p.y - 8} text={p.yValue.toString()} font={font} color={colors.textSecondary} />
+                                    ))}
+                                    {points.target_quantity.map((p, i) => (
+                                        p.yValue > 0 && <SkiaText key={`tgt-${i}`} x={p.x + 4} y={p.y - 8} text={p.yValue.toString()} font={font} color={colors.textSecondary} />
+                                    ))}
+                                </>
+                            )}
+                        </CartesianChart>
+                    </View>
+                </ScrollView>
+            )}
+
+            {/* Searchable Dealer Modal */}
+            <Modal visible={isDropdownOpen} animationType="slide" transparent={true} onRequestClose={() => setIsDropdownOpen(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { height: '75%' }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select Dealer</Text>
+                            <TouchableOpacity onPress={() => setIsDropdownOpen(false)}>
+                                <Feather name="x" size={24} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16 }}>
+                            <Feather name="search" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                            <TextInput
+                                placeholder="Search dealer..."
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                style={{ flex: 1, fontSize: 14, fontFamily: typography.medium, color: colors.text, padding: 0 }}
+                                placeholderTextColor={colors.muted}
+                            />
+                            {searchQuery.length > 0 && (
+                                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                                    <Feather name="x-circle" size={16} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {filteredDealers.map(dealer => (
+                                <TouchableOpacity
+                                    key={dealer}
+                                    style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                                    onPress={() => {
+                                        setSelectedDealer(dealer);
+                                        setIsDropdownOpen(false);
+                                        setSearchQuery("");
+                                    }}
+                                >
+                                    <Text style={{ fontSize: 14, fontFamily: typography.medium, color: selectedDealer === dealer ? colors.primary : colors.text }}>
+                                        {dealer}
+                                    </Text>
+                                    {selectedDealer === dealer && <Feather name="check" size={18} color={colors.primary} />}
+                                </TouchableOpacity>
+                            ))}
+                            {filteredDealers.length === 0 && (
+                                <Text style={{ textAlign: 'center', marginTop: 20, color: colors.muted, fontFamily: typography.medium }}>No dealers found</Text>
+                            )}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+        </View>
     );
 };
 
@@ -1025,7 +1123,7 @@ const styles = StyleSheet.create({
         textShadowRadius: 2,
     },
 
-    modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0)", justifyContent: "flex-end" },
+    modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.16)", justifyContent: "flex-end" },
     modalContent: { backgroundColor: colors.white, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, maxHeight: "80%" },
     modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg },
     modalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
