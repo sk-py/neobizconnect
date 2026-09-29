@@ -200,24 +200,7 @@ export default function ItemMasterScreen() {
           <Text style={styles.headerSubtitle}>View your stock levels and inventory details</Text>
         </View>
 
-        <View style={styles.controlsRow}>
-          <View style={styles.brandRow}>
-            {BRANDS.map((b) => {
-              const active = brand === b.value;
-              return (
-                <TouchableOpacity
-                  key={b.value}
-                  style={[styles.brandPill, active && styles.brandPillActive]}
-                  onPress={() => handleBrandChange(b.value)}
-                >
-                  <Text style={[styles.brandPillText, active && styles.brandPillTextActive]}>
-                    {b.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
+               <View style={styles.searchFilterRow}>
           <View style={styles.searchContainer}>
             <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
             <TextInput
@@ -227,26 +210,43 @@ export default function ItemMasterScreen() {
               value={searchQuery}
               onChangeText={handleSearchChange}
             />
-                        {searchQuery.length > 0 && (
+            {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
                 <Feather name="x-circle" size={13} color={colors.muted} />
               </TouchableOpacity>
             )}
           </View>
+
+          <View style={styles.stockFilterInline}>
+            <FieldSelect
+              label="Stock"
+              value={STOCK_FILTER_LABELS[stockFilter]}
+              options={["All", "In Stock", "Out of Stock"]}
+              onChange={(label) =>
+                handleStockFilterChange(
+                  label === "In Stock" ? "in" : label === "Out of Stock" ? "out" : "all",
+                )
+              }
+              placeholder="All"
+            />
+          </View>
         </View>
 
-                         <View style={styles.stockFilterRow}>
-          <FieldSelect
-            label="Stock"
-            value={STOCK_FILTER_LABELS[stockFilter]}
-            options={["All", "In Stock", "Out of Stock"]}
-            onChange={(label) =>
-              handleStockFilterChange(
-                label === "In Stock" ? "in" : label === "Out of Stock" ? "out" : "all",
-              )
-            }
-            placeholder="All"
-          />
+        <View style={styles.brandRow}>
+          {BRANDS.map((b) => {
+            const active = brand === b.value;
+            return (
+              <TouchableOpacity
+                key={b.value}
+                style={[styles.brandPillHalf, active && styles.brandPillActive]}
+                onPress={() => handleBrandChange(b.value)}
+              >
+                <Text style={[styles.brandPillText, active && styles.brandPillTextActive]}>
+                  {b.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
@@ -301,7 +301,7 @@ export default function ItemMasterScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.white },
 
-  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTitle: {
     fontSize: 20,
     fontFamily: typography.bold,
@@ -314,15 +314,18 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
   titleRow2: { flexDirection: "column", alignItems: "flex-start", marginBottom: 8 },
-  controlsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  brandRow: { flexDirection: "row", gap: 6 },
+    controlsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  searchFilterRow: { flexDirection: "row", alignItems: "stretch", gap: 10, marginBottom: 10 },
+      brandRow: { flexDirection: "row", gap: 8, marginTop: 4 },
   brandPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  brandPillHalf: { flex: 1, height: 36, borderRadius: radius.xl, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
   brandPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   brandPillText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
-  brandPillTextActive: { color: colors.white },
+  brandPillTextActive: { color: colors.white, fontFamily: typography.bold },
 
-    searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 32 },
+          searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, height: 36 },
     stockFilterRow: { marginTop: 8, width: 160 },
+    stockFilterInline: { width: 140, height: 36, justifyContent: "center" },
   stockFilterPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   stockFilterPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   stockFilterPillText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },

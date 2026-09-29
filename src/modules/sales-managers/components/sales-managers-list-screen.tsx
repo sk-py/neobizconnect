@@ -25,17 +25,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 10;
 
-const isActiveStatus = (status: string | null | undefined) =>
-  (status ?? "").trim().toUpperCase() === "TYES";
+const isActiveStatus = (manager: SalesManager) =>
+  (manager.employeeDetails?.login_status ?? "").trim().toUpperCase() ===
+  "ACTIVE";
 
-// A record only represents a real portal-login sales manager account when
-// employeeDetails exists and its lock_status is 1. Inferred from comparing
-// a raw 17-record UAT response against the production web table, which
-// showed exactly the subset matching this condition. Confirm this still
-// holds if the count here ever drifts from the web list's count.
-const hasPortalLogin = (manager: SalesManager) =>
-  manager.employeeDetails !== null &&
-  manager.employeeDetails.lock_status === 1;
+const hasPortalAccount = (manager: SalesManager) =>
+  manager.employeeDetails !== null;
 
 const getMobile = (manager: SalesManager) =>
   manager.mobile || manager.employeeDetails?.number || null;
@@ -63,19 +58,14 @@ export default function SalesManagersListScreen() {
     retry: 2,
   });
 
-  const portalManagers = useMemo(
-    () => data.filter(hasPortalLogin),
-    [data],
-  );
-
-  const filteredData = useMemo(() => {
+    const filteredData = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
     if (!query) {
-      return portalManagers;
+      return data;
     }
 
-    return portalManagers.filter((manager) =>
+    return data.filter((manager) =>
       [
         manager.salesEmployeeName,
         getMobile(manager),
@@ -86,7 +76,7 @@ export default function SalesManagersListScreen() {
           .includes(query),
       ),
     );
-  }, [portalManagers, searchQuery]);
+  }, [data, searchQuery]);
 
 
   const totalItems = filteredData.length;
@@ -115,17 +105,12 @@ export default function SalesManagersListScreen() {
       ? error.message
       : "Something went wrong.";
 
-  const renderRow = ({ item }: { item: SalesManager }) => {
-    const active = isActiveStatus(item.active);
+    const renderRow = ({ item }: { item: SalesManager }) => {
+    const active = isActiveStatus(item);
     const mobile = getMobile(item);
     const email = getEmail(item);
-    // Every row here has already passed hasPortalLogin (lock_status === 1),
-    // so a portal account definitionally exists for it — this mirrors the
-    // web table, which shows the constant "Created" label on every row
-    // rather than the account's separate Active/Inactive state
-    // (employeeDetails.login_status, which is a different field).
-    const loginStatus = "Created";
-    const liveLogin = true;
+    const liveLogin = hasPortalAccount(item);
+    const loginStatus = liveLogin ? "Created" : "Not Created";
 
     return (
       <View style={styles.row}>
@@ -184,13 +169,11 @@ export default function SalesManagersListScreen() {
                   : styles.statusBadgeInactive,
               ]}
             >
-              <Text
+                            <Text
                 style={[
                   styles.statusBadgeText,
                   {
-                    color: active
-                      ? colors.success
-                      : colors.textSecondary,
+                    color: active ? colors.success : colors.error,
                   },
                 ]}
               >
@@ -198,14 +181,14 @@ export default function SalesManagersListScreen() {
               </Text>
             </View>
 
-            <View style={styles.loginStatusRow}>
+                        <View style={styles.loginStatusRow}>
               <View
                 style={[
                   styles.loginStatusDot,
                   {
                     backgroundColor: liveLogin
                       ? colors.success
-                      : colors.muted,
+                      : colors.error,
                   },
                 ]}
               />
@@ -544,8 +527,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#DCFCE7",
   },
 
-  statusBadgeInactive: {
-    backgroundColor: colors.surface,
+    statusBadgeInactive: {
+    backgroundColor: "#FEF2F2",
   },
 
   statusBadgeText: {
