@@ -25,6 +25,7 @@ import { LegendList } from "@legendapp/list/react-native";
 import { SkeletonList } from "@/components/custom/skeleton";
 import { useMemo, useState } from "react";
 import {
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -210,22 +211,15 @@ export default function OnlineLeadScreen() {
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardTop}>
-          <View style={styles.nameDateRow}>
-            <Text style={styles.customerName} numberOfLines={1}>
-              {form?.customer_name || "-"}
-            </Text>
+              <View style={styles.cardTop}>
+          <Text style={styles.customerName} numberOfLines={1}>
+            {form?.customer_name || "-"}
+          </Text>
+          <View style={styles.cardTopRight}>
             <View style={styles.dateBadge}>
               <Text style={styles.dateBadgeText}>{formatDate((item as any).createdDate)}</Text>
             </View>
-          </View>
-          <View style={styles.cardTopRight}>
-            {!!form?.lead_status && (
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText} numberOfLines={1}>{form.lead_status}</Text>
-              </View>
-            )}
-                                                <TouchableOpacity
+            <TouchableOpacity
               style={styles.editIconBtn}
               onPress={() => openEditModal(item)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -244,9 +238,16 @@ export default function OnlineLeadScreen() {
           </View>
         </View>
 
-        <View style={styles.metaRow}>
-          <Feather name="phone" size={11} color={colors.muted} />
-          <Text style={styles.metaText}>{form?.phone_1 || "-"}</Text>
+                <View style={styles.metaRow}>
+          <TouchableOpacity
+            style={styles.metaPhoneRow}
+            onPress={() => form?.phone_1 && Linking.openURL(`tel:${form.phone_1}`)}
+            disabled={!form?.phone_1}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Feather name="phone" size={11} color={colors.muted} />
+            <Text style={styles.metaText}>{form?.phone_1 || "-"}</Text>
+          </TouchableOpacity>
           <Text style={styles.metaDot}>•</Text>
           <Feather name="map-pin" size={11} color={colors.muted} />
           <Text style={[styles.metaText, { flex: 1 }]} numberOfLines={1}>
@@ -278,10 +279,20 @@ export default function OnlineLeadScreen() {
           </View>
         </View>
 
-        <View style={styles.infoRow}>
+              <View style={styles.infoRow}>
           <View style={styles.infoBlock}>
             <Text style={styles.infoLabel}>Query Owner</Text>
             <Text style={styles.infoValue} numberOfLines={1}>{queryOwner}</Text>
+          </View>
+                   <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Status</Text>
+            {!!form?.lead_status ? (
+              <View style={styles.statusValueBadge}>
+                <Text style={styles.statusValueBadgeText} numberOfLines={1}>{form.lead_status}</Text>
+              </View>
+            ) : (
+              <Text style={styles.infoValue}>-</Text>
+            )}
           </View>
         </View>
 
@@ -408,8 +419,8 @@ export default function OnlineLeadScreen() {
       <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
         <Pressable style={styles.modalOverlay} onPress={closeEditModal}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-                                          <View style={styles.modalHeader}>
-              <View>
+                             <View style={styles.modalHeader}>
+              <View style={{ flex: 1, marginRight: spacing.sm }}>
                 <Text style={styles.modalTitle}>
                   {isAdminUser ? "Online Lead" : "Online Lead Form"}
                 </Text>
@@ -419,7 +430,7 @@ export default function OnlineLeadScreen() {
                     : "Update the details of the online lead."}
                 </Text>
               </View>
-              <TouchableOpacity onPress={closeEditModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity style={styles.closeButton} onPress={closeEditModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="x" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
@@ -427,13 +438,12 @@ export default function OnlineLeadScreen() {
             {editForm && isAdminUser && (
               <ScrollView style={styles.modalBody}>
                 <View style={styles.modalSection}>
-                  <View style={styles.modalSectionHeader}>
+                                    <View style={styles.modalSectionHeader}>
                     <View style={styles.modalStepBadge}>
                       <Text style={styles.modalStepBadgeText}>1</Text>
                     </View>
                     <View>
                       <Text style={styles.modalSectionTitle}>Assign Query Manager</Text>
-                      <Text style={styles.modalSectionSubtitle}>Reassign this lead to a different query manager.</Text>
                     </View>
                   </View>
 
@@ -687,20 +697,25 @@ const styles = StyleSheet.create({
   listContent: { padding: spacing.md },
 
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
-  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: spacing.sm },
+  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm, gap: spacing.sm },
+  statusRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: spacing.sm },
   cardTopRight: { flexDirection: "row", alignItems: "center", gap: 6 },
-  customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flexShrink: 1 },
-  nameDateRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
-  dateBadge: { alignSelf: "center", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
+  customerName: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, flexShrink: 1, flexBasis: 0, flexGrow: 1 },
+  nameDateRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, flex: 1 },
+  dateBadge: { alignSelf: "flex-start", paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
   dateBadgeText: { fontSize: 10, fontFamily: typography.semibold, color: "#1D4ED8" },
 
-  statusBadge: { maxWidth: 110, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, backgroundColor: "#FEF2F2" },
-  statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.primary },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: "center", alignSelf: "flex-start" },
+  statusBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.white, textAlign: "center", lineHeight: 14 },
+
+  statusValueBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, backgroundColor: "#F0FDF4", alignItems: "center", alignSelf: "flex-start" },
+  statusValueBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: "#16A34A", textAlign: "center", lineHeight: 14 },
 
   editIconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FCA5A5" },
   transferIconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#86EFAC" },
 
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: spacing.sm },
+  metaPhoneRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   metaText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flexShrink: 1 },
   metaDot: { fontSize: txtSize.xs, color: colors.muted },
 
@@ -733,9 +748,10 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: colors.white, borderRadius: radius.lg, maxHeight: "88%", overflow: "hidden" },
   transferCard: { backgroundColor: colors.white, borderRadius: radius.lg, overflow: "hidden" },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  closeButton: { padding: 4, marginLeft: 4 },
   modalTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
   modalSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
-  modalBody: { padding: spacing.md },
+    modalBody: { flexGrow: 0, flexShrink: 1, padding: spacing.md },
   transferBody: { padding: spacing.md },
 
   customerCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md },

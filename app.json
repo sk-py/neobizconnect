@@ -75,7 +75,6 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location for attendance tracking.",
-          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location for attendance tracking while using the app.",
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true,
           "isIosBackgroundLocationEnabled": true

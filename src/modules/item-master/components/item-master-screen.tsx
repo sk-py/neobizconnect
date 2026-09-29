@@ -68,7 +68,7 @@ export default function ItemMasterScreen() {
 
     let result = data;
 
-    if (!canSeeExtraDetails && stockFilter !== "all") {
+        if (stockFilter !== "all") {
       result = result.filter((item) =>
         stockFilter === "in" ? item.inStockQty >= 4 : item.inStockQty < 4,
       );
@@ -98,7 +98,7 @@ export default function ItemMasterScreen() {
   const rangeEnd = Math.min(totalItems, (safePage + 1) * PAGE_SIZE);
 
   const renderRow = ({ item }: { item: ItemMasterEntry }) => {
-    const outOfStock = item.inStockQty <= 0;
+       const outOfStock = item.inStockQty < 4;
 
         if (!canSeeExtraDetails) {
       const salesManagerOutOfStock = item.inStockQty < 4;
@@ -114,7 +114,8 @@ export default function ItemMasterScreen() {
               <Text style={styles.metaText}>{item.wheelSize}&quot;</Text>
             </View>
           </View>
-                    <View style={[styles.stockBadge, salesManagerOutOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
+                                <View style={[styles.stockBadge, salesManagerOutOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
+            <View style={[styles.stockDot, { backgroundColor: salesManagerOutOfStock ? colors.error : colors.success }]} />
             <Text
               style={[styles.stockBadgeText, salesManagerOutOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}
               numberOfLines={1}
@@ -140,12 +141,13 @@ export default function ItemMasterScreen() {
             </View>
           </View>
 
-          <View style={[styles.stockBadgeLg, outOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
-            <Text style={[styles.stockBadgeTextLg, outOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}>
-              {item.inStockQty}
-            </Text>
-            <Text style={[styles.stockBadgeLabel, outOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}>
-              in stock
+                    <View style={[styles.stockBadgeLg, outOfStock ? styles.stockBadgeEmpty : styles.stockBadgeAvailable]}>
+            <View style={[styles.stockDot, { backgroundColor: outOfStock ? colors.error : colors.success }]} />
+            <Text
+              style={[styles.stockBadgeTextLg, outOfStock ? styles.stockTextEmpty : styles.stockTextAvailable]}
+              numberOfLines={1}
+            >
+              {outOfStock ? "out of stock" : `${item.inStockQty} in stock`}
             </Text>
           </View>
         </View>
@@ -198,24 +200,7 @@ export default function ItemMasterScreen() {
           <Text style={styles.headerSubtitle}>View your stock levels and inventory details</Text>
         </View>
 
-        <View style={styles.controlsRow}>
-          <View style={styles.brandRow}>
-            {BRANDS.map((b) => {
-              const active = brand === b.value;
-              return (
-                <TouchableOpacity
-                  key={b.value}
-                  style={[styles.brandPill, active && styles.brandPillActive]}
-                  onPress={() => handleBrandChange(b.value)}
-                >
-                  <Text style={[styles.brandPillText, active && styles.brandPillTextActive]}>
-                    {b.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
+               <View style={styles.searchFilterRow}>
           <View style={styles.searchContainer}>
             <Feather name="search" size={13} color={colors.muted} style={styles.searchIcon} />
             <TextInput
@@ -225,16 +210,14 @@ export default function ItemMasterScreen() {
               value={searchQuery}
               onChangeText={handleSearchChange}
             />
-                        {searchQuery.length > 0 && (
+            {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
                 <Feather name="x-circle" size={13} color={colors.muted} />
               </TouchableOpacity>
             )}
           </View>
-        </View>
 
-                {!canSeeExtraDetails && (
-          <View style={styles.stockFilterRow}>
+          <View style={styles.stockFilterInline}>
             <FieldSelect
               label="Stock"
               value={STOCK_FILTER_LABELS[stockFilter]}
@@ -247,7 +230,24 @@ export default function ItemMasterScreen() {
               placeholder="All"
             />
           </View>
-        )}
+        </View>
+
+        <View style={styles.brandRow}>
+          {BRANDS.map((b) => {
+            const active = brand === b.value;
+            return (
+              <TouchableOpacity
+                key={b.value}
+                style={[styles.brandPillHalf, active && styles.brandPillActive]}
+                onPress={() => handleBrandChange(b.value)}
+              >
+                <Text style={[styles.brandPillText, active && styles.brandPillTextActive]}>
+                  {b.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {isLoading ? (
@@ -301,7 +301,7 @@ export default function ItemMasterScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.white },
 
-  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTitle: {
     fontSize: 20,
     fontFamily: typography.bold,
@@ -314,15 +314,18 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
   titleRow2: { flexDirection: "column", alignItems: "flex-start", marginBottom: 8 },
-  controlsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  brandRow: { flexDirection: "row", gap: 6 },
+    controlsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  searchFilterRow: { flexDirection: "row", alignItems: "stretch", gap: 10, marginBottom: 10 },
+      brandRow: { flexDirection: "row", gap: 8, marginTop: 4 },
   brandPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  brandPillHalf: { flex: 1, height: 36, borderRadius: radius.xl, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
   brandPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   brandPillText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
-  brandPillTextActive: { color: colors.white },
+  brandPillTextActive: { color: colors.white, fontFamily: typography.bold },
 
-    searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, height: 32 },
+          searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, height: 36 },
     stockFilterRow: { marginTop: 8, width: 160 },
+    stockFilterInline: { width: 140, height: 36, justifyContent: "center" },
   stockFilterPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   stockFilterPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   stockFilterPillText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
@@ -353,16 +356,17 @@ const styles = StyleSheet.create({
   attachmentLink: { flexDirection: "row", alignItems: "center", gap: 4 },
   attachmentLinkText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.primary },
 
-    stockBadge: { minWidth: 34, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+      stockBadge: { flexDirection: "row", alignItems: "center", gap: 5, minWidth: 34, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.xl, justifyContent: "center", flexShrink: 0 },
   stockBadgeText: { fontSize: txtSize.xs, fontFamily: typography.bold },
 
-  stockBadgeLg: { minWidth: 56, paddingHorizontal: 10, paddingVertical: 8, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
-  stockBadgeTextLg: { fontSize: txtSize.body, fontFamily: typography.bold },
+  stockBadgeLg: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 56, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.xl, justifyContent: "center" },
+  stockBadgeTextLg: { fontSize: txtSize.small, fontFamily: typography.bold },
   stockBadgeAvailable: { backgroundColor: "#F0FDF4" },
   stockBadgeEmpty: { backgroundColor: "#FEF2F2" },
   stockBadgeLabel: { fontSize: 10, fontFamily: typography.medium, marginTop: 1 },
   stockTextAvailable: { color: colors.success },
   stockTextEmpty: { color: colors.error },
+  stockDot: { width: 6, height: 6, borderRadius: 3 },
 
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 6 },
   emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
