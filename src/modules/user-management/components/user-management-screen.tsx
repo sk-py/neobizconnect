@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
 
   detailRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: spacing.sm },
   detailChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, backgroundColor: colors.surface, maxWidth: "100%" },
-  detailChipText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary, maxWidth: 200 },
+  detailChipText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary, flexShrink: 1 },
 
   passwordRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   detailLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.muted },
