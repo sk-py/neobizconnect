@@ -267,13 +267,25 @@ const TabLayout = () => {
                     />
                 </Tabs.Protected>
 
-                <Tabs.Protected guard={canAccess("Notifications")}>
+                                <Tabs.Protected guard={canAccess("Notifications")}>
                     <Tabs.Screen
                         name='notifications'
                         options={{
                             title: "Notifications",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='bell' size={size} color={color} />
+                            )
+                        }}
+                    />
+                </Tabs.Protected>
+
+                <Tabs.Protected guard={canAccess("User Management")}>
+                    <Tabs.Screen
+                        name='user-management'
+                        options={{
+                            title: "Users",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='user-plus' size={size} color={color} />
                             )
                         }}
                     />
