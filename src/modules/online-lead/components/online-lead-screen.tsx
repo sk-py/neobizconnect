@@ -25,6 +25,7 @@ import { LegendList } from "@legendapp/list/react-native";
 import { SkeletonList } from "@/components/custom/skeleton";
 import { useMemo, useState } from "react";
 import {
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -237,9 +238,16 @@ export default function OnlineLeadScreen() {
           </View>
         </View>
 
-        <View style={styles.metaRow}>
-          <Feather name="phone" size={11} color={colors.muted} />
-          <Text style={styles.metaText}>{form?.phone_1 || "-"}</Text>
+                <View style={styles.metaRow}>
+          <TouchableOpacity
+            style={styles.metaPhoneRow}
+            onPress={() => form?.phone_1 && Linking.openURL(`tel:${form.phone_1}`)}
+            disabled={!form?.phone_1}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Feather name="phone" size={11} color={colors.muted} />
+            <Text style={styles.metaText}>{form?.phone_1 || "-"}</Text>
+          </TouchableOpacity>
           <Text style={styles.metaDot}>•</Text>
           <Feather name="map-pin" size={11} color={colors.muted} />
           <Text style={[styles.metaText, { flex: 1 }]} numberOfLines={1}>
@@ -707,6 +715,7 @@ const styles = StyleSheet.create({
   transferIconBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#86EFAC" },
 
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: spacing.sm },
+  metaPhoneRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   metaText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, flexShrink: 1 },
   metaDot: { fontSize: txtSize.xs, color: colors.muted },
 

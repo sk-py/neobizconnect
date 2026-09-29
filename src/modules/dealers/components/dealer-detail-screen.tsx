@@ -1268,7 +1268,7 @@ export default function DealerDetailScreen() {
                 <Text style={styles.statLabel} numberOfLines={1}>
                   {stat.label}
                 </Text>
-                                                                {stat.amount !== null && (
+                    {stat.amount !== null && (
                   <View style={styles.statAmountBlock}>
                     <Text style={styles.statAmountLabel} numberOfLines={1}>
                       Amount
