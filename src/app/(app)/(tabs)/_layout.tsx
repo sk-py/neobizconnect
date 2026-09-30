@@ -44,7 +44,7 @@ const TabLayout = () => {
                         elevation: 0,
                         borderTopWidth: 1,
                         borderTopColor: colors.border || '#E2E8F0',
-                        marginBottom: "-3%",
+                        marginBottom: -Math.round(insets.bottom),
                     }
                 }}
             >

@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BarGroup, CartesianChart, Pie, PolarChart } from "victory-native";
 import { fetchDashboardData } from "../services/dashboard.api";
 
@@ -190,56 +190,47 @@ const DASHBOARD_SECTIONS: SectionConfig[] = [
         id: "sales_manager_lead_count",
         getValue: (d) => d.sales_manager_lead_count,
         render: (value: any) => (
-            <FlatDataTable
-                title="Lead Queries by Sales Manager"
-                data={value}
-                columns={[
-                    { key: "employee_name", label: "SALES MANAGER", flex: 1.5 },
-                    { key: "month_name", label: "MONTH", flex: 1 },
-                    { key: "financial_year", label: "FINANCIAL YEAR", flex: 1.2 },
-                    { key: "lead_count", label: "LEAD COUNT", flex: 1 }
-                ]}
-            />
+            <FilteredSalesManagerLeadTable data={value} />
         )
     },
-    {
-        kind: "custom",
-        id: "online_lead_query_detail",
-        getValue: (d) => d.online_lead_query_detail,
-        render: (value: any) => (
-            <FlatDataTable
-                title="Online Lead Query Details"
-                data={value}
-                columns={[
-                    { key: "customer_name", label: "CUSTOMER NAME", flex: 1.5 },
-                    { key: "lead_status", label: "STATUS", flex: 1 },
-                    { key: "city", label: "CITY", flex: 1 },
-                    { key: "source", label: "SOURCE", flex: 1 }
-                ]}
-            />
-        )
-    },
-    {
-        kind: "custom",
-        id: "lead_query_detail",
-        getValue: (d) => d.lead_query_detail,
-        render: (value: any) => (
-            <FlatDataTable
-                title="Lead Query Details"
-                data={value}
-                columns={[
-                    { key: "customer_name", label: "CUSTOMER NAME", flex: 1.5 },
-                    { key: "lead_status", label: "STATUS", flex: 1 },
-                    { key: "city", label: "CITY", flex: 1 }
-                ]}
-            />
-        )
-    },
+    // {
+    //     kind: "custom",
+    //     id: "online_lead_query_detail",
+    //     getValue: (d) => d.online_lead_query_detail,
+    //     render: (value: any) => (
+    //         <FlatDataTable
+    //             title="Online Lead Query Details"
+    //             data={value}
+    //             columns={[
+    //                 { key: "customer_name", label: "CUSTOMER NAME", flex: 1.5 },
+    //                 { key: "lead_status", label: "STATUS", flex: 1 },
+    //                 { key: "city", label: "CITY", flex: 1 },
+    //                 { key: "source", label: "SOURCE", flex: 1 }
+    //             ]}
+    //         />
+    //     )
+    // },
+    // {
+    //     kind: "custom",
+    //     id: "lead_query_detail",
+    //     getValue: (d) => d.lead_query_detail,
+    //     render: (value: any) => (
+    //         <FlatDataTable
+    //             title="Lead Query Details"
+    //             data={value}
+    //             columns={[
+    //                 { key: "customer_name", label: "CUSTOMER NAME", flex: 1.5 },
+    //                 { key: "lead_status", label: "STATUS", flex: 1 },
+    //                 { key: "city", label: "CITY", flex: 1 }
+    //             ]}
+    //         />
+    //     )
+    // },
 
     { kind: "chart", id: "target_vs_achievement", title: "Target vs Achievement", getValue: (d) => d.target_vs_achievement },
     { kind: "chart", id: "monthly_target_vs_collection_of_quantity", title: "Monthly Target vs Collection", getValue: (d) => d.monthly_target_vs_collection_of_quantity },
-    { kind: "chart", id: "assigned_amount_and_achieved_amount", title: "Assigned vs Achieved Amount", getValue: (d) => d.assigned_amount_and_achieved_amount },
-    { kind: "chart", id: "assigned_quantity_and_achieved_quantity", title: "Assigned vs Achieved Qty", getValue: (d) => d.assigned_quantity_and_achieved_quantity },
+    // { kind: "chart", id: "assigned_amount_and_achieved_amount", title: "Assigned vs Achieved Amount", getValue: (d) => d.assigned_amount_and_achieved_amount },
+    // { kind: "chart", id: "assigned_quantity_and_achieved_quantity", title: "Assigned vs Achieved Qty", getValue: (d) => d.assigned_quantity_and_achieved_quantity },
 
     { kind: "barlist", id: "top_selling_design", title: "Top Selling Design", labelKey: "design", valueKey: "total_quantity", icon: "layers", getValue: (d) => d.top_selling_design },
     { kind: "barlist", id: "top_selling_sku", title: "Top Selling SKU's", labelKey: "item_description", valueKey: "total_quantity", icon: "box", getValue: (d) => d.top_selling_sku },
@@ -249,7 +240,7 @@ const DASHBOARD_SECTIONS: SectionConfig[] = [
         kind: "custom",
         id: "salesmanager_target_vs_achieved_quantity",
         getValue: (d) => d.salesmanager_target_vs_achieved_quantity,
-        render: (value: TargetSeriesItem[]) => <SalesManagerSummaryTable data={value} />
+        render: (value: TargetSeriesItem[], font: any) => <SalesManagerDetailedTargetChart data={value} font={font} />
     },
     {
         kind: "custom",
@@ -274,6 +265,11 @@ const DASHBOARD_SECTIONS: SectionConfig[] = [
 ];
 
 const BAR_COLORS = ["#60A5FA", "#34D399", "#FB923C", "#A78BFA", "#38BDF8", "#F472B6", "#2DD4BF"];
+const EXTENDED_PIE_COLORS = [
+    "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", 
+    "#14B8A6", "#F43F5E", "#6366F1", "#84CC16", "#06B6D4", 
+    "#D946EF", "#F97316", "#64748B", "#22C55E", "#A855F7"
+];
 const MONTHS = ["April", "May", "June", "July", "August", "September", "October", "November", "December", "January", "February", "March"];
 const YEARS = ["2024-2025", "2025-2026", "2026-2027"];
 
@@ -409,6 +405,8 @@ const KPICard = ({ title, value, isCurrency = false }: { title: string; value: n
 );
 
 const DonutChartCard = ({ title, data, labelKey, valueKey }: any) => {
+    const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+
     if (!data || data.length === 0) {
         return (
             <View style={styles.chartCard}>
@@ -422,27 +420,53 @@ const DonutChartCard = ({ title, data, labelKey, valueKey }: any) => {
 
     const total = data.reduce((sum: number, item: any) => sum + (item[valueKey] || 0), 0);
 
-    const pieData = data.map((item: any, i: number) => ({
-        value: item[valueKey] || 0,
-        label: item[labelKey] || "Unknown",
-        color: BAR_COLORS[i % BAR_COLORS.length],
-        percentage: total > 0 ? ((item[valueKey] / total) * 100).toFixed(1) : "0.0",
-    }));
+    const pieData = data.map((item: any, i: number) => {
+        const label = item[labelKey] || "Unknown";
+        const isFaded = selectedStatus !== null && selectedStatus !== label;
+        const baseColor = EXTENDED_PIE_COLORS[i % EXTENDED_PIE_COLORS.length];
+        
+        return {
+            value: item[valueKey] || 0,
+            label: label,
+            originalColor: baseColor,
+            color: isFaded ? "#E2E8F0" : baseColor, 
+            percentage: total > 0 ? ((item[valueKey] / total) * 100).toFixed(1) : "0.0",
+        };
+    });
+
+    // Dynamically calculate center display values based on selection
+    const displayValue = selectedStatus ? pieData.find(d => d.label === selectedStatus)?.value : total;
+    const displayLabel = selectedStatus ? "COUNT" : "TOTAL";
 
     return (
         <View style={styles.chartCard}>
             <View style={styles.chartHeader}>
                 <Text style={styles.chartTitle}>{title}</Text>
+                {selectedStatus && (
+                    <TouchableOpacity onPress={() => setSelectedStatus(null)}>
+                        <Text style={{ fontSize: 11, fontFamily: typography.bold, color: colors.primary }}>Clear Selection</Text>
+                    </TouchableOpacity>
+                )}
             </View>
-            <View style={{ flexDirection: "row", alignItems: "center", minHeight: 220 }}>
-                <View style={{ flex: 1, height: 200, position: "relative", justifyContent: "center", alignItems: "center" }}>
-                    <PolarChart data={pieData} colorKey="color" valueKey="value" labelKey="label">
-                        <Pie.Chart innerRadius={50} />
-                    </PolarChart>
-                    <View style={{ position: "absolute", alignItems: "center", justifyContent: "center" }}>
-                        <Text style={{ fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary }}>TOTAL</Text>
-                        <Text style={{ fontSize: 20, fontFamily: typography.bold, color: colors.text }}>{total}</Text>
+            
+            <View style={{ flexDirection: "row", alignItems: "flex-start", minHeight: 200 }}>
+                
+                <View style={{ flex: 1, alignItems: "center" }}>
+                    <View style={{ width: "100%", height: 200, position: "relative" }}>
+                        <PolarChart data={pieData} colorKey="color" valueKey="value" labelKey="label">
+                            <Pie.Chart innerRadius={50} />
+                        </PolarChart>
+                        <View style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, alignItems: "center", justifyContent: "center" }}>
+                            <Text style={{ fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary }}>{displayLabel}</Text>
+                            <Text style={{ fontSize: 20, fontFamily: typography.bold, color: colors.text }}>{displayValue}</Text>
+                        </View>
                     </View>
+                    
+                    {selectedStatus && (
+                        <Text style={{ fontSize: 11, fontFamily: typography.bold, color: colors.text, textAlign: "center" }} numberOfLines={2}>
+                            {selectedStatus}
+                        </Text>
+                    )}
                 </View>
 
                 <View style={{ flex: 1.2, paddingLeft: 10 }}>
@@ -451,16 +475,33 @@ const DonutChartCard = ({ title, data, labelKey, valueKey }: any) => {
                         <Text style={[styles.tableHeaderText, { flex: 1, textAlign: "right" }]}>COUNT</Text>
                         <Text style={[styles.tableHeaderText, { flex: 1, textAlign: "right" }]}>%</Text>
                     </View>
-                    {pieData.map((d: any, i: number) => (
-                        <View key={i} style={styles.tableRow}>
-                            <View style={{ flexDirection: "row", alignItems: "center", flex: 2 }}>
-                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: d.color, marginRight: 6 }} />
-                                <Text style={[styles.tableCellText, { flex: 1 }]} numberOfLines={1}>{d.label}</Text>
-                            </View>
-                            <Text style={[styles.tableCellText, { flex: 1, textAlign: "right", fontFamily: typography.bold }]}>{d.value}</Text>
-                            <Text style={[styles.tableCellText, { flex: 1, textAlign: "right" }]}>{d.percentage}%</Text>
-                        </View>
-                    ))}
+                    {pieData.map((d: any, i: number) => {
+                        const isSelected = selectedStatus === d.label;
+                        const isFaded = selectedStatus !== null && !isSelected;
+                        
+                        return (
+                            <TouchableOpacity 
+                                key={i} 
+                                style={[
+                                    styles.tableRow, 
+                                    isSelected && { backgroundColor: colors.surface, borderRadius: radius.sm, marginHorizontal: -4, paddingHorizontal: 4 }
+                                ]}
+                                onPress={() => setSelectedStatus(isSelected ? null : d.label)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={{ flexDirection: "row", alignItems: "center", flex: 2 }}>
+                                    <View style={{ 
+                                        width: 8, height: 8, borderRadius: 4, marginRight: 6,
+                                        backgroundColor: d.originalColor, 
+                                        opacity: isFaded ? 0.3 : 1
+                                    }} />
+                                    <Text style={[styles.tableCellText, { flex: 1, color: isFaded ? colors.textSecondary : colors.text }]} numberOfLines={1}>{d.label}</Text>
+                                </View>
+                                <Text style={[styles.tableCellText, { flex: 1, textAlign: "right", fontFamily: typography.bold, color: isFaded ? colors.textSecondary : colors.text }]}>{d.value}</Text>
+                                <Text style={[styles.tableCellText, { flex: 1, textAlign: "right", color: isFaded ? colors.textSecondary : colors.text }]}>{d.percentage}%</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
             </View>
         </View>
@@ -532,7 +573,7 @@ const FlatDataTable = ({ title, columns, data }: { title: string, columns: { key
         return (
             <View style={styles.chartCard}>
                 <View style={styles.chartHeader}>
-                    <Text style={styles.chartTitle}>{title}</Text>
+                    <Text allowFontScaling={false} style={styles.chartTitle}>{title}</Text>
                 </View>
                 <EmptyChartState icon="list" />
             </View>
@@ -832,49 +873,281 @@ const DealersDetailedTargetChart = ({ data, font }: { data: DealerTargetItem[], 
     );
 };
 
-const SalesManagerSummaryTable = ({ data }: { data: TargetSeriesItem[] }) => {
-    if (!data || data.length === 0) {
+const SalesManagerDetailedTargetChart = ({ data, font }: { data: TargetSeriesItem[], font: any }) => {
+    const uniqueManagers = React.useMemo(() => {
+        return Array.from(new Set((data || []).map(d => d.name).filter(Boolean))) as string[];
+    }, [data]);
+
+    const [selectedManager, setSelectedManager] = useState<string | null>(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    React.useEffect(() => {
+        if (uniqueManagers.length > 0 && (!selectedManager || !uniqueManagers.includes(selectedManager))) {
+            setSelectedManager(uniqueManagers[0]);
+        }
+    }, [uniqueManagers, selectedManager]);
+
+    if (!data || data.length === 0 || !font) {
         return (
             <View style={styles.chartCard}>
                 <View style={styles.chartHeader}>
-                    <Text style={styles.chartTitle}>SM Target vs Achieved Qty</Text>
+                    <Text allowFontScaling={false} style={styles.chartTitle}>SM Monthly Target vs Achieved</Text>
                 </View>
                 <EmptyChartState icon="users" />
             </View>
         );
     }
 
-    const totalsByName = data.reduce<Record<string, { achieved: number; target: number }>>((acc, item) => {
-        const name = item.name || "Unknown";
-        const bucket = acc[name] ?? { achieved: 0, target: 0 };
-        bucket.achieved += item.achieved_quantity;
-        bucket.target += item.target_quantity;
-        acc[name] = bucket;
-        return acc;
-    }, {});
-
-    const rows = Object.entries(totalsByName).map(([name, totals]) => ({
-        name,
-        total_achieved: totals.achieved,
-        total_target: totals.target,
-    }));
+    const chartData = data.filter(d => d.name === selectedManager);
+    const filteredManagers = uniqueManagers.filter(d => d.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
-        <BarListTable
-            title="SM Target vs Achieved Qty"
-            data={rows}
-            labelKey="name"
-            valueKey="total_achieved"
-            secondaryKey="total_target"
-            secondaryLabel="TARGET"
-            icon="briefcase"
-        />
+        <View style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+                <Text allowFontScaling={false} style={styles.chartTitle}>SM Monthly Target vs Achieved</Text>
+                <View style={styles.chartLegendRow}>
+                    <View style={[styles.legendDot, { backgroundColor: "#F97316" }]} />
+                    <Text style={styles.legendText}>Achieved</Text>
+                    <View style={[styles.legendDot, { backgroundColor: "#3B82F6", marginLeft: 12 }]} />
+                    <Text style={styles.legendText}>Target</Text>
+                </View>
+            </View>
+
+            {/* Dropdown Trigger */}
+            {uniqueManagers.length > 0 && (
+                <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, marginBottom: 16 }}
+                    onPress={() => setIsDropdownOpen(true)}
+                >
+                    <Text style={{ fontSize: 13, fontFamily: typography.medium, color: colors.text }} numberOfLines={1}>
+                        {selectedManager || "Select Sales Manager"}
+                    </Text>
+                    <Feather name="chevron-down" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+            )}
+
+            {chartData.length === 0 ? (
+                <EmptyChartState icon="bar-chart-2" />
+            ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ height: 300, width: Math.max(350, chartData.length * 80) }}>
+                        <CartesianChart
+                            data={chartData}
+                            xKey="month"
+                            yKeys={["achieved_quantity", "target_quantity"]}
+                            domainPadding={{ left: 30, right: 30, top: 40 }}
+                            axisOptions={{
+                                font,
+                                tickCount: chartData.length > 0 ? chartData.length : 1, // Fixes the skipping months issue
+                                lineColor: colors.border,
+                                labelColor: colors.textSecondary,
+                            }}
+                        >
+                            {({ points, chartBounds }) => (
+                                <>
+                                    <BarGroup chartBounds={chartBounds} betweenGroupPadding={0.3} withinGroupPadding={0.1}>
+                                        <BarGroup.Bar points={points.achieved_quantity} color="#F97316" animate={{ type: "timing", duration: 600 }} />
+                                        <BarGroup.Bar points={points.target_quantity} color="#3B82F6" animate={{ type: "timing", duration: 600 }} />
+                                    </BarGroup>
+
+                                    {points.achieved_quantity.map((p, i) => (
+                                        p.yValue > 0 && <SkiaText key={`ach-${i}`} x={p.x - 12} y={p.y - 8} text={p.yValue.toString()} font={font} color={colors.textSecondary} />
+                                    ))}
+                                    {points.target_quantity.map((p, i) => (
+                                        p.yValue > 0 && <SkiaText key={`tgt-${i}`} x={p.x + 4} y={p.y - 8} text={p.yValue.toString()} font={font} color={colors.textSecondary} />
+                                    ))}
+                                </>
+                            )}
+                        </CartesianChart>
+                    </View>
+                </ScrollView>
+            )}
+
+            {/* Searchable Sales Manager Modal */}
+            <Modal visible={isDropdownOpen} animationType="slide" transparent={true} onRequestClose={() => setIsDropdownOpen(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { height: '75%' }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select Sales Manager</Text>
+                            <TouchableOpacity onPress={() => setIsDropdownOpen(false)}>
+                                <Feather name="x" size={24} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16 }}>
+                            <Feather name="search" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                            <TextInput
+                                placeholder="Search manager..."
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                style={{ flex: 1, fontSize: 14, fontFamily: typography.medium, color: colors.text, padding: 0 }}
+                                placeholderTextColor={colors.muted}
+                            />
+                            {searchQuery.length > 0 && (
+                                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                                    <Feather name="x-circle" size={16} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {filteredManagers.map(manager => (
+                                <TouchableOpacity
+                                    key={manager}
+                                    style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                                    onPress={() => {
+                                        setSelectedManager(manager);
+                                        setIsDropdownOpen(false);
+                                        setSearchQuery("");
+                                    }}
+                                >
+                                    <Text style={{ fontSize: 14, fontFamily: typography.medium, color: selectedManager === manager ? colors.primary : colors.text }}>
+                                        {manager}
+                                    </Text>
+                                    {selectedManager === manager && <Feather name="check" size={18} color={colors.primary} />}
+                                </TouchableOpacity>
+                            ))}
+                            {filteredManagers.length === 0 && (
+                                <Text style={{ textAlign: 'center', marginTop: 20, color: colors.muted, fontFamily: typography.medium }}>No managers found</Text>
+                            )}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+        </View>
+    );
+};
+
+
+const FilteredSalesManagerLeadTable = ({ data }: { data: SalesManagerLeadCount[] }) => {
+    const uniqueManagers = React.useMemo(() => {
+        return Array.from(new Set((data || []).map(d => d.employee_name).filter(Boolean))) as string[];
+    }, [data]);
+
+    const [selectedManager, setSelectedManager] = useState<string | null>(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const insets = useSafeAreaInsets()
+
+    React.useEffect(() => {
+        if (uniqueManagers.length > 0 && (!selectedManager || !uniqueManagers.includes(selectedManager))) {
+            setSelectedManager(uniqueManagers[0]);
+        }
+    }, [uniqueManagers, selectedManager]);
+
+    if (!data || data.length === 0) {
+        return (
+            <View style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                    <Text allowFontScaling={false} style={styles.chartTitle}>Lead Queries by Sales Manager</Text>
+                </View>
+                <EmptyChartState icon="list" />
+            </View>
+        );
+    }
+
+    const tableData = data.filter(d => d.employee_name === selectedManager);
+    const filteredManagers = uniqueManagers.filter(d => d.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return (
+        <View style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+                <Text allowFontScaling={false} style={styles.chartTitle}>Lead Queries by Sales Manager</Text>
+            </View>
+
+            {/* Dropdown Trigger */}
+            {uniqueManagers.length > 0 && (
+                <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, marginBottom: 16 }}
+                    onPress={() => setIsDropdownOpen(true)}
+                >
+                    <Text style={{ fontSize: 13, fontFamily: typography.medium, color: colors.text }} numberOfLines={1}>
+                        {selectedManager || "Select Sales Manager"}
+                    </Text>
+                    <Feather name="chevron-down" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+            )}
+
+            {/* Filtered Data Table */}
+            {tableData.length === 0 ? (
+                <EmptyChartState icon="list" />
+            ) : (
+                <View>
+                    <View style={styles.tableHeaderRow}>
+                        <Text style={[styles.tableHeaderText, { flex: 1 }]}>MONTH</Text>
+                        <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>FINANCIAL YEAR</Text>
+                        <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'right' }]}>LEAD COUNT</Text>
+                    </View>
+                    {tableData.map((item, index) => (
+                        <View key={index} style={styles.tableRow}>
+                            <Text style={[styles.tableCellText, { flex: 1 }]} numberOfLines={1}>{item.month_name}</Text>
+                            <Text style={[styles.tableCellText, { flex: 1.2 }]} numberOfLines={1}>{item.financial_year}</Text>
+                            <Text style={[styles.tableCellText, { flex: 1, textAlign: 'right' }]} numberOfLines={1}>{item.lead_count ?? "-"}</Text>
+                        </View>
+                    ))}
+                </View>
+            )}
+
+            {/* Searchable Sales Manager Modal */}
+            <Modal visible={isDropdownOpen} animationType="slide" transparent={true} onRequestClose={() => setIsDropdownOpen(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { height: '75%', paddingBottom: insets.bottom }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select Sales Manager</Text>
+                            <TouchableOpacity onPress={() => setIsDropdownOpen(false)}>
+                                <Feather name="x" size={24} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16 }}>
+                            <Feather name="search" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                            <TextInput
+                                placeholder="Search manager..."
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                style={{ flex: 1, fontSize: 14, fontFamily: typography.medium, color: colors.text, padding: 0 }}
+                                placeholderTextColor={colors.muted}
+                            />
+                            {searchQuery.length > 0 && (
+                                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                                    <Feather name="x-circle" size={16} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {filteredManagers.map(manager => (
+                                <TouchableOpacity
+                                    key={manager}
+                                    style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                                    onPress={() => {
+                                        setSelectedManager(manager);
+                                        setIsDropdownOpen(false);
+                                        setSearchQuery("");
+                                    }}
+                                >
+                                    <Text style={{ fontSize: 14, fontFamily: typography.medium, color: selectedManager === manager ? colors.primary : colors.text }}>
+                                        {manager}
+                                    </Text>
+                                    {selectedManager === manager && <Feather name="check" size={18} color={colors.primary} />}
+                                </TouchableOpacity>
+                            ))}
+                            {filteredManagers.length === 0 && (
+                                <Text style={{ textAlign: 'center', marginTop: 20, color: colors.muted, fontFamily: typography.medium }}>No managers found</Text>
+                            )}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+        </View>
     );
 };
 
 export const DashboardScreen = () => {
     const [animatedCharts, setAnimatedCharts] = useState<Record<string, TargetSeriesItem[]>>({});
-    const { user, clearSession } = useAuth();
+    const { user } = useAuth();
 
     const groupCompanyName = user?.group_company_name || "Neo";
     const router = useRouter();
@@ -1095,9 +1368,9 @@ const styles = StyleSheet.create({
     kpiTitle: { fontSize: 11, fontFamily: typography.medium, color: colors.textSecondary, marginBottom: 8 },
     kpiValue: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
 
-    chartCard: { backgroundColor: colors.white, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg, minHeight: 200 },
+    chartCard: { backgroundColor: colors.white, padding: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg, minHeight: 200 },
     chartHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg },
-    chartTitle: { fontSize: 14, fontFamily: typography.bold, color: colors.text },
+    chartTitle: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.text },
     chartLegendRow: { flexDirection: "row", alignItems: "center" },
     legendDot: { width: 10, height: 10, borderRadius: 2, marginRight: 6 },
     legendText: { fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary },
