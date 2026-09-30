@@ -1,36 +1,46 @@
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export const UsersSetupIndexScreen = () => {
+export const SubDealerIndexScreen = () => {
     const router = useRouter();
 
     const MENU_OPTIONS = [
         {
-            id: "dealers",
-            title: "Dealers",
-            description: "Manage and view your primary dealer network.",
-            icon: "briefcase",
-            route: "/dealers",
-            iconColor: colors.primary,
+            id: "sub-dealer-list",
+            title: "Sub Dealer List",
+            description: "Manage and view your sub-dealer network.",
+            icon: "users",
+            route: "/sub-dealer-list",
+            iconColor: "#8B5CF6",
+            iconBg: "#F5F3FF"
         },
-                {
-            id: "sales-manager",
-            title: "Sales Manager",
-            description: "Configure sales territories and manager accounts.",
-            icon: "bar-chart-2",
-            route: "/sales-managers",
-            iconColor: colors.success,
-        },
-            ];
+               {
+            id: "sub-dealer-sales",
+            title: "Sub Dealer Sales",
+            description: "View sub-dealer sales records.",
+            icon: "shopping-bag",
+            route: "/sub-dealer-sales-target",
+            iconColor: "#0D9488",
+            iconBg: "#F0FDFA"
+        }
+    ];
+
+    const handlePress = (route: string | null) => {
+        if (!route) {
+            Alert.alert("Coming Soon", "This section is under development.");
+            return;
+        }
+        router.push(route as any);
+    };
 
     return (
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
             <View style={styles.header}>
-                            <Text style={styles.headerTitle} numberOfLines={1}>Users</Text>
-                <Text style={styles.headerSubtitle} numberOfLines={2}>Manage system access and roles</Text>
+                <Text style={styles.headerTitle} numberOfLines={1}>Sub Dealer</Text>
+                <Text style={styles.headerSubtitle} numberOfLines={2}>Manage sub-dealer network and sales</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -41,10 +51,9 @@ export const UsersSetupIndexScreen = () => {
                             styles.card,
                             pressed && styles.cardPressed
                         ]}
-                        onPress={() => router.push(option.route as any)}
+                        onPress={() => handlePress(option.route)}
                     >
-                        {/* Using standard theme colors with 10% opacity (1A) for backgrounds */}
-                        <View style={[styles.iconContainer, { backgroundColor: `${option.iconColor}1A` }]}>
+                        <View style={[styles.iconContainer, { backgroundColor: option.iconBg }]}>
                             <Feather name={option.icon as any} size={22} color={option.iconColor} />
                         </View>
 
@@ -70,7 +79,7 @@ const styles = StyleSheet.create({
         padding: spacing.md,
     },
     headerTitle: {
-        fontSize: txtSize.medium || 20, // Fallback to 20 if lg isn't defined in your theme
+        fontSize: txtSize.medium || 20,
         fontFamily: typography.bold,
         color: colors.text
     },
@@ -123,4 +132,4 @@ const styles = StyleSheet.create({
     }
 });
 
-export default UsersSetupIndexScreen;
+export default SubDealerIndexScreen;

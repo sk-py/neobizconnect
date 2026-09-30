@@ -71,7 +71,7 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-                                <Tabs.Protected guard={canAccess("User Setup")}>
+                                             <Tabs.Protected guard={canAccess("User Setup")}>
                     <Tabs.Screen
                         name='user-setup'
                         options={{
@@ -80,6 +80,18 @@ const TabLayout = () => {
                                 <Feather name='users' size={size} color={color} />
                             ),
                             href: userRole === "Admin" ? "/user-setup" : null
+                        }}
+                    />
+                </Tabs.Protected>
+                <Tabs.Protected guard={canAccess("Admin Sub Dealer")}>
+                    <Tabs.Screen
+                        name='sub-dealer-index'
+                        options={{
+                            title: "Sub Dealer",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='user-plus' size={size} color={color} />
+                            ),
+                            href: userRole === "Admin" ? "/sub-dealer-index" : null
                         }}
                     />
                 </Tabs.Protected>

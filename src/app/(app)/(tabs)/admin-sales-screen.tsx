@@ -1,19 +1,19 @@
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export const SalesIndexScreen = () => {
     const router = useRouter();
 
         const MENU_OPTIONS = [
-        {
+                {
             id: "sales-target",
             title: "Sales Target",
-            description: "Monitor and set regional or dealer targets.",
+            description: "Coming soon.",
             icon: "target",
-            route: "/sub-dealer-sales-target",
+            route: null,
             iconColor: "#E11D48", // Rose
             iconBg: "#FFF1F2"
         },
@@ -51,7 +51,13 @@ export const SalesIndexScreen = () => {
                             styles.card,
                             pressed && styles.cardPressed
                         ]}
-                        onPress={() => router.push(option.route as any)}
+                                                onPress={() => {
+                            if (!option.route) {
+                                Alert.alert("Coming Soon", "This section is under development.");
+                                return;
+                            }
+                            router.push(option.route as any);
+                        }}
                     >
                         <View style={[styles.iconContainer, { backgroundColor: option.iconBg }]}>
                             <Feather name={option.icon as any} size={22} color={option.iconColor} />
