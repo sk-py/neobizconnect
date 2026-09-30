@@ -7,7 +7,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export const LeadsAndQueriesIndexScreen = () => {
   const router = useRouter();
 
-  const MENU_OPTIONS = [
+    const MENU_OPTIONS = [
+    {
+      id: "dealer-query",
+      title: "Dealer Query",
+      description: "Address direct inquiries from your dealer network.",
+      icon: "message-square",
+      route: "/dealer-query",
+      iconColor: "#EA580C", // Orange
+      iconBg: "#FFF7ED"
+    },
     {
       id: "lead-query",
       title: "Lead / Query",
@@ -25,22 +34,13 @@ export const LeadsAndQueriesIndexScreen = () => {
       route: "/online-lead",
       iconColor: "#0D9488", // Teal
       iconBg: "#F0FDFA"
-    },
-    {
-      id: "dealer-query",
-      title: "Dealer Query",
-      description: "Address direct inquiries from your dealer network.",
-      icon: "message-square",
-      route: "/dealer-query",
-      iconColor: "#EA580C", // Orange
-      iconBg: "#FFF7ED"
     }
   ];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle} numberOfLines={1}>Leads & Queries</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>Queries</Text>
         <Text style={styles.headerSubtitle} numberOfLines={2}>Manage all incoming inquiries and prospects</Text>
       </View>
 

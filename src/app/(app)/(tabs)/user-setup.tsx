@@ -16,13 +16,29 @@ export const UsersSetupIndexScreen = () => {
             route: "/dealers",
             iconColor: colors.primary,
         },
-        {
+                {
             id: "sales-manager",
             title: "Sales Manager",
             description: "Configure sales territories and manager accounts.",
             icon: "bar-chart-2",
             route: "/sales-managers",
             iconColor: colors.success,
+        },
+        {
+            id: "sub-dealer",
+            title: "Sub-Dealer",
+            description: "Manage your sub-dealer network.",
+            icon: "users",
+            route: "/sub-dealer",
+            iconColor: "#8B5CF6",
+        },
+        {
+            id: "sub-dealer-sales",
+            title: "Sub-Dealer Sales",
+            description: "View sub-dealer sales records.",
+            icon: "shopping-bag",
+            route: "/sub-dealer-list",
+            iconColor: "#0D9488",
         },
         {
             id: "notifications",
