@@ -56,8 +56,9 @@ export const SalesManagerTargetsScreen = () => {
   // UI state
   const [activeTab, setActiveTab] = useState<"list" | "assign">("list");
   const [role, setRole] = useState<QuotaRole>("Dealer");
-  const [filterYear, setFilterYear] = useState("2026-2027");
+    const [filterYear, setFilterYear] = useState("2026-2027");
   const [isYearModalOpen, setIsYearModalOpen] = useState(false);
+  const [isFormYearModalOpen, setIsFormYearModalOpen] = useState(false);
 
   // Search + pagination state (List tab)
   const [searchQuery, setSearchQuery] = useState("");
@@ -297,8 +298,10 @@ export const SalesManagerTargetsScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === "assign" && styles.tabBtnActive]}
-            onPress={() => {
+                        onPress={() => {
               setActiveTab("assign");
+              setRole("Dealer");
+              setFormFinancialYear("2026-2027");
               setMonthValues({});
               setSelectedEntityCode(null);
             }}
@@ -423,8 +426,16 @@ export const SalesManagerTargetsScreen = () => {
           )}
         </>
       ) : (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
+                <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 44 : 0}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            contentContainerStyle={styles.formContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Role</Text>
               <View style={styles.roleFilterRow}>
@@ -459,19 +470,15 @@ export const SalesManagerTargetsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.formGroup}>
+                        <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Financial Year</Text>
-              <View style={styles.yearSelectorRow}>
-                {FINANCIAL_YEARS.map((yr) => (
-                  <TouchableOpacity
-                    key={yr}
-                    style={[styles.yearChip, formFinancialYear === yr && styles.yearChipActive]}
-                    onPress={() => setFormFinancialYear(yr)}
-                  >
-                    <Text style={[styles.yearChipText, formFinancialYear === yr && styles.yearChipTextActive]}>{yr}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setIsFormYearModalOpen(true)}>
+                <View style={styles.dropdownTriggerLeft}>
+                  <Feather name="calendar" size={15} color={colors.muted} />
+                  <Text style={styles.dropdownText}>{formFinancialYear}</Text>
+                </View>
+                <Feather name="chevron-down" size={18} color={colors.muted} />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.targetGrid}>
@@ -550,6 +557,29 @@ export const SalesManagerTargetsScreen = () => {
             </View>
             <TouchableOpacity style={styles.applyBtn} onPress={() => setIsYearModalOpen(false)}>
               <Text style={styles.submitBtnText}>Apply Filter</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+            {/* Form Financial Year Modal */}
+      <Modal visible={isFormYearModalOpen} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Select Financial Year</Text>
+            <View style={styles.yearSelectorRow}>
+              {FINANCIAL_YEARS.map((yr) => (
+                <TouchableOpacity
+                  key={yr}
+                  style={[styles.yearChip, formFinancialYear === yr && styles.yearChipActive]}
+                  onPress={() => setFormFinancialYear(yr)}
+                >
+                  <Text style={[styles.yearChipText, formFinancialYear === yr && styles.yearChipTextActive]}>{yr}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.applyBtn} onPress={() => setIsFormYearModalOpen(false)}>
+              <Text style={styles.submitBtnText}>Apply</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -705,9 +735,9 @@ const styles = StyleSheet.create({
   listContent: { padding: spacing.md, gap: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.surface },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  srNo: { fontSize: 12, fontFamily: typography.medium, color: colors.muted },
-  entityName: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
+   nameRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  srNo: { fontSize: 12, fontFamily: typography.medium, color: colors.muted, flexShrink: 0 },
+  entityName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, flex: 1, flexShrink: 1, flexWrap: "wrap" },
   entityMeta: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
   cardActions: { flexDirection: "row", gap: 8 },
   iconBtn: { width: 32, height: 32, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: "#EFF6FF" },
@@ -718,7 +748,7 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginBottom: 4 },
   totalValue: { fontSize: 14, fontFamily: typography.bold, color: colors.text },
 
-  formContainer: { padding: spacing.md },
+    formContainer: { padding: spacing.md, paddingBottom: spacing.xxl * 2 },
   formGroup: { marginBottom: spacing.lg },
   inputLabel: { fontSize: 13, fontFamily: typography.bold, color: colors.text, marginBottom: 8 },
   dropdownTrigger: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: radius.sm },
@@ -750,10 +780,10 @@ const styles = StyleSheet.create({
   targetInput: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontFamily: typography.medium, color: colors.text, textAlign: "right" },
 
   formFooter: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.white, paddingHorizontal: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  totalBlock: { flexShrink: 1, maxWidth: "38%" },
+    totalBlock: { flexShrink: 0 },
   totalFooterLabel: { fontSize: 11, fontFamily: typography.bold, color: colors.muted, marginBottom: 2 },
   totalFooterValue: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
-  submitBtn: { flex: 1.4, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center" },
+  submitBtn: { flex: 1, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center" },
   submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { fontSize: 14, fontFamily: typography.bold, color: colors.white },
 
