@@ -14,10 +14,11 @@ import {
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
   Dimensions,
   KeyboardAvoidingView,
   Modal,
@@ -30,6 +31,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAuth } from "@/hooks/use-auth";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
@@ -73,6 +75,32 @@ export const SalesManagerTargetsScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
+
+  const goBack = () => {
+    if (isAdmin) {
+      router.push("/sales-managers");
+    } else {
+      router.push("/sales-manager-modules");
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        goBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [router, isAdmin]),
+  );
 
   // UI state
   const [activeTab, setActiveTab] = useState<"list" | "assign">("list");
@@ -306,7 +334,7 @@ export const SalesManagerTargetsScreen = () => {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.push("/sales-managers")}>
+                  <TouchableOpacity style={styles.backButton} onPress={goBack}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>

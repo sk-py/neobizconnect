@@ -70,9 +70,9 @@ export default function OnlineLeadScreen() {
 
     const isAdminUser = user?.authority === "Admin" || user?.authority === "Super Admin";
 
-  const goBack = () => {
+    const goBack = () => {
     if (isAdminUser) {
-      router.push("/dashboard");
+      router.push("/dealer-query");
     } else {
       router.push("/sales-manager-modules");
     }

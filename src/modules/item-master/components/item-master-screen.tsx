@@ -38,9 +38,9 @@ export default function ItemMasterScreen() {
   const canSeeExtraDetails =
     user?.authority === "Admin" || user?.authority === "Super Admin";
 
-  const goBack = () => {
+    const goBack = () => {
     if (canSeeExtraDetails) {
-      router.push("/dashboard");
+      router.push("/admin-inventory");
     } else {
       router.push("/sales-manager-modules");
     }

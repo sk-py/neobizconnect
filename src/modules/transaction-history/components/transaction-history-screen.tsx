@@ -55,9 +55,9 @@ export default function TransactionHistoryScreen() {
   const { user } = useAuth();
   const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
 
-  const goBack = () => {
+    const goBack = () => {
     if (isAdmin) {
-      router.push("/dashboard");
+      router.push("/order-history");
     } else {
       router.push("/sales-manager-modules");
     }

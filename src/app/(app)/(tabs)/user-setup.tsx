@@ -1,11 +1,28 @@
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { Feather } from "@react-native-vector-icons/feather/static";
-import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback } from "react";
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export const UsersSetupIndexScreen = () => {
     const router = useRouter();
+
+    useFocusEffect(
+        useCallback(() => {
+            const onBackPress = () => {
+                router.push("/dashboard");
+                return true;
+            };
+
+            const subscription = BackHandler.addEventListener(
+                "hardwareBackPress",
+                onBackPress,
+            );
+
+            return () => subscription.remove();
+        }, [router]),
+    );
 
     const MENU_OPTIONS = [
         {

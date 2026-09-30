@@ -93,7 +93,7 @@ export default function LeadQueryScreen() {
 
     const goBack = () => {
     if (isAdmin) {
-      router.push("/dashboard");
+      router.push("/dealer-query");
     } else {
       router.push("/sales-manager-modules");
     }
