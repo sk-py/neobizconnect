@@ -48,6 +48,8 @@ const formatDate = (isoDate: string) => {
 const formatCurrency = (val: number) =>
   val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const PAGE_SIZE = 20;
+
 export default function TransactionHistoryScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -74,13 +76,14 @@ export default function TransactionHistoryScreen() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
+  const [page, setPage] = useState(0);
 
   const { data, isLoading } = useQuery({
     queryKey: ["transaction-history"],
     queryFn: fetchTransactionHistory,
   });
 
-  const filteredData = useMemo(() => {
+   const filteredData = useMemo(() => {
     if (!data) return [];
     if (!searchQuery.trim()) return data;
 
@@ -92,6 +95,23 @@ export default function TransactionHistoryScreen() {
         String(t.series ?? "").includes(query),
     );
   }, [data, searchQuery]);
+
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    setPage(0);
+  };
+
+  const totalItems = filteredData.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+
+  const paginatedData = useMemo(() => {
+    const start = safePage * PAGE_SIZE;
+    return filteredData.slice(start, start + PAGE_SIZE);
+  }, [filteredData, safePage]);
+
+  const rangeStart = totalItems === 0 ? 0 : safePage * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(totalItems, (safePage + 1) * PAGE_SIZE);
 
   const renderRow = ({ item }: { item: Transaction }) => {
     const statusStyle = getStatusStyle(item.u_DealerStatus);
@@ -173,11 +193,11 @@ export default function TransactionHistoryScreen() {
             style={styles.searchInput}
             placeholder="Search by dealer, code, or doc no..."
             placeholderTextColor={colors.muted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+                        value={searchQuery}
+            onChangeText={handleSearchChange}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
+            <TouchableOpacity onPress={() => handleSearchChange("")} style={styles.clearSearchBtn}>
               <Feather name="x-circle" size={13} color={colors.muted} />
             </TouchableOpacity>
           )}
@@ -193,14 +213,41 @@ export default function TransactionHistoryScreen() {
           </View>
           <Text style={styles.emptyText}>No transactions found</Text>
         </View>
-      ) : (
-        <LegendList
-          data={filteredData}
-          keyExtractor={(item: Transaction) => String(item.id)}
-          renderItem={renderRow}
-          contentContainerStyle={styles.listContent}
-          estimatedItemSize={220}
-        />
+            ) : (
+        <>
+          <LegendList
+            data={paginatedData}
+            keyExtractor={(item: Transaction) => String(item.id)}
+            renderItem={renderRow}
+            contentContainerStyle={styles.listContent}
+            estimatedItemSize={220}
+          />
+
+          <View style={styles.paginationBar}>
+            <Text style={styles.paginationText}>
+              {rangeStart}-{rangeEnd} of {totalItems}
+            </Text>
+            <View style={styles.paginationControls}>
+              <TouchableOpacity
+                style={[styles.pageBtn, safePage === 0 && styles.pageBtnDisabled]}
+                onPress={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={safePage === 0}
+              >
+                <Feather name="chevron-left" size={15} color={safePage === 0 ? colors.muted : colors.text} />
+              </TouchableOpacity>
+              <Text style={styles.pageIndicator}>
+                {safePage + 1} / {totalPages}
+              </Text>
+              <TouchableOpacity
+                style={[styles.pageBtn, safePage >= totalPages - 1 && styles.pageBtnDisabled]}
+                onPress={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={safePage >= totalPages - 1}
+              >
+                <Feather name="chevron-right" size={15} color={safePage >= totalPages - 1 ? colors.muted : colors.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </>
       )}
 
       <Modal
@@ -340,7 +387,14 @@ const styles = StyleSheet.create({
   modalLineItemTotalLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted },
   modalLineItemTotal: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
 
-  emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
+    emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
   emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
   emptyText: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.text },
+
+    paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: 4, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.white },
+  paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pageBtn: { width: 26, height: 26, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+  pageBtnDisabled: { opacity: 0.5 },
+  pageIndicator: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
 });

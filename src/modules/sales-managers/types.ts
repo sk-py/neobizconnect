@@ -42,3 +42,72 @@ export type SalesManager = {
   salesEmployeeCode: string;
   mobile: string;
 };
+// --- Sales Quota (POST /List/Sales/Quota, POST /Add/Sales/Quota) ---
+// This endpoint is shared across roles (e.g. "Dealer", "Sales Manager");
+// this module only drives it for "Sales Manager".
+export type QuotaRole = "Dealer" | "Sales Manager";
+
+export const QUOTA_MONTHS = [
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+  "January",
+  "February",
+  "March",
+] as const;
+
+export type QuotaMonthName = (typeof QUOTA_MONTHS)[number];
+
+export type SalesQuotaMonthDetail = {
+  id: number;
+  user_code: string;
+  name: string;
+  role: QuotaRole;
+  financial_year: string;
+  month: QuotaMonthName | string;
+  amount: number;
+  quantity: number;
+  amount_percentage: number;
+  quantity_percentage: number;
+  target_amount: number | null;
+  target_quantity: number;
+};
+
+export type SalesQuotaListItem = {
+  user_code: string;
+  name: string;
+  role: QuotaRole;
+  sales_manager: string;
+  financial_year: string;
+  annual_target: number;
+  annual_quantity: number;
+  details: SalesQuotaMonthDetail[];
+};
+
+export type SalesQuotaListParams = {
+  role: QuotaRole;
+  financial_year: string;
+};
+
+export type SalesQuotaMonthInput = {
+  month: QuotaMonthName | string;
+  amount: number;
+  quantity: number;
+  amount_percentage: number;
+  quantity_percentage: number;
+};
+
+export type AssignSalesQuotaPayload = {
+  role: QuotaRole;
+  user_code: string;
+  financial_year: string;
+  annual_target: number;
+  annual_quantity: number;
+  quota: SalesQuotaMonthInput[];
+};

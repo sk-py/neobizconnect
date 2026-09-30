@@ -27,10 +27,11 @@ export type AppModuleName =
   | "Sales Manager Modules"
   | "Notifications"
   | "User Setup"
-  | "Admin Leads & Queries"
-  | "Admin Sales Screen"
+    | "Admin Leads & Queries"
   | "Admin Sales Screen"
   | "Admin Inventory"
+    | "Admin Sub Dealer"
+  | "Sales Target"
   | "Finances";
 
 export const MODULES: Record<AppModuleName, readonly UserRole[]> = {
@@ -62,7 +63,9 @@ export const MODULES: Record<AppModuleName, readonly UserRole[]> = {
   "User Setup": ["Admin"],
   "Admin Leads & Queries": ["Admin"],
   "Admin Sales Screen": ["Admin"],
-  "Admin Inventory": ["Admin"],
+   "Admin Inventory": ["Admin"],
+    "Admin Sub Dealer": ["Admin"],
+  "Sales Target": ["Admin", "Super Admin"],
   Finances: ["Admin"],
 };
 
