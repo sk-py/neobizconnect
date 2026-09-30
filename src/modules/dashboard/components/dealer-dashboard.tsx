@@ -3,34 +3,51 @@ import { useAuth } from "@/hooks/use-auth";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { Text as SkiaText, useFont } from "@shopify/react-native-skia";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BarGroup, CartesianChart } from "victory-native";
+import { BarGroup, CartesianChart, Pie, PolarChart } from "victory-native";
 import { fetchDashboardData } from "../services/dashboard.api";
 
-// ---------------------------------------------------------------------------
-// Payload shape
-//
-// Every field is optional because a given role's payload may omit any of
-// these. Sections are rendered only when their backing field is present
-// (see DASHBOARD_SECTIONS + getValue below) — this is what lets the same
-// component serve Dealer / Sales Manager / Super Admin / future roles
-// without branching on role anywhere in this file.
-// ---------------------------------------------------------------------------
+export interface StatusOfQuery {
+    lead_status: string;
+    count: number;
+}
+export interface LeadQueryDetail {
+    lead_status: string;
+    city: string;
+    customer_name: string;
+    source?: string;
+}
+export interface MonthLeadCount {
+    month_name: string;
+    financial_year: string;
+    lead_type: string;
+    lead_count: number;
+}
+export interface SalesManagerLeadCount {
+    month_name: string;
+    financial_year: string;
+    employee_name: string;
+    financial_month: number;
+    lead_count: number;
+    employeeid: number;
+}
+export interface DealersMonthlyTargetAndQuantityTable {
+    name: string;
+    month_date: string;
+    target_quantity: number;
+    quantity: number;
+}
 
 interface TargetSeriesItem {
     year?: string;
     month: string;
     target_quantity: number;
     achieved_quantity: number;
-    // CartesianChart's generic constrains data to Record<string, unknown> —
-    // without an index signature here, TS can't unify TargetSeriesItem with
-    // that constraint and silently infers `{}` for the chart's data type,
-    // which is why points.achieved_quantity etc. throws TS2339.
+    name?: string;
     [key: string]: unknown;
 }
 
@@ -43,7 +60,6 @@ interface DealerTargetItem {
 }
 
 interface DashboardData {
-    // KPI-style scalars
     total_pending_quantity?: number;
     total_pi_oip_quantity?: number;
     total_invoice_quantity?: number;
@@ -53,7 +69,7 @@ interface DashboardData {
     achieved_sales?: number;
     credit_limit?: number;
     total_dealers?: number;
-    total_dealer?: number; // TODO: backend sends both total_dealers and total_dealer across roles — flag for consolidation
+    total_dealer?: number;
     total_sales_manager?: number;
     total_arcreditmemo?: number;
     annual_target_distribution?: {
@@ -61,29 +77,29 @@ interface DashboardData {
         salesmanager_quantity?: number;
     };
 
-    // Chart-shaped series
+    total_online_lead_query?: number;
+    total_lead_query?: number;
+    Status_of_online_query?: StatusOfQuery[];
+    status_of_lead_query?: StatusOfQuery[];
+    online_lead_query_detail?: LeadQueryDetail[];
+    lead_query_detail?: LeadQueryDetail[];
+    sales_manager_lead_count?: SalesManagerLeadCount[];
+    month_lead_count?: MonthLeadCount[];
+
+    dealers_monthly_target_and_quantity_table?: DealersMonthlyTargetAndQuantityTable[];
+    assigned_amount_and_achieved_amount?: TargetSeriesItem[];
+    assigned_quantity_and_achieved_quantity?: TargetSeriesItem[];
+    salesmanager_target_vs_achieved_quantity?: TargetSeriesItem[];
+
     target_vs_achievement?: TargetSeriesItem[];
     monthly_target_vs_collection_of_quantity?: TargetSeriesItem[];
 
-    // Bar-list-shaped series
     top_selling_design?: Array<{ design: string; total_quantity: number }>;
     top_selling_sku?: Array<{ item_description: string; total_quantity: number }>;
     sales_mix_by_wheel_size?: Array<{ wheel_size: string; total_quantity: number; sales_mix_percentage: number }>;
 
-    // Custom-shaped series
     dealers_target_vs_achieved_quantity?: DealerTargetItem[];
 }
-
-// ---------------------------------------------------------------------------
-// Section config
-//
-// One ordered list drives the whole dashboard body. Each entry knows how to
-// pull its own value out of DashboardData (typed accessor, not a string
-// path — a renamed/removed backend field breaks the build here instead of
-// silently dropping a section at runtime) and how it wants to render.
-//
-// Adding a field for a new role = one entry in this array. No JSX changes.
-// ---------------------------------------------------------------------------
 
 type KPISection = {
     kind: "kpi";
@@ -117,13 +133,14 @@ type CustomSection = {
     kind: "custom";
     id: string;
     getValue: (d: DashboardData) => any;
-    render: (value: any) => React.ReactNode;
+    render: (value: any, font?: any) => React.ReactNode;
 };
 
 type SectionConfig = KPISection | ChartSection | BarListSection | CustomSection;
 
 const DASHBOARD_SECTIONS: SectionConfig[] = [
-    // --- KPIs ---
+    { kind: "kpi", id: "total_online_lead_query", title: "TOTAL ONLINE LEAD QUERIES", getValue: (d) => d.total_online_lead_query },
+    { kind: "kpi", id: "total_lead_query", title: "TOTAL LEAD QUERIES", getValue: (d) => d.total_lead_query },
     { kind: "kpi", id: "total_pending_quantity", title: "Total Pending Qty", getValue: (d) => d.total_pending_quantity },
     { kind: "kpi", id: "total_pi_oip_quantity", title: "Total PI/OIP Qty", getValue: (d) => d.total_pi_oip_quantity },
     { kind: "kpi", id: "total_invoice_quantity", title: "Total Invoice Qty", getValue: (d) => d.total_invoice_quantity },
@@ -138,21 +155,121 @@ const DASHBOARD_SECTIONS: SectionConfig[] = [
     { kind: "kpi", id: "annual_target_dealer", title: "Annual Dealer Target", getValue: (d) => d.annual_target_distribution?.dealer_quantity },
     { kind: "kpi", id: "annual_target_sm", title: "Annual SM Target", getValue: (d) => d.annual_target_distribution?.salesmanager_quantity },
 
-    // --- Charts ---
+    {
+        kind: "custom",
+        id: "Status_of_online_query",
+        getValue: (d) => d.Status_of_online_query,
+        render: (value: any) => <DonutChartCard title="Online Query Status" data={value} labelKey="lead_status" valueKey="count" />
+    },
+    {
+        kind: "custom",
+        id: "status_of_lead_query",
+        getValue: (d) => d.status_of_lead_query,
+        render: (value: any) => <DonutChartCard title="Lead Query Status" data={value} labelKey="lead_status" valueKey="count" />
+    },
+
+    {
+        kind: "custom",
+        id: "month_lead_count",
+        getValue: (d) => {
+            if (!d.month_lead_count) return undefined;
+            const grouped = d.month_lead_count.reduce((acc: any, curr) => {
+                const m = curr.month_name;
+                if (!acc[m]) acc[m] = { month_name: m, lead_query: 0, online_lead_query: 0 };
+                if (curr.lead_type === "Lead Query") acc[m].lead_query += curr.lead_count;
+                if (curr.lead_type === "Online Lead Query") acc[m].online_lead_query += curr.lead_count;
+                return acc;
+            }, {});
+            return Object.values(grouped);
+        },
+        render: (value: any, font: any) => <GroupedTrendChart title="Monthly Lead Queries Trend" data={value} font={font} />
+    },
+
+    {
+        kind: "custom",
+        id: "sales_manager_lead_count",
+        getValue: (d) => d.sales_manager_lead_count,
+        render: (value: any) => (
+            <FlatDataTable
+                title="Lead Queries by Sales Manager"
+                data={value}
+                columns={[
+                    { key: "employee_name", label: "SALES MANAGER", flex: 1.5 },
+                    { key: "month_name", label: "MONTH", flex: 1 },
+                    { key: "financial_year", label: "FINANCIAL YEAR", flex: 1.2 },
+                    { key: "lead_count", label: "LEAD COUNT", flex: 1 }
+                ]}
+            />
+        )
+    },
+    {
+        kind: "custom",
+        id: "online_lead_query_detail",
+        getValue: (d) => d.online_lead_query_detail,
+        render: (value: any) => (
+            <FlatDataTable
+                title="Online Lead Query Details"
+                data={value}
+                columns={[
+                    { key: "customer_name", label: "CUSTOMER NAME", flex: 1.5 },
+                    { key: "lead_status", label: "STATUS", flex: 1 },
+                    { key: "city", label: "CITY", flex: 1 },
+                    { key: "source", label: "SOURCE", flex: 1 }
+                ]}
+            />
+        )
+    },
+    {
+        kind: "custom",
+        id: "lead_query_detail",
+        getValue: (d) => d.lead_query_detail,
+        render: (value: any) => (
+            <FlatDataTable
+                title="Lead Query Details"
+                data={value}
+                columns={[
+                    { key: "customer_name", label: "CUSTOMER NAME", flex: 1.5 },
+                    { key: "lead_status", label: "STATUS", flex: 1 },
+                    { key: "city", label: "CITY", flex: 1 }
+                ]}
+            />
+        )
+    },
+
     { kind: "chart", id: "target_vs_achievement", title: "Target vs Achievement", getValue: (d) => d.target_vs_achievement },
     { kind: "chart", id: "monthly_target_vs_collection_of_quantity", title: "Monthly Target vs Collection", getValue: (d) => d.monthly_target_vs_collection_of_quantity },
+    { kind: "chart", id: "assigned_amount_and_achieved_amount", title: "Assigned vs Achieved Amount", getValue: (d) => d.assigned_amount_and_achieved_amount },
+    { kind: "chart", id: "assigned_quantity_and_achieved_quantity", title: "Assigned vs Achieved Qty", getValue: (d) => d.assigned_quantity_and_achieved_quantity },
 
-    // --- Bar lists ---
     { kind: "barlist", id: "top_selling_design", title: "Top Selling Design", labelKey: "design", valueKey: "total_quantity", icon: "layers", getValue: (d) => d.top_selling_design },
     { kind: "barlist", id: "top_selling_sku", title: "Top Selling SKU's", labelKey: "item_description", valueKey: "total_quantity", icon: "box", getValue: (d) => d.top_selling_sku },
     { kind: "barlist", id: "sales_mix_by_wheel_size", title: "Sales Mix by Wheel Size", labelKey: "wheel_size", valueKey: "total_quantity", secondaryKey: "sales_mix_percentage", secondaryLabel: "% MIX", secondarySuffix: "%", icon: "pie-chart", getValue: (d) => d.sales_mix_by_wheel_size },
 
-    // --- Custom ---
+    {
+        kind: "custom",
+        id: "salesmanager_target_vs_achieved_quantity",
+        getValue: (d) => d.salesmanager_target_vs_achieved_quantity,
+        render: (value: TargetSeriesItem[]) => <SalesManagerSummaryTable data={value} />
+    },
+    {
+        kind: "custom",
+        id: "dealers_monthly_target_and_quantity",
+        getValue: (d) => {
+            if (!d.dealers_monthly_target_and_quantity_table) return undefined;
+            return d.dealers_monthly_target_and_quantity_table.map(x => ({
+                name: x.name,
+                month: x.month_date,
+                target_quantity: x.target_quantity,
+                achieved_quantity: x.quantity
+            }));
+        },
+        render: (value: DealerTargetItem[], font: any) => <DealersDetailedTargetChart data={value} font={font} />
+    },
     {
         kind: "custom",
         id: "dealers_target_vs_achieved_quantity",
         getValue: (d) => d.dealers_target_vs_achieved_quantity,
-        render: (value: DealerTargetItem[]) => <DealersSummaryTable data={value} />,
+        render: (value: DealerTargetItem[], font: any) => <DealersDetailedTargetChart data={value} font={font} />,
     },
 ];
 
@@ -193,8 +310,6 @@ const EmptyChartState = ({ icon = "bar-chart-2" }: { icon?: string }) => (
         <Text style={styles.emptyStateText}>No data available</Text>
     </View>
 );
-
-// ---- Skeleton loading state ----
 
 const SkeletonBlock = ({ style }: { style?: any }) => {
     const pulse = useSharedValue(0.4);
@@ -256,8 +371,6 @@ const SkeletonBarListCard = ({ rows = 4 }: { rows?: number }) => (
     </View>
 );
 
-// Skeleton is shown before we know which fields the payload has, so it stays
-// a generic approximation rather than being data-driven.
 const DashboardBodySkeleton = () => (
     <>
         <View style={styles.kpiGrid}>
@@ -273,17 +386,15 @@ const DashboardBodySkeleton = () => (
     </>
 );
 
-// Helper to calculate dynamic initial filters
 const getInitialFilters = () => {
     const today = new Date();
-    const currentMonth = format(today, "MMMM");
     const year = today.getFullYear();
-    const isJanToMar = today.getMonth() < 3; // 0 = Jan, 1 = Feb, 2 = Mar
+    const isJanToMar = today.getMonth() < 3;
     const currentFY = isJanToMar ? `${year - 1}-${year}` : `${year}-${year + 1}`;
 
     return {
         financial_year: currentFY,
-        month: "", // Default to no month filter
+        month: "",
     };
 };
 
@@ -296,6 +407,160 @@ const KPICard = ({ title, value, isCurrency = false }: { title: string; value: n
         </Text>
     </View>
 );
+
+const DonutChartCard = ({ title, data, labelKey, valueKey }: any) => {
+    if (!data || data.length === 0) {
+        return (
+            <View style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                    <Text style={styles.chartTitle}>{title}</Text>
+                </View>
+                <EmptyChartState icon="pie-chart" />
+            </View>
+        );
+    }
+
+    const total = data.reduce((sum: number, item: any) => sum + (item[valueKey] || 0), 0);
+
+    const pieData = data.map((item: any, i: number) => ({
+        value: item[valueKey] || 0,
+        label: item[labelKey] || "Unknown",
+        color: BAR_COLORS[i % BAR_COLORS.length],
+        percentage: total > 0 ? ((item[valueKey] / total) * 100).toFixed(1) : "0.0",
+    }));
+
+    return (
+        <View style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+                <Text style={styles.chartTitle}>{title}</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", minHeight: 220 }}>
+                <View style={{ flex: 1, height: 200, position: "relative", justifyContent: "center", alignItems: "center" }}>
+                    <PolarChart data={pieData} colorKey="color" valueKey="value" labelKey="label">
+                        <Pie.Chart innerRadius={50} />
+                    </PolarChart>
+                    <View style={{ position: "absolute", alignItems: "center", justifyContent: "center" }}>
+                        <Text style={{ fontSize: 10, fontFamily: typography.medium, color: colors.textSecondary }}>TOTAL</Text>
+                        <Text style={{ fontSize: 20, fontFamily: typography.bold, color: colors.text }}>{total}</Text>
+                    </View>
+                </View>
+
+                <View style={{ flex: 1.2, paddingLeft: 10 }}>
+                    <View style={styles.tableHeaderRow}>
+                        <Text style={[styles.tableHeaderText, { flex: 2 }]}>STATUS</Text>
+                        <Text style={[styles.tableHeaderText, { flex: 1, textAlign: "right" }]}>COUNT</Text>
+                        <Text style={[styles.tableHeaderText, { flex: 1, textAlign: "right" }]}>%</Text>
+                    </View>
+                    {pieData.map((d: any, i: number) => (
+                        <View key={i} style={styles.tableRow}>
+                            <View style={{ flexDirection: "row", alignItems: "center", flex: 2 }}>
+                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: d.color, marginRight: 6 }} />
+                                <Text style={[styles.tableCellText, { flex: 1 }]} numberOfLines={1}>{d.label}</Text>
+                            </View>
+                            <Text style={[styles.tableCellText, { flex: 1, textAlign: "right", fontFamily: typography.bold }]}>{d.value}</Text>
+                            <Text style={[styles.tableCellText, { flex: 1, textAlign: "right" }]}>{d.percentage}%</Text>
+                        </View>
+                    ))}
+                </View>
+            </View>
+        </View>
+    );
+};
+
+const GroupedTrendChart = ({ title, data, font }: any) => {
+    if (!data || data.length === 0 || !font) {
+        return (
+            <View style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                    <Text style={styles.chartTitle}>{title}</Text>
+                </View>
+                <EmptyChartState icon="bar-chart-2" />
+            </View>
+        );
+    }
+
+    return (
+        <View style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+                <Text style={styles.chartTitle}>{title}</Text>
+                <View style={styles.chartLegendRow}>
+                    <View style={[styles.legendDot, { backgroundColor: "#8B5CF6" }]} />
+                    <Text style={styles.legendText}>Lead Query</Text>
+                    <View style={[styles.legendDot, { backgroundColor: "#3B82F6", marginLeft: 12 }]} />
+                    <Text style={styles.legendText}>Online Lead Query</Text>
+                </View>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={{ height: 300, width: Math.max(350, data.length * 60) }}>
+                    <CartesianChart
+                        data={data}
+                        xKey="month_name"
+                        yKeys={["lead_query", "online_lead_query"]}
+                        domainPadding={{ left: 30, right: 30, top: 40 }}
+                        axisOptions={{
+                            font,
+                            tickCount: data.length,
+                            lineColor: colors.border,
+                            labelColor: colors.textSecondary,
+                        }}
+                    >
+                        {({ points, chartBounds }) => (
+                            <>
+                                <BarGroup chartBounds={chartBounds} betweenGroupPadding={0.3} withinGroupPadding={0.1}>
+                                    <BarGroup.Bar points={points.lead_query} color="#8B5CF6" animate={{ type: "timing", duration: 600 }} />
+                                    <BarGroup.Bar points={points.online_lead_query} color="#3B82F6" animate={{ type: "timing", duration: 600 }} />
+                                </BarGroup>
+
+                                {points.lead_query.map((p, i) => (
+                                    p.yValue > 0 && <SkiaText key={`lq-${i}`} x={p.x - 12} y={p.y - 8} text={p.yValue.toString()} font={font} color={colors.textSecondary} />
+                                ))}
+                                {points.online_lead_query.map((p, i) => (
+                                    p.yValue > 0 && <SkiaText key={`olq-${i}`} x={p.x + 4} y={p.y - 8} text={p.yValue.toString()} font={font} color={colors.textSecondary} />
+                                ))}
+                            </>
+                        )}
+                    </CartesianChart>
+                </View>
+            </ScrollView>
+        </View>
+    );
+};
+
+const FlatDataTable = ({ title, columns, data }: { title: string, columns: { key: string, label: string, flex?: number }[], data: any[] }) => {
+    if (!data || data.length === 0) {
+        return (
+            <View style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                    <Text style={styles.chartTitle}>{title}</Text>
+                </View>
+                <EmptyChartState icon="list" />
+            </View>
+        );
+    }
+
+    return (
+        <View style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+                <Text style={styles.chartTitle}>{title}</Text>
+            </View>
+            <View style={styles.tableHeaderRow}>
+                {columns.map((col, i) => (
+                    <Text key={i} style={[styles.tableHeaderText, { flex: col.flex || 1 }]}>{col.label}</Text>
+                ))}
+            </View>
+            {data.slice(0, 10).map((item, rowIndex) => (
+                <View key={rowIndex} style={styles.tableRow}>
+                    {columns.map((col, colIndex) => (
+                        <Text key={colIndex} style={[styles.tableCellText, { flex: col.flex || 1 }]} numberOfLines={1}>
+                            {item[col.key] ?? "-"}
+                        </Text>
+                    ))}
+                </View>
+            ))}
+        </View>
+    );
+};
 
 const BarListTable = ({ title, data, labelKey, valueKey, secondaryKey, secondaryLabel, secondarySuffix = "", icon = "pie-chart" }: any) => {
     return (
@@ -318,10 +583,6 @@ const BarListTable = ({ title, data, labelKey, valueKey, secondaryKey, secondary
                         const maxValue = Math.max(...data.map((d: any) => d[valueKey]));
                         const widthPercent = maxValue === 0 ? 0 : (item[valueKey] / maxValue) * 100;
                         const maxSecondary = secondaryKey ? Math.max(...data.map((d: any) => d[secondaryKey])) : 0;
-                        // A "%" secondary (e.g. sales-mix %) is already a 0-100
-                        // fill value, so use it directly as bar width. A raw-sum
-                        // secondary (e.g. a target total) isn't on a 0-100 scale,
-                        // so scale it relative to the largest value in the list.
                         const secondaryWidthPercent = !secondaryKey ? 0 : secondarySuffix === "%" ? item[secondaryKey] : maxSecondary !== 0 ? (item[secondaryKey] / maxSecondary) * 100 : 0;
                         const barColor = BAR_COLORS[index % BAR_COLORS.length];
 
@@ -358,10 +619,6 @@ const BarListTable = ({ title, data, labelKey, valueKey, secondaryKey, secondary
     );
 };
 
-// Reusable target-vs-achieved bar chart. Both target_vs_achievement and
-// monthly_target_vs_collection_of_quantity share this exact shape
-// (month / achieved_quantity / target_quantity), so one component serves
-// both instead of duplicating the CartesianChart block per field.
 const TargetChart = ({ title, data, animatedData, font }: { title: string; data: TargetSeriesItem[]; animatedData: TargetSeriesItem[]; font: any }) => (
     <View style={styles.chartCard}>
         <View style={styles.chartHeader}>
@@ -386,7 +643,7 @@ const TargetChart = ({ title, data, animatedData, font }: { title: string; data:
                         domainPadding={{ left: 30, right: 30, top: 40 }}
                         axisOptions={{
                             font,
-                            tickCount: 12,
+                            tickCount: animatedData.length > 0 ? animatedData.length : 1,
                             lineColor: colors.border,
                             labelColor: colors.textSecondary,
                             formatYLabel: (val) => `${val}`,
@@ -429,31 +686,174 @@ const TargetChart = ({ title, data, animatedData, font }: { title: string; data:
     </View>
 );
 
-// Sums achieved and target quantity per dealer across all the months the
-// backend sent — no percentage, no filtering by date. Each dealer gets one
-// row: total achieved and total target side by side, so multiple dealers
-// fit in one compact list instead of a chart per dealer.
-const DealersSummaryTable = ({ data }: { data: DealerTargetItem[] }) => {
-    if (!data || data.length === 0) {
+const DealersDetailedTargetChart = ({ data, font }: { data: DealerTargetItem[], font: any }) => {
+    const uniqueDealers = React.useMemo(() => {
+        return Array.from(new Set((data || []).map(d => d.name).filter(Boolean)));
+    }, [data]);
+
+    const [selectedDealer, setSelectedDealer] = useState<string | null>(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    React.useEffect(() => {
+        if (uniqueDealers.length > 0 && (!selectedDealer || !uniqueDealers.includes(selectedDealer))) {
+            setSelectedDealer(uniqueDealers[0]);
+        }
+    }, [uniqueDealers, selectedDealer]);
+
+    if (!data || data.length === 0 || !font) {
         return (
             <View style={styles.chartCard}>
                 <View style={styles.chartHeader}>
-                    <Text style={styles.chartTitle}>Dealer Target vs Achieved</Text>
+                    <Text style={styles.chartTitle}>Dealer Monthly Target vs Achieved</Text>
                 </View>
                 <EmptyChartState icon="users" />
             </View>
         );
     }
 
-    const totalsByDealer = data.reduce<Record<string, { achieved: number; target: number }>>((acc, item) => {
-        const bucket = acc[item.name] ?? { achieved: 0, target: 0 };
+    const chartData = data.filter(d => d.name === selectedDealer);
+    const filteredDealers = uniqueDealers.filter(d => d.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return (
+        <View style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+                <Text style={styles.chartTitle}>Dealer Monthly Target vs Achieved</Text>
+                <View style={styles.chartLegendRow}>
+                    <View style={[styles.legendDot, { backgroundColor: "#F97316" }]} />
+                    <Text style={styles.legendText}>Achieved</Text>
+                    <View style={[styles.legendDot, { backgroundColor: "#3B82F6", marginLeft: 12 }]} />
+                    <Text style={styles.legendText}>Target</Text>
+                </View>
+            </View>
+
+            {/* Dropdown Trigger */}
+            {uniqueDealers.length > 0 && (
+                <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, marginBottom: 16 }}
+                    onPress={() => setIsDropdownOpen(true)}
+                >
+                    <Text style={{ fontSize: 13, fontFamily: typography.medium, color: colors.text }} numberOfLines={1}>
+                        {selectedDealer || "Select Dealer"}
+                    </Text>
+                    <Feather name="chevron-down" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+            )}
+
+            {chartData.length === 0 ? (
+                <EmptyChartState icon="bar-chart-2" />
+            ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ height: 300, width: Math.max(350, chartData.length * 80) }}>
+                        <CartesianChart
+                            data={chartData}
+                            xKey="month"
+                            yKeys={["achieved_quantity", "target_quantity"]}
+                            domainPadding={{ left: 30, right: 20, top: 40 }}
+                            axisOptions={{
+                                font,
+                                tickCount: chartData.length,
+                                lineColor: colors.border,
+                                labelColor: colors.textSecondary,
+                            }}
+                        >
+                            {({ points, chartBounds }) => (
+                                <>
+                                    <BarGroup chartBounds={chartBounds} betweenGroupPadding={0.3} withinGroupPadding={0.1}>
+                                        <BarGroup.Bar points={points.achieved_quantity} color="#F97316" animate={{ type: "timing", duration: 600 }} />
+                                        <BarGroup.Bar points={points.target_quantity} color="#3B82F6" animate={{ type: "timing", duration: 600 }} />
+                                    </BarGroup>
+
+                                    {points.achieved_quantity.map((p, i) => (
+                                        p.yValue > 0 && <SkiaText key={`ach-${i}`} x={p.x - 20} y={p.y - 8} text={p.yValue.toString()} font={font} color={colors.textSecondary} />
+                                    ))}
+                                    {points.target_quantity.map((p, i) => (
+                                        p.yValue > 0 && <SkiaText key={`tgt-${i}`} x={p.x + 4} y={p.y - 8} text={p.yValue.toString()} font={font} color={colors.textSecondary} />
+                                    ))}
+                                </>
+                            )}
+                        </CartesianChart>
+                    </View>
+                </ScrollView>
+            )}
+
+            {/* Searchable Dealer Modal */}
+            <Modal visible={isDropdownOpen} animationType="slide" transparent={true} onRequestClose={() => setIsDropdownOpen(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { height: '75%' }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select Dealer</Text>
+                            <TouchableOpacity onPress={() => setIsDropdownOpen(false)}>
+                                <Feather name="x" size={24} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16 }}>
+                            <Feather name="search" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                            <TextInput
+                                placeholder="Search dealer..."
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                style={{ flex: 1, fontSize: 14, fontFamily: typography.medium, color: colors.text, padding: 0 }}
+                                placeholderTextColor={colors.muted}
+                            />
+                            {searchQuery.length > 0 && (
+                                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                                    <Feather name="x-circle" size={16} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {filteredDealers.map(dealer => (
+                                <TouchableOpacity
+                                    key={dealer}
+                                    style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                                    onPress={() => {
+                                        setSelectedDealer(dealer);
+                                        setIsDropdownOpen(false);
+                                        setSearchQuery("");
+                                    }}
+                                >
+                                    <Text style={{ fontSize: 14, fontFamily: typography.medium, color: selectedDealer === dealer ? colors.primary : colors.text }}>
+                                        {dealer}
+                                    </Text>
+                                    {selectedDealer === dealer && <Feather name="check" size={18} color={colors.primary} />}
+                                </TouchableOpacity>
+                            ))}
+                            {filteredDealers.length === 0 && (
+                                <Text style={{ textAlign: 'center', marginTop: 20, color: colors.muted, fontFamily: typography.medium }}>No dealers found</Text>
+                            )}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+        </View>
+    );
+};
+
+const SalesManagerSummaryTable = ({ data }: { data: TargetSeriesItem[] }) => {
+    if (!data || data.length === 0) {
+        return (
+            <View style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                    <Text style={styles.chartTitle}>SM Target vs Achieved Qty</Text>
+                </View>
+                <EmptyChartState icon="users" />
+            </View>
+        );
+    }
+
+    const totalsByName = data.reduce<Record<string, { achieved: number; target: number }>>((acc, item) => {
+        const name = item.name || "Unknown";
+        const bucket = acc[name] ?? { achieved: 0, target: 0 };
         bucket.achieved += item.achieved_quantity;
         bucket.target += item.target_quantity;
-        acc[item.name] = bucket;
+        acc[name] = bucket;
         return acc;
     }, {});
 
-    const rows = Object.entries(totalsByDealer).map(([name, totals]) => ({
+    const rows = Object.entries(totalsByName).map(([name, totals]) => ({
         name,
         total_achieved: totals.achieved,
         total_target: totals.target,
@@ -461,13 +861,13 @@ const DealersSummaryTable = ({ data }: { data: DealerTargetItem[] }) => {
 
     return (
         <BarListTable
-            title="Dealer Target vs Achieved"
+            title="SM Target vs Achieved Qty"
             data={rows}
             labelKey="name"
             valueKey="total_achieved"
             secondaryKey="total_target"
             secondaryLabel="TARGET"
-            icon="users"
+            icon="briefcase"
         />
     );
 };
@@ -516,7 +916,6 @@ export const DashboardScreen = () => {
         });
 
         return () => timers.forEach(clearTimeout);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data]);
 
     const applyFilters = () => {
@@ -551,8 +950,9 @@ export const DashboardScreen = () => {
             >
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.headerTitle}>Dashboard</Text>
-                        <Text style={styles.headerSubtitle}>{getSubtitle()}</Text>
+                        <Text style={styles.headerTitle}>Welcome, {user?.name}</Text>
+                        <Text style={styles.headerSubtitle}>{user?.authority}</Text>
+                        <Text style={styles.currentYear}>{getSubtitle()}</Text>
                     </View>
                     <View style={styles.headerActions}>
                         <TouchableOpacity
@@ -609,7 +1009,7 @@ export const DashboardScreen = () => {
                                         />
                                     );
                                 case "custom":
-                                    return <React.Fragment key={cfg.id}>{cfg.render(cfg.getValue(data!))}</React.Fragment>;
+                                    return <React.Fragment key={cfg.id}>{cfg.render(cfg.getValue(data!), font)}</React.Fragment>;
                                 default:
                                     return null;
                             }
@@ -683,9 +1083,10 @@ const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
     scrollContent: { padding: spacing.md, paddingBottom: spacing.xxl },
 
-    header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md },
-    headerTitle: { fontSize: 24, fontFamily: typography.bold, color: colors.text },
-    headerSubtitle: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
+    header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: spacing.md },
+    headerTitle: { fontSize: txtSize.body, fontFamily: typography.bold, color: colors.text },
+    headerSubtitle: { fontSize: txtSize.small, fontFamily: typography.semibold, color: colors.textSecondary, marginTop: 2 },
+    currentYear: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
     headerActions: { flexDirection: "row", gap: spacing.sm },
     headerBtn: { padding: 10, backgroundColor: colors.white, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border },
 
@@ -722,7 +1123,7 @@ const styles = StyleSheet.create({
         textShadowRadius: 2,
     },
 
-    modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+    modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.16)", justifyContent: "flex-end" },
     modalContent: { backgroundColor: colors.white, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, maxHeight: "80%" },
     modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg },
     modalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },

@@ -10,6 +10,7 @@ export const colors = {
   success: "#16A34A",
   white: "#FFFFFF",
   black: "#000000",
+  warning: "#ffc444",
 };
 
 export const spacing = {
@@ -33,6 +34,7 @@ import { fontScale } from "@/utils/responsive";
 export const txtSize = {
   heading: fontScale(32),
   title: fontScale(24),
+  medium: fontScale(20),
   body: fontScale(16),
   small: fontScale(14),
   xs: fontScale(12),
