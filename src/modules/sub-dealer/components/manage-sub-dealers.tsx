@@ -9,11 +9,12 @@ import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
     ActivityIndicator,
+    BackHandler,
     Modal,
     Platform,
     ScrollView,
@@ -84,9 +85,33 @@ export const SubDealerScreen = () => {
     const user = useAuthStore((state) => state.user);
     const groupCompanyName = user?.group_company_name || "Neo";
     const registeredByName = user?.name || "NA";
-    const canRegister = user?.authority !== "Admin" && user?.authority !== "Super Admin";
+        const canRegister = user?.authority !== "Admin" && user?.authority !== "Super Admin";
     const isAdminView = !canRegister;
     const screenTitle = canRegister ? "Sub-Dealers" : "Sub Dealer List";
+
+    const goBack = () => {
+        if (isAdminView) {
+            router.push("/dashboard");
+        } else {
+            router.push("/sub-dealer");
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            const onBackPress = () => {
+                goBack();
+                return true;
+            };
+
+            const subscription = BackHandler.addEventListener(
+                "hardwareBackPress",
+                onBackPress,
+            );
+
+            return () => subscription.remove();
+        }, [router, isAdminView]),
+    );
 
     const [activeTab, setActiveTab] = useState<"list" | "create">("list");
     const [editingDealer, setEditingDealer] = useState<SubDealer | null>(null);
@@ -390,9 +415,9 @@ export const SubDealerScreen = () => {
     return (
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
                         <View style={styles.header}>
-                <TouchableOpacity
+                                <TouchableOpacity
                     style={styles.backButton}
-                    onPress={() => (isAdminView ? router.back() : router.push("/sub-dealer"))}
+                    onPress={goBack}
                 >
                     <Feather name="arrow-left" size={24} color={colors.text} />
                 </TouchableOpacity>
