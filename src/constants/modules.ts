@@ -26,7 +26,12 @@ export type AppModuleName =
   | "Online Lead"
   | "Sales Manager Modules"
   | "Notifications"
-  | "User Management";
+  | "User Setup"
+  | "Admin Leads & Queries"
+  | "Admin Sales Screen"
+  | "Admin Sales Screen"
+  | "Admin Inventory"
+  | "Finances";
 
 export const MODULES: Record<AppModuleName, readonly UserRole[]> = {
   Tracker: ["None"],
@@ -52,9 +57,13 @@ export const MODULES: Record<AppModuleName, readonly UserRole[]> = {
   "Lead Query": ["Sales Manager", "Admin", "Super Admin"],
   "Sales Manager Modules": ["Sales Manager"],
   "Dealer Lead Query": ["Query Manager"],
-    "Online Lead": ["Query Manager", "Admin", "Super Admin"],
+  "Online Lead": ["Query Manager", "Admin", "Super Admin"],
   Notifications: ["Admin", "Super Admin"],
-  "User Management": ["Super Admin"],
+  "User Setup": ["Admin"],
+  "Admin Leads & Queries": ["Admin"],
+  "Admin Sales Screen": ["Admin"],
+  "Admin Inventory": ["Admin"],
+  Finances: ["Admin"],
 };
 
 export const hasModuleAccess = (
