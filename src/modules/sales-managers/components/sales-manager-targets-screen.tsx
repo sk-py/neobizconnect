@@ -58,7 +58,6 @@ export const SalesManagerTargetsScreen = () => {
   const [role, setRole] = useState<QuotaRole>("Dealer");
   const [filterYear, setFilterYear] = useState("2026-2027");
   const [isYearModalOpen, setIsYearModalOpen] = useState(false);
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
   // Search + pagination state (List tab)
   const [searchQuery, setSearchQuery] = useState("");
@@ -311,33 +310,40 @@ export const SalesManagerTargetsScreen = () => {
 
         {activeTab === "list" && (
           <>
-            <View style={styles.filterRow}>
-              <TouchableOpacity style={styles.filterPill} onPress={() => setIsYearModalOpen(true)}>
-                <Feather name="calendar" size={14} color={colors.text} />
-                <Text style={styles.filterPillText}>{filterYear}</Text>
-                <Feather name="chevron-down" size={14} color={colors.muted} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.filterPill} onPress={() => setIsRoleModalOpen(true)}>
-                <Feather name="users" size={14} color={colors.text} />
-                <Text style={styles.filterPillText}>{role}</Text>
-                <Feather name="chevron-down" size={14} color={colors.muted} />
+            <View style={styles.searchFilterRow}>
+              <View style={styles.searchContainer}>
+                <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search by name or code..."
+                  placeholderTextColor={colors.muted}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
+                    <Feather name="x-circle" size={16} color={colors.muted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <TouchableOpacity style={styles.calendarIconBtn} onPress={() => setIsYearModalOpen(true)}>
+                <Feather name="calendar" size={18} color={colors.text} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.searchContainer}>
-              <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search by name or code..."
-                placeholderTextColor={colors.muted}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
-                  <Feather name="x-circle" size={16} color={colors.muted} />
-                </TouchableOpacity>
-              )}
+            <View style={styles.roleFilterRow}>
+              {ROLES.map((r) => {
+                const active = role === r;
+                return (
+                  <TouchableOpacity
+                    key={r}
+                    style={[styles.roleFilterPill, active && styles.roleFilterPillActive]}
+                    onPress={() => setRole(r)}
+                  >
+                    <Text style={[styles.roleFilterPillText, active && styles.roleFilterPillTextActive]}>{r}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </>
         )}
@@ -421,28 +427,34 @@ export const SalesManagerTargetsScreen = () => {
           <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
             <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Role</Text>
-              <View style={styles.yearSelectorRow}>
-                {ROLES.map((r) => (
-                  <TouchableOpacity
-                    key={r}
-                    style={[styles.yearChip, role === r && styles.yearChipActive]}
-                    onPress={() => {
-                      setRole(r);
-                      setSelectedEntityCode(null);
-                    }}
-                  >
-                    <Text style={[styles.yearChipText, role === r && styles.yearChipTextActive]}>{r}</Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.roleFilterRow}>
+                {ROLES.map((r) => {
+                  const active = role === r;
+                  return (
+                    <TouchableOpacity
+                      key={r}
+                      style={[styles.roleFilterPill, active && styles.roleFilterPillActive]}
+                      onPress={() => {
+                        setRole(r);
+                        setSelectedEntityCode(null);
+                      }}
+                    >
+                      <Text style={[styles.roleFilterPillText, active && styles.roleFilterPillTextActive]}>{r}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
             <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Select {role}</Text>
               <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setIsEntityModalOpen(true)}>
-                <Text style={[styles.dropdownText, !selectedEntity && { color: colors.muted }]}>
-                  {selectedEntity ? `${selectedEntity.name} (${selectedEntity.code})` : `Select a ${role.toLowerCase()}`}
-                </Text>
+                <View style={styles.dropdownTriggerLeft}>
+                  <Feather name="user" size={15} color={colors.muted} />
+                  <Text style={[styles.dropdownText, !selectedEntity && { color: colors.muted }]}>
+                    {selectedEntity ? `${selectedEntity.name} (${selectedEntity.code})` : `Select a ${role.toLowerCase()}`}
+                  </Text>
+                </View>
                 <Feather name="chevron-down" size={18} color={colors.muted} />
               </TouchableOpacity>
             </View>
@@ -537,29 +549,6 @@ export const SalesManagerTargetsScreen = () => {
               ))}
             </View>
             <TouchableOpacity style={styles.applyBtn} onPress={() => setIsYearModalOpen(false)}>
-              <Text style={styles.submitBtnText}>Apply Filter</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Role Filter Modal */}
-      <Modal visible={isRoleModalOpen} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Filter by Role</Text>
-            <View style={styles.yearSelectorRow}>
-              {ROLES.map((r) => (
-                <TouchableOpacity
-                  key={r}
-                  style={[styles.yearChip, role === r && styles.yearChipActive]}
-                  onPress={() => setRole(r)}
-                >
-                  <Text style={[styles.yearChipText, role === r && styles.yearChipTextActive]}>{r}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity style={styles.applyBtn} onPress={() => setIsRoleModalOpen(false)}>
               <Text style={styles.submitBtnText}>Apply Filter</Text>
             </TouchableOpacity>
           </View>
@@ -700,14 +689,18 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 14, fontFamily: typography.medium, color: colors.muted },
   tabTextActive: { color: colors.primary, fontFamily: typography.bold },
 
-  filterRow: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
-  filterPill: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.white, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border },
-  filterPillText: { fontSize: 12, fontFamily: typography.medium, color: colors.text },
-
-  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 40, marginHorizontal: spacing.md },
+  searchFilterRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
+  searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 40 },
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 4 },
+  calendarIconBtn: { width: 40, height: 40, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, alignItems: "center", justifyContent: "center" },
+
+  roleFilterRow: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
+  roleFilterPill: { flex: 1, height: 36, borderRadius: radius.xl, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
+  roleFilterPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  roleFilterPillText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.textSecondary },
+  roleFilterPillTextActive: { color: colors.white, fontFamily: typography.bold },
 
   listContent: { padding: spacing.md, gap: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
@@ -729,7 +722,8 @@ const styles = StyleSheet.create({
   formGroup: { marginBottom: spacing.lg },
   inputLabel: { fontSize: 13, fontFamily: typography.bold, color: colors.text, marginBottom: 8 },
   dropdownTrigger: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: radius.sm },
-  dropdownText: { fontSize: 14, fontFamily: typography.medium, color: colors.text },
+  dropdownTriggerLeft: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
+  dropdownText: { fontSize: 14, fontFamily: typography.medium, color: colors.text, flexShrink: 1 },
 
   yearSelectorRow: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
   yearChip: { flex: 1, minWidth: 90, paddingVertical: 10, alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm },
