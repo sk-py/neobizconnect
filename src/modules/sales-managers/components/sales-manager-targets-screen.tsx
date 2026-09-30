@@ -1,4 +1,5 @@
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
+import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { fetchSalesManagers } from "@/modules/sales-managers/services/sales-managers.api";
 import {
   assignSalesQuota,
@@ -7,14 +8,14 @@ import {
 import {
   QUOTA_MONTHS,
   QuotaMonthName,
-  SalesManager,
+  QuotaRole,
   SalesQuotaListItem,
 } from "@/modules/sales-managers/types";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -31,7 +32,21 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const FINANCIAL_YEARS = ["2025-2026", "2026-2027", "2027-2028"];
-const ROLE = "Sales Manager" as const;
+const ROLES: QuotaRole[] = ["Dealer", "Sales Manager"];
+const PAGE_SIZE = 10;
+
+type EntityOption = { code: string; name: string };
+
+// "Effective From" is not part of the /List or /Add Sales Quota payloads.
+// It's derived for display only: the first month (in fiscal order) whose
+// target_quantity is greater than zero.
+const getEffectiveFrom = (item: SalesQuotaListItem): string => {
+  const firstFunded = QUOTA_MONTHS.find((month) => {
+    const detail = item.details.find((d) => d.month === month);
+    return (detail?.target_quantity ?? 0) > 0;
+  });
+  return firstFunded ?? "-";
+};
 
 export const SalesManagerTargetsScreen = () => {
   const router = useRouter();
@@ -40,16 +55,23 @@ export const SalesManagerTargetsScreen = () => {
 
   // UI state
   const [activeTab, setActiveTab] = useState<"list" | "assign">("list");
+  const [role, setRole] = useState<QuotaRole>("Dealer");
   const [filterYear, setFilterYear] = useState("2026-2027");
   const [isYearModalOpen, setIsYearModalOpen] = useState(false);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
-  // Form state
-  const [selectedManagerCode, setSelectedManagerCode] = useState<
-    string | null
-  >(null);
+  // Search + pagination state (List tab)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+
+  // View modal
+  const [viewingItem, setViewingItem] = useState<SalesQuotaListItem | null>(null);
+
+  // Form state (Create/Edit tab)
+  const [selectedEntityCode, setSelectedEntityCode] = useState<string | null>(null);
   const [formFinancialYear, setFormFinancialYear] = useState("2026-2027");
   const [monthValues, setMonthValues] = useState<Record<string, string>>({});
-  const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
+  const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
 
   // --- Queries ---
   const {
@@ -60,21 +82,66 @@ export const SalesManagerTargetsScreen = () => {
     isRefetching: listRefetching,
     refetch: refetchList,
   } = useQuery({
-    queryKey: ["sales-manager-quota", filterYear],
-    queryFn: () =>
-      fetchSalesQuotaList({ role: ROLE, financial_year: filterYear }),
+    queryKey: ["sales-quota", role, filterYear],
+    queryFn: () => fetchSalesQuotaList({ role, financial_year: filterYear }),
   });
 
   const { data: salesManagers = [] } = useQuery({
     queryKey: ["sales-managers"],
     queryFn: fetchSalesManagers,
-    enabled: activeTab === "assign",
+    enabled: activeTab === "assign" && role === "Sales Manager",
   });
+
+  const { data: dealers = [] } = useQuery({
+    queryKey: ["dealers"],
+    queryFn: fetchDealers,
+    enabled: activeTab === "assign" && role === "Dealer",
+  });
+
+  const entityOptions: EntityOption[] = useMemo(() => {
+    if (role === "Dealer") {
+      return dealers.map((d) => ({ code: d.cardCode, name: d.cardName }));
+    }
+    return salesManagers.map((m) => ({ code: m.salesEmployeeCode, name: m.salesEmployeeName }));
+  }, [role, dealers, salesManagers]);
+
+  // --- Search filtering (by name or code) ---
+  const filteredData = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return listData;
+    return listData.filter(
+      (item) =>
+        item.name?.toLowerCase().includes(query) ||
+        item.user_code?.toLowerCase().includes(query),
+    );
+  }, [listData, searchQuery]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery, filterYear, role]);
+
+  // --- Pagination ---
+  const totalItems = filteredData.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paginatedData = useMemo(() => {
+    const start = safePage * PAGE_SIZE;
+    return filteredData.slice(start, start + PAGE_SIZE);
+  }, [filteredData, safePage]);
+  const rangeStart = totalItems === 0 ? 0 : safePage * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(totalItems, (safePage + 1) * PAGE_SIZE);
+
+  // --- Stat cards ---
+  const totalCount = listData.length;
+  const totalQuantity = useMemo(
+    () => listData.reduce((sum, item) => sum + (item.annual_quantity || 0), 0),
+    [listData],
+  );
 
   // --- Mutations ---
   const assignMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedManagerCode) throw new Error("Select a Sales Manager");
+      if (!selectedEntityCode) throw new Error(`Select a ${role}`);
 
       const quantities = QUOTA_MONTHS.map(
         (month) => parseFloat(monthValues[month] || "0") || 0,
@@ -94,8 +161,8 @@ export const SalesManagerTargetsScreen = () => {
       });
 
       return assignSalesQuota({
-        role: ROLE,
-        user_code: selectedManagerCode,
+        role,
+        user_code: selectedEntityCode,
         financial_year: formFinancialYear,
         annual_target: 0,
         annual_quantity: annualQuantity,
@@ -103,12 +170,12 @@ export const SalesManagerTargetsScreen = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sales-manager-quota"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-quota"] });
       if (Platform.OS === "android")
         ToastAndroid.show("Target assigned successfully!", ToastAndroid.SHORT);
       setActiveTab("list");
       setMonthValues({});
-      setSelectedManagerCode(null);
+      setSelectedEntityCode(null);
     },
     onError: (err: any) => {
       if (Platform.OS === "android")
@@ -121,7 +188,7 @@ export const SalesManagerTargetsScreen = () => {
 
   // --- Handlers ---
   const handleEdit = (item: SalesQuotaListItem) => {
-    setSelectedManagerCode(item.user_code);
+    setSelectedEntityCode(item.user_code);
     setFormFinancialYear(item.financial_year);
 
     const newValues: Record<string, string> = {};
@@ -139,50 +206,49 @@ export const SalesManagerTargetsScreen = () => {
     }));
   };
 
-  const totalQuantity = QUOTA_MONTHS.reduce(
+  const totalFormQuantity = QUOTA_MONTHS.reduce(
     (acc, month) => acc + (parseFloat(monthValues[month] || "0") || 0),
     0,
   );
 
-  const selectedManagerObj = salesManagers.find(
-    (m) => m.salesEmployeeCode === selectedManagerCode,
-  );
+  const selectedEntity = entityOptions.find((e) => e.code === selectedEntityCode);
 
   const errorMessage =
     listError instanceof Error ? listError.message : "Something went wrong.";
 
   // --- Renders ---
-  const renderListCard = ({ item }: { item: SalesQuotaListItem }) => (
+  const renderListCard = ({ item, index }: { item: SalesQuotaListItem; index: number }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.managerName}>{item.name}</Text>
-          <Text style={styles.managerMeta}>Code: {item.user_code}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.srNo}>{safePage * PAGE_SIZE + index + 1}.</Text>
+            <Text style={styles.entityName}>{item.name}</Text>
+          </View>
+          <Text style={styles.entityMeta}>Code: {item.user_code}</Text>
         </View>
-        <TouchableOpacity style={styles.editBtn} onPress={() => handleEdit(item)}>
-          <Feather name="edit-2" size={14} color={colors.primary} />
-          <Text style={styles.editBtnText}>Edit</Text>
-        </TouchableOpacity>
+        <View style={styles.cardActions}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => setViewingItem(item)}>
+            <Feather name="eye" size={15} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => handleEdit(item)}>
+            <Feather name="edit-2" size={15} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.totalsRow}>
         <View style={styles.totalCol}>
-          <Text style={styles.totalLabel}>Annual Target</Text>
-          <Text style={styles.totalValue}>
-            {item.annual_target.toLocaleString()}
-          </Text>
+          <Text style={styles.totalLabel}>Financial Year</Text>
+          <Text style={styles.totalValue}>{item.financial_year}</Text>
         </View>
         <View style={styles.totalDivider} />
         <View style={styles.totalCol}>
-          <Text style={styles.totalLabel}>Annual Quantity</Text>
+          <Text style={styles.totalLabel}>Net Quantity</Text>
           <Text style={styles.totalValue}>
             {item.annual_quantity.toLocaleString()}
           </Text>
         </View>
-      </View>
-
-      <View style={styles.cardFooter}>
-        <Text style={styles.yearBadge}>{item.financial_year}</Text>
       </View>
     </View>
   );
@@ -190,62 +256,95 @@ export const SalesManagerTargetsScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Feather name="arrow-left" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Sales Manager Targets</Text>
-      </View>
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Feather name="arrow-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>Sales Target</Text>
+            <Text style={styles.headerSubtitle}>Here is a list of sales targets</Text>
+          </View>
+        </View>
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tabBtn, activeTab === "list" && styles.tabBtnActive]}
-          onPress={() => setActiveTab("list")}
-        >
-          <Feather
-            name="list"
-            size={16}
-            color={activeTab === "list" ? colors.primary : colors.muted}
-          />
-          <Text
-            style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}
+        {/* Stat cards */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <View>
+              <Text style={styles.statLabel}>Total {role === "Dealer" ? "Dealers" : "Sales Managers"}</Text>
+              <Text style={styles.statValue}>{totalCount}</Text>
+            </View>
+            <View style={styles.statIconCircle}>
+              <Feather name="users" size={16} color={colors.primary} />
+            </View>
+          </View>
+          <View style={styles.statCard}>
+            <View>
+              <Text style={styles.statLabel}>{role} Quantity</Text>
+              <Text style={styles.statValue}>{totalQuantity.toLocaleString()}</Text>
+            </View>
+            <View style={styles.statIconCircle}>
+              <Feather name="box" size={16} color={colors.primary} />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === "list" && styles.tabBtnActive]}
+            onPress={() => setActiveTab("list")}
           >
-            Overview
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabBtn, activeTab === "assign" && styles.tabBtnActive]}
-          onPress={() => {
-            setActiveTab("assign");
-            setMonthValues({});
-            setSelectedManagerCode(null);
-          }}
-        >
-          <Feather
-            name="target"
-            size={16}
-            color={activeTab === "assign" ? colors.primary : colors.muted}
-          />
-          <Text
-            style={[styles.tabText, activeTab === "assign" && styles.tabTextActive]}
+            <Feather name="list" size={16} color={activeTab === "list" ? colors.primary : colors.muted} />
+            <Text style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}>List</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === "assign" && styles.tabBtnActive]}
+            onPress={() => {
+              setActiveTab("assign");
+              setMonthValues({});
+              setSelectedEntityCode(null);
+            }}
           >
-            Assign Target
-          </Text>
-        </TouchableOpacity>
+            <Feather name="plus-circle" size={16} color={activeTab === "assign" ? colors.primary : colors.muted} />
+            <Text style={[styles.tabText, activeTab === "assign" && styles.tabTextActive]}>Create</Text>
+          </TouchableOpacity>
+        </View>
+
+        {activeTab === "list" && (
+          <>
+            <View style={styles.filterRow}>
+              <TouchableOpacity style={styles.filterPill} onPress={() => setIsYearModalOpen(true)}>
+                <Feather name="calendar" size={14} color={colors.text} />
+                <Text style={styles.filterPillText}>{filterYear}</Text>
+                <Feather name="chevron-down" size={14} color={colors.muted} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.filterPill} onPress={() => setIsRoleModalOpen(true)}>
+                <Feather name="users" size={14} color={colors.text} />
+                <Text style={styles.filterPillText}>{role}</Text>
+                <Feather name="chevron-down" size={14} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.searchContainer}>
+              <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by name or code..."
+                placeholderTextColor={colors.muted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
+                  <Feather name="x-circle" size={16} color={colors.muted} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        )}
       </View>
 
       {activeTab === "list" ? (
         <>
-          <View style={styles.filterBar}>
-            <TouchableOpacity
-              style={styles.filterPill}
-              onPress={() => setIsYearModalOpen(true)}
-            >
-              <Feather name="calendar" size={14} color={colors.text} />
-              <Text style={styles.filterPillText}>{filterYear}</Text>
-              <Feather name="chevron-down" size={14} color={colors.muted} />
-            </TouchableOpacity>
-          </View>
-
           {listLoading ? (
             <View style={styles.centerBox}>
               <ActivityIndicator size="large" color={colors.primary} />
@@ -259,47 +358,90 @@ export const SalesManagerTargetsScreen = () => {
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
-          ) : listData.length === 0 ? (
+          ) : filteredData.length === 0 ? (
             <View style={styles.centerBox}>
               <Feather name="pie-chart" size={48} color={colors.muted} />
               <Text style={styles.emptyTitle}>No targets found</Text>
             </View>
           ) : (
-            <LegendList
-              data={listData}
-              keyExtractor={(item) => item.user_code}
-              estimatedItemSize={140}
-              renderItem={renderListCard}
-              contentContainerStyle={styles.listContent}
-              onRefresh={refetchList}
-              refreshing={listRefetching}
-            />
+            <>
+              <LegendList
+                data={paginatedData}
+                keyExtractor={(item) => item.user_code}
+                estimatedItemSize={140}
+                renderItem={renderListCard}
+                contentContainerStyle={styles.listContent}
+                onRefresh={refetchList}
+                refreshing={listRefetching}
+              />
+
+              <View style={styles.paginationBar}>
+                <Text style={styles.paginationText}>
+                  {rangeStart}-{rangeEnd} of {totalItems}
+                </Text>
+                <View style={styles.paginationControls}>
+                  <TouchableOpacity
+                    style={[styles.pageBtn, safePage === 0 && styles.pageBtnDisabled]}
+                    onPress={() => setPage(0)}
+                    disabled={safePage === 0}
+                  >
+                    <Feather name="chevrons-left" size={15} color={safePage === 0 ? colors.muted : colors.text} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.pageBtn, safePage === 0 && styles.pageBtnDisabled]}
+                    onPress={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={safePage === 0}
+                  >
+                    <Feather name="chevron-left" size={15} color={safePage === 0 ? colors.muted : colors.text} />
+                  </TouchableOpacity>
+                  <Text style={styles.pageIndicator}>
+                    {safePage + 1} / {totalPages}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.pageBtn, safePage >= totalPages - 1 && styles.pageBtnDisabled]}
+                    onPress={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={safePage >= totalPages - 1}
+                  >
+                    <Feather name="chevron-right" size={15} color={safePage >= totalPages - 1 ? colors.muted : colors.text} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.pageBtn, safePage >= totalPages - 1 && styles.pageBtnDisabled]}
+                    onPress={() => setPage(totalPages - 1)}
+                    disabled={safePage >= totalPages - 1}
+                  >
+                    <Feather name="chevrons-right" size={15} color={safePage >= totalPages - 1 ? colors.muted : colors.text} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </>
           )}
         </>
       ) : (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={{ flex: 1 }}
-        >
-          <ScrollView
-            contentContainerStyle={styles.formContainer}
-            keyboardShouldPersistTaps="handled"
-          >
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
             <View style={styles.formGroup}>
-              <Text style={styles.inputLabel}>Select Sales Manager</Text>
-              <TouchableOpacity
-                style={styles.dropdownTrigger}
-                onPress={() => setIsManagerModalOpen(true)}
-              >
-                <Text
-                  style={[
-                    styles.dropdownText,
-                    !selectedManagerObj && { color: colors.muted },
-                  ]}
-                >
-                  {selectedManagerObj
-                    ? `${selectedManagerObj.salesEmployeeName} (${selectedManagerObj.salesEmployeeCode})`
-                    : "Select a sales manager"}
+              <Text style={styles.inputLabel}>Role</Text>
+              <View style={styles.yearSelectorRow}>
+                {ROLES.map((r) => (
+                  <TouchableOpacity
+                    key={r}
+                    style={[styles.yearChip, role === r && styles.yearChipActive]}
+                    onPress={() => {
+                      setRole(r);
+                      setSelectedEntityCode(null);
+                    }}
+                  >
+                    <Text style={[styles.yearChipText, role === r && styles.yearChipTextActive]}>{r}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.inputLabel}>Select {role}</Text>
+              <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setIsEntityModalOpen(true)}>
+                <Text style={[styles.dropdownText, !selectedEntity && { color: colors.muted }]}>
+                  {selectedEntity ? `${selectedEntity.name} (${selectedEntity.code})` : `Select a ${role.toLowerCase()}`}
                 </Text>
                 <Feather name="chevron-down" size={18} color={colors.muted} />
               </TouchableOpacity>
@@ -311,20 +453,10 @@ export const SalesManagerTargetsScreen = () => {
                 {FINANCIAL_YEARS.map((yr) => (
                   <TouchableOpacity
                     key={yr}
-                    style={[
-                      styles.yearChip,
-                      formFinancialYear === yr && styles.yearChipActive,
-                    ]}
+                    style={[styles.yearChip, formFinancialYear === yr && styles.yearChipActive]}
                     onPress={() => setFormFinancialYear(yr)}
                   >
-                    <Text
-                      style={[
-                        styles.yearChipText,
-                        formFinancialYear === yr && styles.yearChipTextActive,
-                      ]}
-                    >
-                      {yr}
-                    </Text>
+                    <Text style={[styles.yearChipText, formFinancialYear === yr && styles.yearChipTextActive]}>{yr}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -332,13 +464,27 @@ export const SalesManagerTargetsScreen = () => {
 
             <View style={styles.targetGrid}>
               <View style={styles.targetGridHeader}>
-                <Text style={styles.gridHeaderLeft}>Month</Text>
-                <Text style={styles.gridHeaderRight}>Sales Quantity</Text>
+                <View style={styles.gridHeaderLabel}>
+                  <Feather name="calendar" size={13} color="#1E3A8A" />
+                  <Text style={styles.gridHeaderLeft}>Month</Text>
+                </View>
+                <View style={styles.gridHeaderLabel}>
+                  <Feather name="box" size={13} color="#1E3A8A" />
+                  <Text style={styles.gridHeaderRight}>Sales Quantity</Text>
+                </View>
               </View>
 
               {QUOTA_MONTHS.map((month: QuotaMonthName) => (
                 <View key={month} style={styles.targetRow}>
-                  <Text style={styles.targetMonthLabel}>{month}</Text>
+                  <View style={styles.targetMonthLeft}>
+                    <View style={styles.monthIconCircle}>
+                      <Feather name="calendar" size={14} color={colors.primary} />
+                    </View>
+                    <View>
+                      <Text style={styles.targetMonthLabel}>{month}</Text>
+                      <Text style={styles.editableTag}>Editable</Text>
+                    </View>
+                  </View>
                   <TextInput
                     style={styles.targetInput}
                     placeholder="0"
@@ -352,31 +498,22 @@ export const SalesManagerTargetsScreen = () => {
             </View>
           </ScrollView>
 
-          <View
-            style={[
-              styles.formFooter,
-              { paddingBottom: Math.max(spacing.md, insets.bottom) },
-            ]}
-          >
+          <View style={[styles.formFooter, { paddingBottom: Math.max(spacing.md, insets.bottom) }]}>
             <View style={styles.totalBlock}>
-              <Text style={styles.totalFooterLabel}>Total Quantity</Text>
+              <Text style={styles.totalFooterLabel}>Net Quantity</Text>
               <Text style={styles.totalFooterValue} numberOfLines={1} adjustsFontSizeToFit>
-                {totalQuantity.toLocaleString()}
+                {totalFormQuantity.toLocaleString()}
               </Text>
             </View>
             <TouchableOpacity
-              style={[
-                styles.submitBtn,
-                (assignMutation.isPending || !selectedManagerCode) &&
-                  styles.submitBtnDisabled,
-              ]}
+              style={[styles.submitBtn, (assignMutation.isPending || !selectedEntityCode) && styles.submitBtnDisabled]}
               onPress={() => assignMutation.mutate()}
-              disabled={assignMutation.isPending || !selectedManagerCode}
+              disabled={assignMutation.isPending || !selectedEntityCode}
             >
               {assignMutation.isPending ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.submitBtnText}>Submit Target</Text>
+                <Text style={styles.submitBtnText}>Update</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -395,57 +532,147 @@ export const SalesManagerTargetsScreen = () => {
                   style={[styles.yearChip, filterYear === yr && styles.yearChipActive]}
                   onPress={() => setFilterYear(yr)}
                 >
-                  <Text
-                    style={[
-                      styles.yearChipText,
-                      filterYear === yr && styles.yearChipTextActive,
-                    ]}
-                  >
-                    {yr}
-                  </Text>
+                  <Text style={[styles.yearChipText, filterYear === yr && styles.yearChipTextActive]}>{yr}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-
-            <TouchableOpacity
-              style={styles.applyBtn}
-              onPress={() => setIsYearModalOpen(false)}
-            >
+            <TouchableOpacity style={styles.applyBtn} onPress={() => setIsYearModalOpen(false)}>
               <Text style={styles.submitBtnText}>Apply Filter</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Sales Manager Selector Modal */}
-      <Modal visible={isManagerModalOpen} animationType="slide" presentationStyle="pageSheet">
+      {/* Role Filter Modal */}
+      <Modal visible={isRoleModalOpen} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Filter by Role</Text>
+            <View style={styles.yearSelectorRow}>
+              {ROLES.map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.yearChip, role === r && styles.yearChipActive]}
+                  onPress={() => setRole(r)}
+                >
+                  <Text style={[styles.yearChipText, role === r && styles.yearChipTextActive]}>{r}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.applyBtn} onPress={() => setIsRoleModalOpen(false)}>
+              <Text style={styles.submitBtnText}>Apply Filter</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Entity Selector Modal */}
+      <Modal visible={isEntityModalOpen} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.managerModalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Sales Manager</Text>
-            <TouchableOpacity onPress={() => setIsManagerModalOpen(false)}>
+            <Text style={styles.modalTitle}>Select {role}</Text>
+            <TouchableOpacity onPress={() => setIsEntityModalOpen(false)}>
               <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ padding: spacing.md }}>
-            {salesManagers.map((manager: SalesManager) => (
+            {entityOptions.map((entity) => (
               <TouchableOpacity
-                key={manager.salesEmployeeCode}
+                key={entity.code}
                 style={styles.managerSelectRow}
                 onPress={() => {
-                  setSelectedManagerCode(manager.salesEmployeeCode);
-                  setIsManagerModalOpen(false);
+                  setSelectedEntityCode(entity.code);
+                  setIsEntityModalOpen(false);
                 }}
               >
-                <Text style={styles.managerSelectName}>
-                  {manager.salesEmployeeName}
-                </Text>
-                <Text style={styles.managerSelectCode}>
-                  {manager.salesEmployeeCode}
-                </Text>
+                <Text style={styles.managerSelectName}>{entity.name}</Text>
+                <Text style={styles.managerSelectCode}>{entity.code}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </SafeAreaView>
+      </Modal>
+
+      {/* View Modal */}
+      <Modal visible={Boolean(viewingItem)} transparent animationType="fade" onRequestClose={() => setViewingItem(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxHeight: "80%" }]}>
+            <View style={styles.viewModalHeader}>
+              <View style={styles.viewModalHeaderLeft}>
+                <View style={styles.viewModalIconCircle}>
+                  <Feather name="eye" size={16} color={colors.white} />
+                </View>
+                <Text style={styles.modalTitle}>View Sales Target</Text>
+              </View>
+              <TouchableOpacity onPress={() => setViewingItem(null)}>
+                <Feather name="x" size={22} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {viewingItem && (
+              <>
+                <View style={styles.viewInfoGrid}>
+                  <View style={styles.viewInfoBlock}>
+                    <Text style={styles.viewInfoLabel}>Name</Text>
+                    <Text style={styles.viewInfoValue}>{viewingItem.name}</Text>
+                  </View>
+                  <View style={styles.viewInfoBlock}>
+                    <Text style={styles.viewInfoLabel}>Sales Manager</Text>
+                    <Text style={styles.viewInfoValue}>{viewingItem.sales_manager || "-"}</Text>
+                  </View>
+                  <View style={styles.viewInfoBlock}>
+                    <Text style={styles.viewInfoLabel}>Designation</Text>
+                    <Text style={styles.viewInfoValue}>{viewingItem.role}</Text>
+                  </View>
+                  <View style={styles.viewInfoBlock}>
+                    <Text style={styles.viewInfoLabel}>Financial Year</Text>
+                    <Text style={styles.viewInfoValue}>{viewingItem.financial_year}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.viewSummaryRow}>
+                  <View style={styles.viewSummaryBox}>
+                    <View>
+                      <Text style={styles.viewInfoLabel}>Net Quantity</Text>
+                      <Text style={styles.viewSummaryValue}>{viewingItem.annual_quantity.toLocaleString()}</Text>
+                    </View>
+                    <View style={styles.summaryIconCircle}>
+                      <Feather name="box" size={16} color={colors.primary} />
+                    </View>
+                  </View>
+                  <View style={styles.viewSummaryBox}>
+                    <View>
+                      <Text style={styles.viewInfoLabel}>Effective From</Text>
+                      <Text style={styles.viewSummaryValue}>{getEffectiveFrom(viewingItem).toUpperCase()}</Text>
+                    </View>
+                    <View style={styles.summaryIconCircle}>
+                      <Feather name="calendar" size={16} color={colors.primary} />
+                    </View>
+                  </View>
+                </View>
+
+                <ScrollView style={{ maxHeight: 320, marginTop: spacing.sm }}>
+                  <View style={styles.monthHeaderRow}>
+                    <View style={styles.monthHeaderLabel}>
+                      <Feather name="calendar" size={13} color={colors.text} />
+                      <Text style={styles.monthHeaderText}>Month</Text>
+                    </View>
+                    <View style={styles.monthHeaderLabel}>
+                      <Feather name="box" size={13} color={colors.text} />
+                      <Text style={styles.monthHeaderText}>Quantity</Text>
+                    </View>
+                  </View>
+                  {viewingItem.details.map((d) => (
+                    <View key={d.month} style={styles.monthRow}>
+                      <Text style={styles.monthName}>{d.month.toUpperCase()}</Text>
+                      <Text style={styles.monthQty}>{(d.target_quantity ?? 0).toLocaleString()}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -455,36 +682,48 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
   centerBox: { flex: 1, justifyContent: "center", alignItems: "center", gap: 6, paddingHorizontal: spacing.xl },
 
-  header: { flexDirection: "row", alignItems: "center", padding: spacing.md, backgroundColor: colors.white },
+  header: { backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: spacing.sm },
+  headerTopRow: { flexDirection: "row", alignItems: "center", padding: spacing.md, paddingBottom: spacing.sm },
   backButton: { padding: 4, marginRight: spacing.sm },
   headerTitle: { fontSize: 20, fontFamily: typography.bold, color: colors.text },
+  headerSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
 
-  tabContainer: { flexDirection: "row", backgroundColor: colors.surface, padding: spacing.sm, marginHorizontal: spacing.md, borderRadius: radius.md, marginTop: spacing.sm, marginBottom: spacing.sm },
+  statsRow: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
+  statCard: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm },
+  statLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  statValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginTop: 2 },
+  statIconCircle: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+
+  tabContainer: { flexDirection: "row", backgroundColor: colors.surface, padding: spacing.sm, marginHorizontal: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
   tabBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 10, borderRadius: radius.sm },
   tabBtnActive: { backgroundColor: colors.white, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
   tabText: { fontSize: 14, fontFamily: typography.medium, color: colors.muted },
   tabTextActive: { color: colors.primary, fontFamily: typography.bold },
 
-  filterBar: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm, flexDirection: "row" },
-  filterPill: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.white, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border },
+  filterRow: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
+  filterPill: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.white, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border },
   filterPillText: { fontSize: 12, fontFamily: typography.medium, color: colors.text },
+
+  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 40, marginHorizontal: spacing.md },
+  searchIcon: { marginRight: 6 },
+  searchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
+  clearSearchBtn: { padding: 4 },
 
   listContent: { padding: spacing.md, gap: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.surface },
-  managerName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 2 },
-  managerMeta: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
-  editBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#EFF6FF", paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.xl },
-  editBtnText: { fontSize: 12, fontFamily: typography.bold, color: colors.primary },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  srNo: { fontSize: 12, fontFamily: typography.medium, color: colors.muted },
+  entityName: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
+  entityMeta: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
+  cardActions: { flexDirection: "row", gap: 8 },
+  iconBtn: { width: 32, height: 32, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: "#EFF6FF" },
 
   totalsRow: { flexDirection: "row", backgroundColor: "#F8FAFC", padding: spacing.sm },
   totalCol: { flex: 1, alignItems: "center" },
   totalDivider: { width: 1, backgroundColor: colors.border, marginVertical: 4 },
   totalLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginBottom: 4 },
   totalValue: { fontSize: 14, fontFamily: typography.bold, color: colors.text },
-
-  cardFooter: { padding: spacing.sm, alignItems: "flex-end", backgroundColor: colors.white, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
-  yearBadge: { fontSize: 11, fontFamily: typography.bold, color: colors.muted, backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
 
   formContainer: { padding: spacing.md },
   formGroup: { marginBottom: spacing.lg },
@@ -499,9 +738,13 @@ const styles = StyleSheet.create({
   yearChipTextActive: { color: colors.white, fontFamily: typography.bold },
 
   targetGrid: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, overflow: "hidden", marginBottom: spacing.xxl },
-  targetGridHeader: { flexDirection: "row", backgroundColor: "#DBEAFE", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-  gridHeaderLeft: { flex: 1, fontSize: 12, fontFamily: typography.bold, color: "#1E3A8A" },
-  gridHeaderRight: { flex: 1, fontSize: 12, fontFamily: typography.bold, color: "#1E3A8A", textAlign: "right" },
+  targetGridHeader: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "#DBEAFE", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  gridHeaderLabel: { flexDirection: "row", alignItems: "center", gap: 6 },
+  gridHeaderLeft: { fontSize: 12, fontFamily: typography.bold, color: "#1E3A8A" },
+  gridHeaderRight: { fontSize: 12, fontFamily: typography.bold, color: "#1E3A8A", textAlign: "right" },
+  targetMonthLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  monthIconCircle: { width: 28, height: 28, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+  editableTag: { fontSize: 10, fontFamily: typography.semibold, color: "#16A34A", marginTop: 1 },
   emptyTitle: { fontFamily: typography.bold, fontSize: 16, color: colors.muted, marginTop: spacing.md },
   errorSubtitle: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, textAlign: "center" },
 
@@ -530,4 +773,31 @@ const styles = StyleSheet.create({
   managerSelectRow: { padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, borderRadius: radius.sm, marginBottom: spacing.sm },
   managerSelectName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 4 },
   managerSelectCode: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
+
+  paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.white },
+  paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pageBtn: { width: 28, height: 28, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+  pageBtnDisabled: { opacity: 0.5 },
+  pageIndicator: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text, minWidth: 36, textAlign: "center" },
+
+  viewModalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md },
+  viewModalHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+  viewModalIconCircle: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  viewInfoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: spacing.sm },
+  viewInfoBlock: { minWidth: "45%" },
+  viewInfoLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginBottom: 2 },
+  viewInfoValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
+
+  viewSummaryRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
+  viewSummaryBox: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F8FAFC", borderRadius: radius.md, padding: spacing.sm },
+  viewSummaryValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginTop: 2 },
+  summaryIconCircle: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+
+  monthHeaderRow: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "#EFF6FF", paddingHorizontal: spacing.sm, paddingVertical: 8, borderRadius: radius.sm, marginBottom: 4 },
+  monthHeaderLabel: { flexDirection: "row", alignItems: "center", gap: 6 },
+  monthHeaderText: { fontSize: txtSize.xs, fontFamily: typography.bold, color: colors.text },
+  monthRow: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: spacing.sm, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
+  monthName: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text },
+  monthQty: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
 });
