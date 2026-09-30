@@ -142,13 +142,25 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-                                <Tabs.Protected guard={canAccess("Finances")}>
+                                                <Tabs.Protected guard={canAccess("Finances")}>
                     <Tabs.Screen
                         name='finances'
                         options={{
                             title: "Finances",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='dollar-sign' size={size} color={color} />
+                            ),
+                            href: null
+                        }}
+                    />
+                </Tabs.Protected>
+                <Tabs.Protected guard={canAccess("Sales Target")}>
+                    <Tabs.Screen
+                        name='sales-target'
+                        options={{
+                            title: "Sales Target",
+                            tabBarIcon: ({ color, size }) => (
+                                <Feather name='target' size={size} color={color} />
                             ),
                             href: null
                         }}

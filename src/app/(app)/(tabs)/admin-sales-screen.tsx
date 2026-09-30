@@ -8,12 +8,12 @@ export const SalesIndexScreen = () => {
     const router = useRouter();
 
         const MENU_OPTIONS = [
-                {
+                        {
             id: "sales-target",
             title: "Sales Target",
-            description: "Coming soon.",
+            description: "Monitor and set regional or dealer targets.",
             icon: "target",
-            route: null,
+            route: "/sales-target",
             iconColor: "#E11D48", // Rose
             iconBg: "#FFF1F2"
         },
