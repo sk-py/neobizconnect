@@ -7,9 +7,9 @@ import { ItemMasterBrand, ItemMasterEntry } from "@/modules/item-master/types";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { BackHandler, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const BRANDS: { label: string; value: ItemMasterBrand }[] = [
@@ -37,6 +37,30 @@ export default function ItemMasterScreen() {
   const { user } = useAuth();
   const canSeeExtraDetails =
     user?.authority === "Admin" || user?.authority === "Super Admin";
+
+  const goBack = () => {
+    if (canSeeExtraDetails) {
+      router.push("/dashboard");
+    } else {
+      router.push("/sales-manager-modules");
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        goBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [router, canSeeExtraDetails]),
+  );
 
     const [brand, setBrand] = useState<ItemMasterBrand>("NEO");
   const [page, setPage] = useState(0);
@@ -195,9 +219,20 @@ export default function ItemMasterScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <View style={styles.titleRow2}>
-          <Text style={styles.headerTitle}>Inventory</Text>
-          <Text style={styles.headerSubtitle}>View your stock levels and inventory details</Text>
+                <View style={styles.titleRow2}>
+          <View style={styles.titleRowHeader}>
+            <TouchableOpacity
+              onPress={goBack}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.backButton}
+            >
+              <Feather name="arrow-left" size={20} color={colors.text} />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle}>Inventory</Text>
+              <Text style={styles.headerSubtitle}>View your stock levels and inventory details</Text>
+            </View>
+          </View>
         </View>
 
                <View style={styles.searchFilterRow}>
@@ -313,7 +348,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2
   },
-  titleRow2: { flexDirection: "column", alignItems: "flex-start", marginBottom: 8 },
+    titleRow2: { flexDirection: "column", alignItems: "flex-start", marginBottom: 8 },
+  titleRowHeader: { flexDirection: "row", alignItems: "center", width: "100%" },
+  backButton: { marginRight: spacing.sm },
     controlsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   searchFilterRow: { flexDirection: "row", alignItems: "stretch", gap: 10, marginBottom: 10 },
       brandRow: { flexDirection: "row", gap: 8, marginTop: 4 },

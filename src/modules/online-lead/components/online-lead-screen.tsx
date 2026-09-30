@@ -21,10 +21,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "expo-router";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
+import { useFocusEffect } from "expo-router";
 import { LegendList } from "@legendapp/list/react-native";
 import { SkeletonList } from "@/components/custom/skeleton";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
+  BackHandler,
   Linking,
   Modal,
   Pressable,
@@ -66,7 +68,31 @@ export default function OnlineLeadScreen() {
 
       const [reassignName, setReassignName] = useState("");
 
-  const isAdminUser = user?.authority === "Admin" || user?.authority === "Super Admin";
+    const isAdminUser = user?.authority === "Admin" || user?.authority === "Super Admin";
+
+  const goBack = () => {
+    if (isAdminUser) {
+      router.push("/dashboard");
+    } else {
+      router.push("/sales-manager-modules");
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        goBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [router, isAdminUser]),
+  );
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["online-leads"],
@@ -309,7 +335,14 @@ export default function OnlineLeadScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
+                <View style={styles.titleRow}>
+          <TouchableOpacity
+            onPress={goBack}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.backButton}
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+          </TouchableOpacity>
           <Text style={styles.title}>Online Lead</Text>
           <View style={{ flex: 1 }} />
                     {!isAdminUser && (
@@ -685,7 +718,8 @@ const styles = StyleSheet.create({
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
-  title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
+   title: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
+  backButton: { marginRight: spacing.sm },
   createBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm },
   createBtnText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.white },
 

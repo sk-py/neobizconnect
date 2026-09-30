@@ -18,6 +18,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -31,19 +32,39 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+const SCREEN_HEIGHT = Dimensions.get("window").height;
+
 const FINANCIAL_YEARS = ["2025-2026", "2026-2027", "2027-2028"];
 const ROLES: QuotaRole[] = ["Dealer", "Sales Manager"];
 const PAGE_SIZE = 10;
 
-type EntityOption = { code: string; name: string };
+type EntityOption = { code: string; name: string; salesManager?: string };
 
-// "Effective From" is not part of the /List or /Add Sales Quota payloads.
-// It's derived for display only: the first month (in fiscal order) whose
-// target_quantity is greater than zero.
+const FY_MONTH_OFFSET: Record<string, number> = {
+  April: 0, May: 1, June: 2, July: 3, August: 4, September: 5,
+  October: 6, November: 7, December: 8, January: 9, February: 10, March: 11,
+};
+
+const getMonthDate = (financialYear: string, month: string): Date | null => {
+  const startYear = parseInt(financialYear.split("-")[0], 10);
+  const offset = FY_MONTH_OFFSET[month];
+  if (isNaN(startYear) || offset === undefined) return null;
+  const calendarMonth = (3 + offset) % 12; // April = 3 (0-indexed)
+  const calendarYear = offset <= 8 ? startYear : startYear + 1; // Jan-Mar roll into next year
+  return new Date(calendarYear, calendarMonth, 1);
+};
+
+const isMonthPassed = (financialYear: string, month: string): boolean => {
+  const monthDate = getMonthDate(financialYear, month);
+  if (!monthDate) return false;
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  return monthDate.getTime() < currentMonthStart.getTime();
+};
 const getEffectiveFrom = (item: SalesQuotaListItem): string => {
   const firstFunded = QUOTA_MONTHS.find((month) => {
     const detail = item.details.find((d) => d.month === month);
-    return (detail?.target_quantity ?? 0) > 0;
+        return (detail?.target_quantity ?? detail?.quantity ?? 0) > 0;
   });
   return firstFunded ?? "-";
 };
@@ -67,11 +88,16 @@ export const SalesManagerTargetsScreen = () => {
   // View modal
   const [viewingItem, setViewingItem] = useState<SalesQuotaListItem | null>(null);
 
-  // Form state (Create/Edit tab)
+    // Form state (Create/Edit tab)
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [selectedEntityCode, setSelectedEntityCode] = useState<string | null>(null);
   const [formFinancialYear, setFormFinancialYear] = useState("2026-2027");
   const [monthValues, setMonthValues] = useState<Record<string, string>>({});
   const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
+  const [entitySearchQuery, setEntitySearchQuery] = useState("");
+  const [effectiveFromMonth, setEffectiveFromMonth] = useState<QuotaMonthName | null>(null);
+  const [isEffectiveMonthModalOpen, setIsEffectiveMonthModalOpen] = useState(false);
+  const [netQuantityInput, setNetQuantityInput] = useState("");
 
   // --- Queries ---
   const {
@@ -98,12 +124,33 @@ export const SalesManagerTargetsScreen = () => {
     enabled: activeTab === "assign" && role === "Dealer",
   });
 
-  const entityOptions: EntityOption[] = useMemo(() => {
+    const entityOptions: EntityOption[] = useMemo(() => {
     if (role === "Dealer") {
-      return dealers.map((d) => ({ code: d.cardCode, name: d.cardName }));
+      return dealers.map((d) => ({ code: d.cardCode, name: d.cardName, salesManager: d.salesManager }));
     }
     return salesManagers.map((m) => ({ code: m.salesEmployeeCode, name: m.salesEmployeeName }));
   }, [role, dealers, salesManagers]);
+
+  const filteredEntityOptions = useMemo(() => {
+    const query = entitySearchQuery.trim().toLowerCase();
+    if (!query) return entityOptions;
+    return entityOptions.filter(
+      (e) => e.name.toLowerCase().includes(query) || e.code.toLowerCase().includes(query),
+    );
+  }, [entityOptions, entitySearchQuery]);
+
+  // Create mode: a month is locked unless it's the chosen "Effective From" month
+  // (the Net Quantity typed by the user is assigned only to that month).
+  // Edit mode: a month is locked once its date has already passed.
+  const isMonthLocked = (month: QuotaMonthName): boolean => {
+    if (formMode === "edit") return isMonthPassed(formFinancialYear, month);
+    return month !== effectiveFromMonth;
+  };
+
+  useEffect(() => {
+    if (formMode !== "create" || !effectiveFromMonth) return;
+    setMonthValues((prev) => ({ ...prev, [effectiveFromMonth]: netQuantityInput }));
+  }, [netQuantityInput, effectiveFromMonth, formMode]);
 
   // --- Search filtering (by name or code) ---
   const filteredData = useMemo(() => {
@@ -187,13 +234,15 @@ export const SalesManagerTargetsScreen = () => {
   });
 
   // --- Handlers ---
-  const handleEdit = (item: SalesQuotaListItem) => {
+    const handleEdit = (item: SalesQuotaListItem) => {
+    setFormMode("edit");
+    setRole(item.role);
     setSelectedEntityCode(item.user_code);
     setFormFinancialYear(item.financial_year);
 
     const newValues: Record<string, string> = {};
     item.details.forEach((detail) => {
-      newValues[detail.month] = String(detail.target_quantity ?? 0);
+            newValues[detail.month] = String(detail.target_quantity ?? detail.quantity ?? 0);
     });
     setMonthValues(newValues);
     setActiveTab("assign");
@@ -257,7 +306,7 @@ export const SalesManagerTargetsScreen = () => {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.push("/sales-managers")}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
@@ -298,10 +347,14 @@ export const SalesManagerTargetsScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === "assign" && styles.tabBtnActive]}
-                        onPress={() => {
+                                    onPress={() => {
               setActiveTab("assign");
+              setFormMode("create");
               setRole("Dealer");
               setFormFinancialYear("2026-2027");
+              setEffectiveFromMonth(null);
+              setNetQuantityInput("");
+              setEntitySearchQuery("");
               setMonthValues({});
               setSelectedEntityCode(null);
             }}
@@ -445,9 +498,10 @@ export const SalesManagerTargetsScreen = () => {
                     <TouchableOpacity
                       key={r}
                       style={[styles.roleFilterPill, active && styles.roleFilterPillActive]}
-                      onPress={() => {
+                                            onPress={() => {
                         setRole(r);
                         setSelectedEntityCode(null);
+                        setEntitySearchQuery("");
                       }}
                     >
                       <Text style={[styles.roleFilterPillText, active && styles.roleFilterPillTextActive]}>{r}</Text>
@@ -466,11 +520,23 @@ export const SalesManagerTargetsScreen = () => {
                     {selectedEntity ? `${selectedEntity.name} (${selectedEntity.code})` : `Select a ${role.toLowerCase()}`}
                   </Text>
                 </View>
-                <Feather name="chevron-down" size={18} color={colors.muted} />
+                               <Feather name="chevron-down" size={18} color={colors.muted} />
               </TouchableOpacity>
             </View>
 
-                        <View style={styles.formGroup}>
+            {role === "Dealer" && selectedEntity && (
+              <View style={styles.formGroup}>
+                <Text style={styles.inputLabel}>Sales Manager</Text>
+                <View style={[styles.dropdownTrigger, styles.readOnlyField]}>
+                  <View style={styles.dropdownTriggerLeft}>
+                    <Feather name="user-check" size={15} color={colors.muted} />
+                    <Text style={styles.dropdownText}>{selectedEntity.salesManager || "-"}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Financial Year</Text>
               <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setIsFormYearModalOpen(true)}>
                 <View style={styles.dropdownTriggerLeft}>
@@ -480,6 +546,41 @@ export const SalesManagerTargetsScreen = () => {
                 <Feather name="chevron-down" size={18} color={colors.muted} />
               </TouchableOpacity>
             </View>
+
+            {formMode === "create" && (
+              <>
+                <View style={styles.formGroup}>
+                  <Text style={styles.inputLabel}>Effective From</Text>
+                  <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setIsEffectiveMonthModalOpen(true)}>
+                    <View style={styles.dropdownTriggerLeft}>
+                      <Feather name="calendar" size={15} color={colors.muted} />
+                      <Text style={[styles.dropdownText, !effectiveFromMonth && { color: colors.muted }]}>
+                        {effectiveFromMonth ?? "Select month"}
+                      </Text>
+                    </View>
+                    <Feather name="chevron-down" size={18} color={colors.muted} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.inputLabel}>Net Quantity</Text>
+                  <TextInput
+                    style={styles.targetInput}
+                    placeholder="0"
+                    placeholderTextColor={colors.muted}
+                    keyboardType="numeric"
+                    editable={Boolean(effectiveFromMonth)}
+                    value={netQuantityInput}
+                    onChangeText={(val) => setNetQuantityInput(val.replace(/[^0-9.]/g, ""))}
+                  />
+                  {!effectiveFromMonth && (
+                    <Text style={styles.helperText}>Select an Effective From month first</Text>
+                  )}
+                </View>
+              </>
+            )}
+
+            <View style={styles.targetGrid}></View>
 
             <View style={styles.targetGrid}>
               <View style={styles.targetGridHeader}>
@@ -493,27 +594,33 @@ export const SalesManagerTargetsScreen = () => {
                 </View>
               </View>
 
-              {QUOTA_MONTHS.map((month: QuotaMonthName) => (
-                <View key={month} style={styles.targetRow}>
-                  <View style={styles.targetMonthLeft}>
-                    <View style={styles.monthIconCircle}>
-                      <Feather name="calendar" size={14} color={colors.primary} />
+                            {QUOTA_MONTHS.map((month: QuotaMonthName) => {
+                const locked = isMonthLocked(month);
+                return (
+                  <View key={month} style={styles.targetRow}>
+                    <View style={styles.targetMonthLeft}>
+                      <View style={[styles.monthIconCircle, locked && styles.monthIconCircleLocked]}>
+                        <Feather name={locked ? "lock" : "calendar"} size={14} color={locked ? colors.muted : colors.primary} />
+                      </View>
+                      <View>
+                        <Text style={styles.targetMonthLabel}>{month}</Text>
+                        <Text style={locked ? styles.lockedTag : styles.editableTag}>
+                          {locked ? "Locked" : "Editable"}
+                        </Text>
+                      </View>
                     </View>
-                    <View>
-                      <Text style={styles.targetMonthLabel}>{month}</Text>
-                      <Text style={styles.editableTag}>Editable</Text>
-                    </View>
+                    <TextInput
+                      style={[styles.targetInput, locked && styles.targetInputLocked]}
+                      placeholder="0"
+                      placeholderTextColor={colors.muted}
+                      keyboardType="numeric"
+                      editable={!locked}
+                      value={locked ? String(monthValues[month] ?? "0") : monthValues[month]}
+                      onChangeText={(val) => handleMonthValueChange(month, val)}
+                    />
                   </View>
-                  <TextInput
-                    style={styles.targetInput}
-                    placeholder="0"
-                    placeholderTextColor={colors.muted}
-                    keyboardType="numeric"
-                    value={monthValues[month]}
-                    onChangeText={(val) => handleMonthValueChange(month, val)}
-                  />
-                </View>
-              ))}
+                );
+              })}
             </View>
           </ScrollView>
 
@@ -585,29 +692,75 @@ export const SalesManagerTargetsScreen = () => {
         </View>
       </Modal>
 
+           {/* Effective From Month Modal */}
+      <Modal visible={isEffectiveMonthModalOpen} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Select Effective From Month</Text>
+            <ScrollView style={{ maxHeight: 320 }}>
+              {QUOTA_MONTHS.map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.managerSelectRow, styles.effectiveMonthRow]}
+                  onPress={() => {
+                    setEffectiveFromMonth(m);
+                    setIsEffectiveMonthModalOpen(false);
+                  }}
+                >
+                  <Text style={styles.managerSelectName}>{m}</Text>
+                  {effectiveFromMonth === m && <Feather name="check" size={16} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.applyBtn} onPress={() => setIsEffectiveMonthModalOpen(false)}>
+              <Text style={styles.submitBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Entity Selector Modal */}
       <Modal visible={isEntityModalOpen} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.managerModalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select {role}</Text>
-            <TouchableOpacity onPress={() => setIsEntityModalOpen(false)}>
+            <TouchableOpacity onPress={() => { setIsEntityModalOpen(false); setEntitySearchQuery(""); }}>
               <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={{ padding: spacing.md }}>
-            {entityOptions.map((entity) => (
-              <TouchableOpacity
-                key={entity.code}
-                style={styles.managerSelectRow}
-                onPress={() => {
-                  setSelectedEntityCode(entity.code);
-                  setIsEntityModalOpen(false);
-                }}
-              >
-                <Text style={styles.managerSelectName}>{entity.name}</Text>
-                <Text style={styles.managerSelectCode}>{entity.code}</Text>
+          <View style={[styles.searchContainer, { margin: spacing.md, marginBottom: 0 }]}>
+            <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={`Search ${role.toLowerCase()} by name or code...`}
+              placeholderTextColor={colors.muted}
+              value={entitySearchQuery}
+              onChangeText={setEntitySearchQuery}
+            />
+            {entitySearchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setEntitySearchQuery("")} style={styles.clearSearchBtn}>
+                <Feather name="x-circle" size={16} color={colors.muted} />
               </TouchableOpacity>
-            ))}
+            )}
+          </View>
+          <ScrollView contentContainerStyle={{ padding: spacing.md }}>
+            {filteredEntityOptions.length === 0 ? (
+              <Text style={styles.helperText}>No {role.toLowerCase()} matches "{entitySearchQuery}"</Text>
+            ) : (
+              filteredEntityOptions.map((entity) => (
+                <TouchableOpacity
+                  key={entity.code}
+                  style={styles.managerSelectRow}
+                  onPress={() => {
+                    setSelectedEntityCode(entity.code);
+                    setIsEntityModalOpen(false);
+                  }}
+                >
+                  <Text style={styles.managerSelectName}>{entity.name}</Text>
+                  <Text style={styles.managerSelectCode}>{entity.code}</Text>
+                </TouchableOpacity>
+              ))
+            )}
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -615,7 +768,7 @@ export const SalesManagerTargetsScreen = () => {
       {/* View Modal */}
       <Modal visible={Boolean(viewingItem)} transparent animationType="fade" onRequestClose={() => setViewingItem(null)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { maxHeight: "80%" }]}>
+                <View style={[styles.modalCard, { maxHeight: SCREEN_HEIGHT * 0.82 }]}>
             <View style={styles.viewModalHeader}>
               <View style={styles.viewModalHeaderLeft}>
                 <View style={styles.viewModalIconCircle}>
@@ -628,8 +781,8 @@ export const SalesManagerTargetsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {viewingItem && (
-              <>
+                        {viewingItem && (
+                            <ScrollView style={{ maxHeight: SCREEN_HEIGHT * 0.82 - 70 }} showsVerticalScrollIndicator={false}>
                 <View style={styles.viewInfoGrid}>
                   <View style={styles.viewInfoBlock}>
                     <Text style={styles.viewInfoLabel}>Name</Text>
@@ -670,25 +823,23 @@ export const SalesManagerTargetsScreen = () => {
                   </View>
                 </View>
 
-                <ScrollView style={{ maxHeight: 320, marginTop: spacing.sm }}>
-                  <View style={styles.monthHeaderRow}>
-                    <View style={styles.monthHeaderLabel}>
-                      <Feather name="calendar" size={13} color={colors.text} />
-                      <Text style={styles.monthHeaderText}>Month</Text>
-                    </View>
-                    <View style={styles.monthHeaderLabel}>
-                      <Feather name="box" size={13} color={colors.text} />
-                      <Text style={styles.monthHeaderText}>Quantity</Text>
-                    </View>
+                               <View style={[styles.monthHeaderRow, { marginTop: spacing.sm }]}>
+                  <View style={styles.monthHeaderLabel}>
+                    <Feather name="calendar" size={13} color={colors.text} />
+                    <Text style={styles.monthHeaderText}>Month</Text>
                   </View>
-                  {viewingItem.details.map((d) => (
-                    <View key={d.month} style={styles.monthRow}>
-                      <Text style={styles.monthName}>{d.month.toUpperCase()}</Text>
-                      <Text style={styles.monthQty}>{(d.target_quantity ?? 0).toLocaleString()}</Text>
-                    </View>
-                  ))}
-                </ScrollView>
-              </>
+                  <View style={styles.monthHeaderLabel}>
+                    <Feather name="box" size={13} color={colors.text} />
+                    <Text style={styles.monthHeaderText}>Quantity</Text>
+                  </View>
+                </View>
+                {viewingItem.details.map((d) => (
+                  <View key={d.month} style={styles.monthRow}>
+                    <Text style={styles.monthName}>{d.month.toUpperCase()}</Text>
+                                        <Text style={styles.monthQty}>{(d.target_quantity ?? d.quantity ?? 0).toLocaleString()}</Text>
+                  </View>
+                ))}
+              </ScrollView>
             )}
           </View>
         </View>
@@ -708,10 +859,10 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
 
   statsRow: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
-  statCard: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm },
+    statCard: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, overflow: "hidden" },
   statLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
   statValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginTop: 2 },
-  statIconCircle: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+    statIconCircle: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" },
 
   tabContainer: { flexDirection: "row", backgroundColor: colors.surface, padding: spacing.sm, marginHorizontal: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
   tabBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 10, borderRadius: radius.sm },
@@ -751,9 +902,11 @@ const styles = StyleSheet.create({
     formContainer: { padding: spacing.md, paddingBottom: spacing.xxl * 2 },
   formGroup: { marginBottom: spacing.lg },
   inputLabel: { fontSize: 13, fontFamily: typography.bold, color: colors.text, marginBottom: 8 },
-  dropdownTrigger: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: radius.sm },
-  dropdownTriggerLeft: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
+    dropdownTrigger: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: radius.sm, overflow: "hidden" },
+    dropdownTriggerLeft: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
   dropdownText: { fontSize: 14, fontFamily: typography.medium, color: colors.text, flexShrink: 1 },
+  readOnlyField: { backgroundColor: colors.surface },
+  helperText: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginTop: 6 },
 
   yearSelectorRow: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
   yearChip: { flex: 1, minWidth: 90, paddingVertical: 10, alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm },
@@ -767,8 +920,10 @@ const styles = StyleSheet.create({
   gridHeaderLeft: { fontSize: 12, fontFamily: typography.bold, color: "#1E3A8A" },
   gridHeaderRight: { fontSize: 12, fontFamily: typography.bold, color: "#1E3A8A", textAlign: "right" },
   targetMonthLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
-  monthIconCircle: { width: 28, height: 28, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+  monthIconCircle: { width: 28, height: 28, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" },
+  monthIconCircleLocked: { backgroundColor: "#F3F4F6" },
   editableTag: { fontSize: 10, fontFamily: typography.semibold, color: "#16A34A", marginTop: 1 },
+  lockedTag: { fontSize: 10, fontFamily: typography.semibold, color: colors.muted, marginTop: 1 },
   emptyTitle: { fontFamily: typography.bold, fontSize: 16, color: colors.muted, marginTop: spacing.md },
   errorSubtitle: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, textAlign: "center" },
 
@@ -777,7 +932,8 @@ const styles = StyleSheet.create({
 
   targetRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.surface },
   targetMonthLabel: { flex: 1, fontSize: 14, fontFamily: typography.bold, color: colors.text },
-  targetInput: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontFamily: typography.medium, color: colors.text, textAlign: "right" },
+    targetInput: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontFamily: typography.medium, color: colors.text, textAlign: "right" },
+  targetInputLocked: { backgroundColor: "#F3F4F6", color: colors.muted },
 
   formFooter: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.white, paddingHorizontal: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
     totalBlock: { flexShrink: 0 },
@@ -788,7 +944,7 @@ const styles = StyleSheet.create({
   submitBtnText: { fontSize: 14, fontFamily: typography.bold, color: colors.white },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: spacing.xl },
-  modalCard: { backgroundColor: colors.white, padding: spacing.md, borderRadius: radius.lg },
+    modalCard: { backgroundColor: colors.white, padding: spacing.md, borderRadius: radius.lg, flexShrink: 1 },
   modalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text, marginBottom: spacing.lg },
   applyBtn: { backgroundColor: colors.text, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center", marginTop: spacing.md },
 
@@ -796,7 +952,8 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   managerSelectRow: { padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, borderRadius: radius.sm, marginBottom: spacing.sm },
   managerSelectName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 4 },
-  managerSelectCode: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
+    managerSelectCode: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
+  effectiveMonthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
 
   paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.white },
   paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
@@ -814,9 +971,9 @@ const styles = StyleSheet.create({
   viewInfoValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
 
   viewSummaryRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
-  viewSummaryBox: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F8FAFC", borderRadius: radius.md, padding: spacing.sm },
+    viewSummaryBox: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F8FAFC", borderRadius: radius.md, padding: spacing.sm, overflow: "hidden" },
   viewSummaryValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginTop: 2 },
-  summaryIconCircle: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+  summaryIconCircle: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" },
 
   monthHeaderRow: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "#EFF6FF", paddingHorizontal: spacing.sm, paddingVertical: 8, borderRadius: radius.sm, marginBottom: 4 },
   monthHeaderLabel: { flexDirection: "row", alignItems: "center", gap: 6 },

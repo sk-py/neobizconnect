@@ -4,11 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
     ActivityIndicator,
+    BackHandler,
     Modal,
     Platform,
     ScrollView,
@@ -41,8 +42,33 @@ export const DealerQueryScreen = () => {
     const user = useAuthStore((state) => state.user);
     const groupCompanyName = user?.group_company_name || "Neo";
 
-    const isDealer = user?.authority === "Dealer";
-    const canCreate = user?.authority !== "Admin" && user?.authority !== "Super Admin";
+       const isDealer = user?.authority === "Dealer";
+    const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
+    const canCreate = !isAdmin;
+
+    const goBack = () => {
+        if (isAdmin) {
+            router.push("/dashboard");
+        } else {
+            router.push("/sales-manager-modules");
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            const onBackPress = () => {
+                goBack();
+                return true;
+            };
+
+            const subscription = BackHandler.addEventListener(
+                "hardwareBackPress",
+                onBackPress,
+            );
+
+            return () => subscription.remove();
+        }, [router, isAdmin]),
+    );
 
     const [activeTab, setActiveTab] = useState<"list" | "create">("list");
     const [editingQuery, setEditingQuery] = useState<DealerQuery | null>(null);
@@ -165,9 +191,16 @@ export const DealerQueryScreen = () => {
 
     return (
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Dealer Queries</Text>
-                <Text style={styles.headerSubTitle}>Here is a list of dealer queries</Text>
+                        <View style={styles.header}>
+                <View style={styles.titleRowHeader}>
+                    <TouchableOpacity onPress={goBack} style={styles.backButton} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Feather name="arrow-left" size={20} color={colors.text} />
+                    </TouchableOpacity>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.headerTitle}>Dealer Queries</Text>
+                        <Text style={styles.headerSubTitle}>Here is a list of dealer queries</Text>
+                    </View>
+                </View>
             </View>
 
             {canCreate && (
@@ -408,6 +441,7 @@ const styles = StyleSheet.create({
     centerBox: { flex: 1, justifyContent: "center", alignItems: "center" },
     header: { flexDirection: "column", alignItems: "flex-start", justifyContent: "center", padding: spacing.md, backgroundColor: colors.white },
     backButton: { padding: 4, marginRight: spacing.sm },
+    titleRowHeader: { flexDirection: "row", alignItems: "center", width: "100%" },
     headerTitle: { fontSize: 20, fontFamily: typography.bold, color: colors.text, paddingBottom: 2 },
     headerSubTitle: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.textSecondary },
     tabContainer: { flexDirection: "row", backgroundColor: colors.surface, padding: spacing.sm, marginHorizontal: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },

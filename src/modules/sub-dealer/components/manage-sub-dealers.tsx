@@ -389,11 +389,14 @@ export const SubDealerScreen = () => {
 
     return (
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <View style={styles.header}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => (isAdminView ? router.back() : router.push("/sub-dealer"))}
+                >
                     <Feather name="arrow-left" size={24} color={colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{screenTitle}</Text>
+                     <Text style={styles.headerTitle}>{screenTitle}</Text>
             </View>
 
             {canRegister && (
