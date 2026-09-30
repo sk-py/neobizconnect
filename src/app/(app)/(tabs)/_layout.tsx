@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const TabLayout = () => {
     const { user } = useAuth();
     const userRole = user?.authority as UserRole | undefined;
+    console.log("DEBUG userRole:", JSON.stringify(userRole));
     const insets = useSafeAreaInsets();
 
     const { initializePush } = usePushNotifications(user?.user_id);

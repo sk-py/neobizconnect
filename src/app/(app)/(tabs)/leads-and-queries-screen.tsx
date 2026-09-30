@@ -13,7 +13,7 @@ export const LeadsAndQueriesIndexScreen = () => {
       title: "Lead / Query",
       description: "Manage specific lead and query entries.",
       icon: "bar-chart-2",
-      route: "/dealer-lead-query",
+      route: "/lead-query",
       iconColor: "#8B5CF6", // Purple
       iconBg: "#F5F3FF"
     },
