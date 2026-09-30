@@ -7,24 +7,24 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export const SalesIndexScreen = () => {
     const router = useRouter();
 
-    const MENU_OPTIONS = [
-        {
-            id: "sales-order",
-            title: "Sales",
-            description: "Create and manage new sales orders.",
-            icon: "shopping-bag",
-            route: "/sales-order",
-            iconColor: "#3B82F6", // Blue
-            iconBg: "#EFF6FF"
-        },
+        const MENU_OPTIONS = [
         {
             id: "sales-target",
             title: "Sales Target",
             description: "Monitor and set regional or dealer targets.",
             icon: "target",
-            route: "/sub-dealers-targets",
+            route: "/sub-dealer-sales-target",
             iconColor: "#E11D48", // Rose
             iconBg: "#FFF1F2"
+        },
+        {
+            id: "transaction-history",
+            title: "Transaction History",
+            description: "Review your transaction records.",
+            icon: "repeat",
+            route: "/transaction-history",
+            iconColor: "#3B82F6", // Blue
+            iconBg: "#EFF6FF"
         },
         {
             id: "order-history",
@@ -36,11 +36,10 @@ export const SalesIndexScreen = () => {
             iconBg: "#ECFDF5"
         }
     ];
-
     return (
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle} numberOfLines={1}>Sales</Text>
+                            <Text style={styles.headerTitle} numberOfLines={1}>Sales & Order</Text>
                 <Text style={styles.headerSubtitle} numberOfLines={2}>Manage orders, targets, and sales history</Text>
             </View>
 

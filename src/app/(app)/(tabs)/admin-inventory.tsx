@@ -7,7 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export const InventoryIndexScreen = () => {
     const router = useRouter();
 
-    const MENU_OPTIONS = [
+        const MENU_OPTIONS = [
         {
             id: "item-master",
             title: "Item Master",
@@ -16,15 +16,6 @@ export const InventoryIndexScreen = () => {
             route: "/item-master",
             iconColor: "#6366F1", // Indigo
             iconBg: "#EEF2FF"
-        },
-        {
-            id: "stock",
-            title: "Stock",
-            description: "Monitor real-time inventory levels and warehouse availability.",
-            icon: "archive",
-            route: "/admin-inventory",
-            iconColor: "#F59E0B", // Amber
-            iconBg: "#FFFBEB"
         }
     ];
 

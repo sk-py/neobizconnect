@@ -32,28 +32,20 @@ export const UsersSetupIndexScreen = () => {
             route: "/sub-dealer",
             iconColor: "#8B5CF6",
         },
-        {
+                {
             id: "sub-dealer-sales",
             title: "Sub-Dealer Sales",
             description: "View sub-dealer sales records.",
             icon: "shopping-bag",
             route: "/sub-dealer-list",
             iconColor: "#0D9488",
-        },
-        {
-            id: "notifications",
-            title: "Notifications",
-            description: "Broadcast notifications to all the users",
-            icon: "bell",
-            route: "/notifications",
-            iconColor: colors.warning,
         }
     ];
 
     return (
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle} numberOfLines={1}>User Setup</Text>
+                            <Text style={styles.headerTitle} numberOfLines={1}>Users</Text>
                 <Text style={styles.headerSubtitle} numberOfLines={2}>Manage system access and roles</Text>
             </View>
 

@@ -40,7 +40,7 @@ export const LeadsAndQueriesIndexScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle} numberOfLines={1}>Queries</Text>
+               <Text style={styles.headerTitle} numberOfLines={1}>Queries</Text>
         <Text style={styles.headerSubtitle} numberOfLines={2}>Manage all incoming inquiries and prospects</Text>
       </View>
 
