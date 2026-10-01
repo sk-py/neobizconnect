@@ -397,27 +397,29 @@ export const SalesManagerTargetsScreen = () => {
           </View>
         </View>
 
-        {/* Stat cards */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <View>
-              <Text style={styles.statLabel}>Total {role === "Dealer" ? "Dealers" : "Sales Managers"}</Text>
-              <Text style={styles.statValue}>{totalCount}</Text>
+                {/* Stat cards (List tab only) */}
+        {activeTab === "list" && (
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <View style={styles.statTextBlock}>
+                <Text style={styles.statLabel} numberOfLines={2}>Total {role === "Dealer" ? "Dealers" : "Sales Managers"}</Text>
+                <Text style={styles.statValue}>{totalCount}</Text>
+              </View>
+              <View style={styles.statIconCircle}>
+                <Feather name="users" size={16} color={colors.primary} />
+              </View>
             </View>
-            <View style={styles.statIconCircle}>
-              <Feather name="users" size={16} color={colors.primary} />
+            <View style={styles.statCard}>
+              <View style={styles.statTextBlock}>
+                <Text style={styles.statLabel} numberOfLines={2}>{role} Quantity</Text>
+                <Text style={styles.statValue}>{totalQuantity.toLocaleString()}</Text>
+              </View>
+              <View style={styles.statIconCircle}>
+                <Feather name="box" size={16} color={colors.primary} />
+              </View>
             </View>
           </View>
-          <View style={styles.statCard}>
-            <View>
-              <Text style={styles.statLabel}>{role} Quantity</Text>
-              <Text style={styles.statValue}>{totalQuantity.toLocaleString()}</Text>
-            </View>
-            <View style={styles.statIconCircle}>
-              <Feather name="box" size={16} color={colors.primary} />
-            </View>
-          </View>
-        </View>
+        )}
 
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -725,7 +727,7 @@ export const SalesManagerTargetsScreen = () => {
             </View>
           </ScrollView>
 
-          <View style={[styles.formFooter, { paddingBottom: Math.max(spacing.md, insets.bottom) }]}>
+              <View style={[styles.formFooter, { paddingBottom: spacing.md }]}>
             <View style={styles.totalBlock}>
               <Text style={styles.totalFooterLabel}>Net Quantity</Text>
               <Text style={styles.totalFooterValue} numberOfLines={1} adjustsFontSizeToFit>
@@ -799,19 +801,26 @@ export const SalesManagerTargetsScreen = () => {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Select Effective From Month</Text>
             <ScrollView style={{ maxHeight: 320 }}>
-              {QUOTA_MONTHS.map((m) => (
-                <TouchableOpacity
-                  key={m}
-                  style={[styles.managerSelectRow, styles.effectiveMonthRow]}
-                  onPress={() => {
-                    setEffectiveFromMonth(m);
-                    setIsEffectiveMonthModalOpen(false);
-                  }}
-                >
-                  <Text style={styles.managerSelectName}>{m}</Text>
-                  {effectiveFromMonth === m && <Feather name="check" size={16} color={colors.primary} />}
-                </TouchableOpacity>
-              ))}
+                            {QUOTA_MONTHS.map((m) => {
+                const isSelected = effectiveFromMonth === m;
+                return (
+                  <TouchableOpacity
+                    key={m}
+                    style={[
+                      styles.managerSelectRow,
+                      styles.effectiveMonthRow,
+                      isSelected && styles.effectiveMonthRowActive,
+                    ]}
+                    onPress={() => {
+                      setEffectiveFromMonth(m);
+                      setIsEffectiveMonthModalOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.managerSelectName, isSelected && styles.managerSelectNameActive]}>{m}</Text>
+                    {isSelected && <Feather name="check" size={16} color={colors.white} />}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
             <TouchableOpacity style={styles.applyBtn} onPress={() => setIsEffectiveMonthModalOpen(false)}>
               <Text style={styles.submitBtnText}>Close</Text>
@@ -963,10 +972,11 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
 
   statsRow: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
-    statCard: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, overflow: "hidden" },
+      statCard: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, minHeight: 64, overflow: "hidden" },
+  statTextBlock: { flex: 1, paddingRight: spacing.xs },
   statLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
   statValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginTop: 2 },
-    statIconCircle: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" },
+  statIconCircle: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", flexShrink: 0, marginLeft: spacing.xs },
 
   tabContainer: { flexDirection: "row", backgroundColor: colors.surface, padding: spacing.sm, marginHorizontal: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm },
   tabBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 10, borderRadius: radius.sm },
@@ -1014,7 +1024,7 @@ const styles = StyleSheet.create({
 
   yearSelectorRow: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
   yearChip: { flex: 1, minWidth: 90, paddingVertical: 10, alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm },
-  yearChipActive: { backgroundColor: colors.text, borderColor: colors.text },
+  yearChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   yearChipText: { fontSize: 14, fontFamily: typography.medium, color: colors.text },
   yearChipTextActive: { color: colors.white, fontFamily: typography.bold },
 
@@ -1050,14 +1060,16 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: spacing.xl },
     modalCard: { backgroundColor: colors.white, padding: spacing.md, borderRadius: radius.lg, flexShrink: 1 },
   modalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text, marginBottom: spacing.lg },
-  applyBtn: { backgroundColor: colors.text, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center", marginTop: spacing.md },
+    applyBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center", marginTop: spacing.md },
 
   managerModalContainer: { flex: 1, backgroundColor: colors.surface },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   managerSelectRow: { padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, borderRadius: radius.sm, marginBottom: spacing.sm },
   managerSelectName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 4 },
-    managerSelectCode: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
+  managerSelectCode: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
   effectiveMonthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  effectiveMonthRowActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  managerSelectNameActive: { color: colors.white },
 
   paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.white },
   paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
