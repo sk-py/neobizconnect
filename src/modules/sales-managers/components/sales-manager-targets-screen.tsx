@@ -817,7 +817,7 @@ export const SalesManagerTargetsScreen = () => {
                     }}
                   >
                     <Text style={[styles.managerSelectName, isSelected && styles.managerSelectNameActive]}>{m}</Text>
-                    {isSelected && <Feather name="check" size={16} color={colors.white} />}
+                      {isSelected && <Feather name="check" size={16} color={colors.primary} />}
                   </TouchableOpacity>
                 );
               })}
@@ -1024,9 +1024,9 @@ const styles = StyleSheet.create({
 
   yearSelectorRow: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
   yearChip: { flex: 1, minWidth: 90, paddingVertical: 10, alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm },
-  yearChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    yearChipActive: { backgroundColor: colors.white, borderColor: colors.primary, borderWidth: 2 },
   yearChipText: { fontSize: 14, fontFamily: typography.medium, color: colors.text },
-  yearChipTextActive: { color: colors.white, fontFamily: typography.bold },
+  yearChipTextActive: { color: colors.primary, fontFamily: typography.bold },
 
   targetGrid: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, overflow: "hidden", marginBottom: spacing.xxl },
   targetGridHeader: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "#DBEAFE", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
@@ -1067,9 +1067,9 @@ const styles = StyleSheet.create({
   managerSelectRow: { padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, borderRadius: radius.sm, marginBottom: spacing.sm },
   managerSelectName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 4 },
   managerSelectCode: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
-  effectiveMonthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  effectiveMonthRowActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  managerSelectNameActive: { color: colors.white },
+    effectiveMonthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  effectiveMonthRowActive: { backgroundColor: colors.white, borderWidth: 2, borderColor: colors.primary },
+  managerSelectNameActive: { color: colors.primary, fontFamily: typography.bold },
 
   paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.white },
   paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
