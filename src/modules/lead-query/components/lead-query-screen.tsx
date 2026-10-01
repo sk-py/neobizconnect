@@ -91,9 +91,9 @@ export default function LeadQueryScreen() {
     );
   };
 
-    const goBack = () => {
+      const goBack = () => {
     if (isAdmin) {
-      router.push("/dealer-query");
+      router.push("/leads-and-queries-screen");
     } else {
       router.push("/sales-manager-modules");
     }

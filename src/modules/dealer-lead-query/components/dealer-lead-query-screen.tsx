@@ -52,7 +52,7 @@ export default function DealerLeadQueryScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-
+  const isAdminUser = user?.authority === "Admin" || user?.authority === "Super Admin";
   const [searchQuery, setSearchQuery] = useState("");
   const [editingLead, setEditingLead] = useState<LeadQuery | null>(null);
   const [editForm, setEditForm] = useState<LeadFormData | null>(null);
@@ -74,8 +74,12 @@ export default function DealerLeadQueryScreen() {
     }, [refetch])
   );
 
-  const goBack = () => {
-    router.push("/dashboard");
+    const goBack = () => {
+    if (isAdminUser) {
+      router.push("/dealer-lead-query");
+    } else {
+      router.push("/sales-manager-modules");
+    }
   };
 
   useFocusEffect(

@@ -77,8 +77,8 @@ export const OrderHistoryIndexScreen = () => {
           return true;
         }
 
-        if (isAdmin) {
-          router.push("/dashboard");
+                if (isAdmin) {
+          router.push("/admin-sales-screen");
           return true;
         }
 

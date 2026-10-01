@@ -89,9 +89,9 @@ export const SubDealerScreen = () => {
     const isAdminView = !canRegister;
     const screenTitle = canRegister ? "Sub-Dealers" : "Sub Dealer List";
 
-    const goBack = () => {
+        const goBack = () => {
         if (isAdminView) {
-            router.push("/dashboard");
+            router.push("/sub-dealer-index");
         } else {
             router.push("/sub-dealer");
         }

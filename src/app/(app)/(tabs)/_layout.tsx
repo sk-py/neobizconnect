@@ -195,13 +195,13 @@ const TabLayout = () => {
 
                 <Tabs.Protected guard={canAccess("Item Master")}>
                     <Tabs.Screen
-                        name='item-master'
+                                                name='item-master'
                         options={{
                             title: "Stock",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='package' color={color} size={size} />
                             ),
-                            href: userRole === "Admin" ? null : "/dealers"
+                            href: userRole === "Admin" ? null : "/item-master"
                         }}
                     />
                 </Tabs.Protected>
@@ -323,13 +323,13 @@ const TabLayout = () => {
 
                 <Tabs.Protected guard={canAccess("Lead Query")}>
                     <Tabs.Screen
-                        name='lead-query'
+                                               name='lead-query'
                         options={{
                             title: "Leads & Queries",
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='message-square' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? null : "/dealers"
+                            href: userRole === "Admin" ? null : "/lead-query"
                         }}
                     />
                 </Tabs.Protected>
