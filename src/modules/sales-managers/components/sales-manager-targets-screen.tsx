@@ -88,9 +88,9 @@ export const SalesManagerTargetsScreen = () => {
   const { user } = useAuth();
   const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
 
-  const goBack = () => {
+    const goBack = () => {
     if (isAdmin) {
-      router.push("/sales-managers");
+      router.push("/admin-sales-screen");
     } else {
       router.push("/sales-manager-modules");
     }

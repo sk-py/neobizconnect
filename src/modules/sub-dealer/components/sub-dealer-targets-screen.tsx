@@ -53,15 +53,16 @@ export const SubDealerTargetsScreen = () => {
     const insets = useSafeAreaInsets();
     const queryClient = useQueryClient();
     const user = useAuthStore((state) => state.user);
-            const canAssignTarget = user?.authority !== "Admin" && user?.authority !== "Super Admin";
+    const canAssignTarget = user?.authority !== "Admin" && user?.authority !== "Super Admin";
+    const isAdminView = user?.authority === "Admin" || user?.authority === "Super Admin";
     const screenTitle = canAssignTarget ? "Sales Targets" : "Sub Dealer Sales List";
     const groupCompanyName = user?.group_company_name || "Neo";
 
-    const goBack = () => {
-        if (canAssignTarget) {
-            router.push("/sub-dealer");
+        const goBack = () => {
+        if (isAdminView) {
+            router.push("/sub-dealer-index");
         } else {
-            router.push("/dashboard");
+            router.push("/sub-dealer");
         }
     };
 

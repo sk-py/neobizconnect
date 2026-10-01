@@ -74,8 +74,12 @@ export default function DealerLeadQueryScreen() {
     }, [refetch])
   );
 
-      const goBack = () => {
-    router.push("/sales-manager-modules");
+    const goBack = () => {
+    if (isAdminUser) {
+      router.push("/dealer-lead-query");
+    } else {
+      router.push("/sales-manager-modules");
+    }
   };
 
   useFocusEffect(
