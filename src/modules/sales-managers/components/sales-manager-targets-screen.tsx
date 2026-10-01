@@ -63,10 +63,20 @@ const isMonthPassed = (financialYear: string, month: string): boolean => {
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   return monthDate.getTime() < currentMonthStart.getTime();
 };
+const normalizeMonth = (value?: string | null) => (value ?? "").trim().toLowerCase();
+
+const findDetailForMonth = (
+  details: SalesQuotaListItem["details"],
+  month: string,
+) => details.find((d) => normalizeMonth(d.month) === normalizeMonth(month));
+
+const getMonthQuantity = (detail?: SalesQuotaListItem["details"][number]) =>
+  detail?.quantity ?? detail?.target_quantity ?? 0;
+
 const getEffectiveFrom = (item: SalesQuotaListItem): string => {
   const firstFunded = QUOTA_MONTHS.find((month) => {
-    const detail = item.details.find((d) => d.month === month);
-        return (detail?.target_quantity ?? detail?.quantity ?? 0) > 0;
+    const detail = findDetailForMonth(item.details, month);
+    return getMonthQuantity(detail) > 0;
   });
   return firstFunded ?? "-";
 };
@@ -167,17 +177,41 @@ export const SalesManagerTargetsScreen = () => {
     );
   }, [entityOptions, entitySearchQuery]);
 
-  // Create mode: a month is locked unless it's the chosen "Effective From" month
-  // (the Net Quantity typed by the user is assigned only to that month).
-  // Edit mode: a month is locked once its date has already passed.
+  
   const isMonthLocked = (month: QuotaMonthName): boolean => {
     if (formMode === "edit") return isMonthPassed(formFinancialYear, month);
-    return month !== effectiveFromMonth;
+    if (!effectiveFromMonth) return true;
+    return QUOTA_MONTHS.indexOf(month) < QUOTA_MONTHS.indexOf(effectiveFromMonth);
+  };
+
+  const getEditableMonths = (effectiveFrom: QuotaMonthName | null): QuotaMonthName[] => {
+    if (!effectiveFrom) return [];
+    return QUOTA_MONTHS.slice(QUOTA_MONTHS.indexOf(effectiveFrom));
+  };
+
+  // Splits `total` into `count` whole-number shares that sum back to
+  // `total` exactly, handing the remainder to the first few shares.
+  const splitEqually = (total: number, count: number): number[] => {
+    if (count <= 0) return [];
+    const base = Math.floor(total / count);
+    const remainder = Math.round(total - base * count);
+    return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0));
   };
 
   useEffect(() => {
     if (formMode !== "create" || !effectiveFromMonth) return;
-    setMonthValues((prev) => ({ ...prev, [effectiveFromMonth]: netQuantityInput }));
+
+    const editableMonths = getEditableMonths(effectiveFromMonth);
+    const total = parseFloat(netQuantityInput) || 0;
+    const shares = splitEqually(total, editableMonths.length);
+
+    setMonthValues((prev) => {
+      const next = { ...prev };
+      editableMonths.forEach((month, index) => {
+        next[month] = String(shares[index]);
+      });
+      return next;
+    });
   }, [netQuantityInput, effectiveFromMonth, formMode]);
 
   // --- Search filtering (by name or code) ---
@@ -262,25 +296,45 @@ export const SalesManagerTargetsScreen = () => {
   });
 
   // --- Handlers ---
-    const handleEdit = (item: SalesQuotaListItem) => {
+        const handleEdit = (item: SalesQuotaListItem) => {
     setFormMode("edit");
     setRole(item.role);
     setSelectedEntityCode(item.user_code);
     setFormFinancialYear(item.financial_year);
+    setEffectiveFromMonth(null);
+    setNetQuantityInput("");
 
     const newValues: Record<string, string> = {};
-    item.details.forEach((detail) => {
-            newValues[detail.month] = String(detail.target_quantity ?? detail.quantity ?? 0);
+    QUOTA_MONTHS.forEach((month) => {
+      const detail = findDetailForMonth(item.details, month);
+      newValues[month] = String(getMonthQuantity(detail));
     });
     setMonthValues(newValues);
     setActiveTab("assign");
   };
 
-  const handleMonthValueChange = (month: string, val: string) => {
-    setMonthValues((prev) => ({
-      ...prev,
-      [month]: val.replace(/[^0-9.]/g, ""),
-    }));
+    const handleMonthValueChange = (month: string, val: string) => {
+    const sanitized = val.replace(/[^0-9.]/g, "");
+
+    // Outside create mode (or before an Effective From month is chosen)
+    // there's no Net Quantity to balance against, so just store the value.
+    if (formMode !== "create" || !effectiveFromMonth) {
+      setMonthValues((prev) => ({ ...prev, [month]: sanitized }));
+      return;
+    }
+
+    const total = parseFloat(netQuantityInput) || 0;
+    const newValue = Math.min(Math.max(parseFloat(sanitized) || 0, 0), total);
+    const otherMonths = getEditableMonths(effectiveFromMonth).filter((m) => m !== month);
+    const shares = splitEqually(total - newValue, otherMonths.length);
+
+    setMonthValues((prev) => {
+      const next = { ...prev, [month]: sanitized };
+      otherMonths.forEach((m, index) => {
+        next[m] = String(shares[index]);
+      });
+      return next;
+    });
   };
 
   const totalFormQuantity = QUOTA_MONTHS.reduce(
@@ -387,8 +441,14 @@ export const SalesManagerTargetsScreen = () => {
               setSelectedEntityCode(null);
             }}
           >
-            <Feather name="plus-circle" size={16} color={activeTab === "assign" ? colors.primary : colors.muted} />
-            <Text style={[styles.tabText, activeTab === "assign" && styles.tabTextActive]}>Create</Text>
+                        <Feather
+              name={activeTab === "assign" && formMode === "edit" ? "edit-2" : "plus-circle"}
+              size={16}
+              color={activeTab === "assign" ? colors.primary : colors.muted}
+            />
+            <Text style={[styles.tabText, activeTab === "assign" && styles.tabTextActive]}>
+              {activeTab === "assign" && formMode === "edit" ? "Edit" : "Create"}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -523,9 +583,14 @@ export const SalesManagerTargetsScreen = () => {
                 {ROLES.map((r) => {
                   const active = role === r;
                   return (
-                    <TouchableOpacity
+                                        <TouchableOpacity
                       key={r}
-                      style={[styles.roleFilterPill, active && styles.roleFilterPillActive]}
+                      disabled={formMode === "edit"}
+                      style={[
+                        styles.roleFilterPill,
+                        active && styles.roleFilterPillActive,
+                        formMode === "edit" && { opacity: 0.6 },
+                      ]}
                                             onPress={() => {
                         setRole(r);
                         setSelectedEntityCode(null);
@@ -541,14 +606,18 @@ export const SalesManagerTargetsScreen = () => {
 
             <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Select {role}</Text>
-              <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setIsEntityModalOpen(true)}>
+                          <TouchableOpacity
+                style={[styles.dropdownTrigger, formMode === "edit" && styles.readOnlyField]}
+                disabled={formMode === "edit"}
+                onPress={() => setIsEntityModalOpen(true)}
+              >
                 <View style={styles.dropdownTriggerLeft}>
                   <Feather name="user" size={15} color={colors.muted} />
                   <Text style={[styles.dropdownText, !selectedEntity && { color: colors.muted }]}>
                     {selectedEntity ? `${selectedEntity.name} (${selectedEntity.code})` : `Select a ${role.toLowerCase()}`}
                   </Text>
                 </View>
-                               <Feather name="chevron-down" size={18} color={colors.muted} />
+                {formMode !== "edit" && <Feather name="chevron-down" size={18} color={colors.muted} />}
               </TouchableOpacity>
             </View>
 
@@ -566,12 +635,16 @@ export const SalesManagerTargetsScreen = () => {
 
             <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Financial Year</Text>
-              <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setIsFormYearModalOpen(true)}>
+                           <TouchableOpacity
+                style={[styles.dropdownTrigger, formMode === "edit" && styles.readOnlyField]}
+                disabled={formMode === "edit"}
+                onPress={() => setIsFormYearModalOpen(true)}
+              >
                 <View style={styles.dropdownTriggerLeft}>
                   <Feather name="calendar" size={15} color={colors.muted} />
                   <Text style={styles.dropdownText}>{formFinancialYear}</Text>
                 </View>
-                <Feather name="chevron-down" size={18} color={colors.muted} />
+                {formMode !== "edit" && <Feather name="chevron-down" size={18} color={colors.muted} />}
               </TouchableOpacity>
             </View>
 
@@ -861,12 +934,15 @@ export const SalesManagerTargetsScreen = () => {
                     <Text style={styles.monthHeaderText}>Quantity</Text>
                   </View>
                 </View>
-                {viewingItem.details.map((d) => (
-                  <View key={d.month} style={styles.monthRow}>
-                    <Text style={styles.monthName}>{d.month.toUpperCase()}</Text>
-                                        <Text style={styles.monthQty}>{(d.target_quantity ?? d.quantity ?? 0).toLocaleString()}</Text>
-                  </View>
-                ))}
+                                {QUOTA_MONTHS.map((month) => {
+                  const detail = findDetailForMonth(viewingItem.details, month);
+                  return (
+                    <View key={month} style={styles.monthRow}>
+                      <Text style={styles.monthName}>{month.toUpperCase()}</Text>
+                      <Text style={styles.monthQty}>{getMonthQuantity(detail).toLocaleString()}</Text>
+                    </View>
+                  );
+                })}
               </ScrollView>
             )}
           </View>
