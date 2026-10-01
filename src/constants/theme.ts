@@ -1,3 +1,4 @@
+
 export const colors = {
   primary: "#DC2626",
   background: "#FFFFFF",
@@ -29,15 +30,13 @@ export const radius = {
   xl: 24,
 };
 
-import { fontScale } from "@/utils/responsive";
-
 export const txtSize = {
-  heading: fontScale(32),
-  title: fontScale(24),
-  medium: fontScale(20),
-  body: fontScale(16),
-  small: fontScale(14),
-  xs: fontScale(12),
+  heading: 32,
+  title: 24,
+  medium: 20,
+  body: 16,
+  small: 14,
+  xs: 12,
 };
 
 export const typography = {
