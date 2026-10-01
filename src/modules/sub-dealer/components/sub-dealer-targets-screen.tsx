@@ -55,7 +55,7 @@ export const SubDealerTargetsScreen = () => {
     const user = useAuthStore((state) => state.user);
     const canAssignTarget = user?.authority !== "Admin" && user?.authority !== "Super Admin";
     const isAdminView = user?.authority === "Admin" || user?.authority === "Super Admin";
-    const screenTitle = canAssignTarget ? "Sales Targets" : "Sub Dealer Sales List";
+    const screenTitle = canAssignTarget ? "Sales Records" : "Sub Dealer Sales List";
     const groupCompanyName = user?.group_company_name || "Neo";
 
         const goBack = () => {
@@ -223,11 +223,11 @@ export const SubDealerTargetsScreen = () => {
                 <View style={styles.tabContainer}>
                     <TouchableOpacity style={[styles.tabBtn, activeTab === "list" && styles.tabBtnActive]} onPress={() => setActiveTab("list")}>
                         <Feather name="list" size={16} color={activeTab === "list" ? colors.primary : colors.muted} />
-                        <Text style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}>Overview</Text>
+                        <Text style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}>List</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.tabBtn, activeTab === "assign" && styles.tabBtnActive]} onPress={() => { setActiveTab("assign"); setMonthValues({}); setSelectedDealerId(null); }}>
                         <Feather name="target" size={16} color={activeTab === "assign" ? colors.primary : colors.muted} />
-                        <Text style={[styles.tabText, activeTab === "assign" && styles.tabTextActive]}>Assign Target</Text>
+                                                <Text style={[styles.tabText, activeTab === "assign" && styles.tabTextActive]}>Record Sales</Text>
                     </TouchableOpacity>
                 </View>
             )}
@@ -247,7 +247,7 @@ export const SubDealerTargetsScreen = () => {
                     ) : listData?.length === 0 ? (
                         <View style={styles.centerBox}>
                             <Feather name="pie-chart" size={48} color={colors.muted} />
-                            <Text style={styles.emptyTitle}>No targets found</Text>
+                                    <Text style={styles.emptyTitle}>No records found</Text>
                         </View>
                     ) : (
                         <LegendList
@@ -330,17 +330,17 @@ export const SubDealerTargetsScreen = () => {
                             onPress={() => assignMutation.mutate()}
                             disabled={assignMutation.isPending || selectedDealerId === null}
                         >
-                            {assignMutation.isPending ? <ActivityIndicator color={colors.white} /> : <Text style={styles.submitBtnText}>Submit Target</Text>}
+                            {assignMutation.isPending ? <ActivityIndicator color={colors.white} /> : <Text style={styles.submitBtnText}>Submit Record</Text>}
                         </TouchableOpacity>
                     </View>
-                </KeyboardAvoidingView>
+                </KeyboardAvoidingView> 
             )}
 
             {/* List Filter Modal */}
             <Modal visible={isFilterModalOpen} transparent  animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Filter Targets</Text>
+                            <Text style={styles.modalTitle}>Filter Records</Text>
                         
                         <Text style={styles.inputLabel}>Select Year</Text>
                         <View style={styles.yearSelectorRow}>
