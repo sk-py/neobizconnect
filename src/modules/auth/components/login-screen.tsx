@@ -42,6 +42,7 @@ const LoginScreen = () => {
 
   const { setSession } = useAuth()
   const { mutate, isPending } = useLogin()
+  const [focusedField, setFocusedField] = useState<"username" | "password" | null>(null);
 
   const onSubmit = async (data: LoginForm) => {
     mutate(data, {
@@ -59,9 +60,10 @@ const LoginScreen = () => {
 
 
   return (
-            <KeyboardAvoidingView
+                        <KeyboardAvoidingView
       style={styles.keyboardView}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <SafeAreaView style={styles.safeArea}>
         <ScrollView
@@ -102,24 +104,27 @@ const LoginScreen = () => {
                 control={control}
                 name="username"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View
+                                    <View
                     style={[
                       styles.inputContainer,
+                      focusedField === "username" && styles.inputContainerFocused,
                       errors.username && styles.inputContainerError,
                     ]}
                   >
-                    <Feather name="user" size={18} color={colors.muted} />
+                    <Feather name="user" size={18} color={focusedField === "username" ? colors.primary : colors.muted} />
                     <TextInput
                       style={styles.textInput}
                       placeholder="Username"
                       placeholderTextColor={colors.muted}
                       value={value}
                       onChangeText={onChange}
-                      onBlur={onBlur}
+                      onFocus={() => setFocusedField("username")}
+                      onBlur={() => { onBlur(); setFocusedField(null); }}
                       inputMode="email"
                       autoCapitalize="none"
                       autoCorrect={false}
                       autoComplete="email"
+                      returnKeyType="next"
                     />
                   </View>
                 )}
@@ -141,7 +146,7 @@ const LoginScreen = () => {
                       errors.password && styles.inputContainerError,
                     ]}
                   >
-                    <Feather name="lock" size={18} color={colors.muted} />
+                                        <Feather name="lock" size={18} color={focusedField === "password" ? colors.primary : colors.muted} />
                     <TextInput
                       style={styles.textInput}
                       placeholder="Password"
@@ -149,10 +154,13 @@ const LoginScreen = () => {
                       secureTextEntry={!showPassword}
                       value={value}
                       onChangeText={onChange}
-                      onBlur={onBlur}
+                      onFocus={() => setFocusedField("password")}
+                      onBlur={() => { onBlur(); setFocusedField(null); }}
                       autoCapitalize="none"
                       autoCorrect={false}
                       autoComplete="password"
+                      returnKeyType="done"
+                      onSubmitEditing={handleSubmit(onSubmit)}
                     />
                     <TouchableOpacity
                       onPress={() => setShowPassword(prev => !prev)}
@@ -369,8 +377,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: colors.white,
   },
-  inputContainerError: {
+   inputContainerError: {
     borderColor: colors.error,
+  },
+  inputContainerFocused: {
+    borderColor: colors.primary,
+    borderWidth: 1.5,
   },
   textInput: {
     flex: 1,
