@@ -829,7 +829,7 @@ export const SalesManagerTargetsScreen = () => {
         </View>
       </Modal>
 
-      {/* Entity Selector Modal */}
+                  {/* Entity Selector Modal */}
       <Modal visible={isEntityModalOpen} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.managerModalContainer}>
           <View style={styles.modalHeader}>
@@ -838,7 +838,7 @@ export const SalesManagerTargetsScreen = () => {
               <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
-          <View style={[styles.searchContainer, { margin: spacing.md, marginBottom: 0 }]}>
+                     <View style={styles.entitySearchBar}>
             <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
@@ -846,6 +846,7 @@ export const SalesManagerTargetsScreen = () => {
               placeholderTextColor={colors.muted}
               value={entitySearchQuery}
               onChangeText={setEntitySearchQuery}
+              autoFocus
             />
             {entitySearchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setEntitySearchQuery("")} style={styles.clearSearchBtn}>
@@ -985,7 +986,8 @@ const styles = StyleSheet.create({
   tabTextActive: { color: colors.primary, fontFamily: typography.bold },
 
   searchFilterRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
-  searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 40 },
+    searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 40 },
+  entitySearchBar: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 40, margin: spacing.md, marginBottom: 0 },
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
   clearSearchBtn: { padding: 4 },
