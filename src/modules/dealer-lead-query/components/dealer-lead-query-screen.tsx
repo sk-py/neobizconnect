@@ -26,6 +26,7 @@ import { LegendList } from "@legendapp/list/react-native";
 import { SkeletonList } from "@/components/custom/skeleton";
 import { useCallback, useMemo, useState } from "react";
 import {
+  BackHandler,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -67,10 +68,30 @@ export default function DealerLeadQueryScreen() {
     queryFn: fetchLeadQueries,
   });
 
-  useFocusEffect(
+    useFocusEffect(
     useCallback(() => {
       refetch();
     }, [refetch])
+  );
+
+  const goBack = () => {
+    router.push("/dashboard");
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        goBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [router]),
   );
 
   const { data: employees, isLoading: employeesLoading } = useQuery({
@@ -264,8 +285,15 @@ export default function DealerLeadQueryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <View style={styles.header}>
+            <View style={styles.header}>
         <View style={styles.titleRow}>
+          <TouchableOpacity
+            onPress={goBack}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.backButton}
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+          </TouchableOpacity>
           <Text style={styles.title}>Lead / Query</Text>
           <View style={{ flex: 1 }} />
           <TouchableOpacity style={styles.createBtn} onPress={() => router.push("/dealer-lead-query-create")}>
@@ -439,7 +467,8 @@ export default function DealerLeadQueryScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surface },
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+    titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+  backButton: { padding: 2 },
   title: { fontSize: 15, fontFamily: typography.bold, color: colors.text },
   createBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm },
   createBtnText: { fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.white },

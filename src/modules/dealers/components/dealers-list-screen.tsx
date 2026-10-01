@@ -9,12 +9,14 @@ import {
 import { DealerQuickViewModal } from "@/modules/dealers/components/dealer-quick-view-modal";
 import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { Dealer } from "@/modules/dealers/types";
+import { useAuth } from "@/hooks/use-auth";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
+  BackHandler,
   Linking,
   StyleSheet,
   Text,
@@ -28,27 +30,37 @@ const PAGE_SIZE = 10;
 
 export default function DealersListScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
+
+  const goBack = () => {
+    if (isAdmin) {
+      router.push("/user-setup");
+    } else {
+      router.push("/sales-manager-modules");
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [quickViewDealer, setQuickViewDealer] =
     useState<Dealer | null>(null);
 
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     const onBackPress = () => {
-  //       router.push("/sales-manager-modules");
-  //       return true;
-  //     };
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        goBack();
+        return true;
+      };
 
-  //     const subscription = BackHandler.addEventListener(
-      //   "hardwareBackPress",
-      //   onBackPress,
-      // );
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
 
-  //     return () => subscription.remove();
-  //   }, [router]),
-  // );
+      return () => subscription.remove();
+    }, [router, isAdmin]),
+  );
 
   const {
     data = [],
@@ -210,14 +222,19 @@ export default function DealersListScreen() {
     >
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          {/* <TouchableOpacity
-            onPress={() => router.push("/sales-manager-modules")}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Feather name="arrow-left" size={20} color={colors.text} />
-          </TouchableOpacity> */}
-          <Text style={styles.headerTitle}>Dealers</Text>
-          <Text style={styles.headerSubtitle}>View and manage your dealer network</Text>
+          <View style={styles.titleRowHeader}>
+            <TouchableOpacity
+              onPress={goBack}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.backButton}
+            >
+              <Feather name="arrow-left" size={20} color={colors.text} />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle}>Dealers</Text>
+              <Text style={styles.headerSubtitle}>View and manage your dealer network</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.searchContainer}>
@@ -433,6 +450,8 @@ const styles = StyleSheet.create({
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "column", alignItems: "flex-start", marginBottom: 6 },
+  titleRowHeader: { flexDirection: "row", alignItems: "center", width: "100%" },
+  backButton: { marginRight: spacing.sm },
   headerTitle: {
     fontSize: 20,
     fontFamily: typography.bold,

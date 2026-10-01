@@ -20,6 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
+  BackHandler,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -90,10 +91,34 @@ export default function LeadQueryScreen() {
     );
   };
 
+    const goBack = () => {
+    if (isAdmin) {
+      router.push("/dealer-query");
+    } else {
+      router.push("/sales-manager-modules");
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       refetch();
     }, [refetch]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        goBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [router, isAdmin]),
   );
 
   const filteredData = useMemo(() => {
@@ -354,7 +379,14 @@ export default function LeadQueryScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
+                <View style={styles.titleRow}>
+          <TouchableOpacity
+            onPress={goBack}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.backButton}
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+          </TouchableOpacity>
           <View style={styles.titleTextBlock}>
             <Text style={styles.headerTitle}>Leads & Queries</Text>
             <Text style={styles.headerSubtitle}>Manage new leads and customer inquiries</Text>
@@ -581,7 +613,8 @@ const styles = StyleSheet.create({
 
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
-  titleTextBlock: { flex: 1 },
+    titleTextBlock: { flex: 1 },
+  backButton: { marginRight: spacing.sm },
   headerTitle: {
     fontSize: 20,
     fontFamily: typography.bold,

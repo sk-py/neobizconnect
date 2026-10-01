@@ -67,18 +67,26 @@ export const OrderHistoryIndexScreen = () => {
 
   const { user } = useAuth()
 
+    const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
+
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
+        if (user?.authority === "Sales Manager") {
+          router.push("/sales-manager-modules");
+          return true;
+        }
 
-        if (user?.authority !== "Sales Manager") return;
+        if (isAdmin) {
+          router.push("/dashboard");
+          return true;
+        }
 
-        router.push("/sales-manager-modules");
-        return true;
+        return false;
       };
       const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
       return () => subscription.remove();
-    }, [router]),
+    }, [router, user?.authority, isAdmin]),
   );
 
   return (

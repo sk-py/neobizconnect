@@ -11,9 +11,12 @@ import { SalesManagerQuickViewModal } from "@/modules/sales-managers/components/
 import { SalesManager } from "@/modules/sales-managers/types";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
+import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
+  BackHandler,
   Linking,
   StyleSheet,
   Text,
@@ -39,6 +42,34 @@ const getEmail = (manager: SalesManager) =>
   manager.email || manager.employeeDetails?.email || null;
 
 export default function SalesManagersListScreen() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
+
+  const goBack = () => {
+    if (isAdmin) {
+      router.push("/user-setup");
+    } else {
+      router.push("/sales-manager-modules");
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        goBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [router, isAdmin]),
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [quickViewManager, setQuickViewManager] =
@@ -208,11 +239,22 @@ export default function SalesManagersListScreen() {
       edges={["top", "left", "right"]}
     >
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.headerTitle}>Sales Manager</Text>
-          <Text style={styles.headerSubtitle}>
-            View and manage your sales managers
-          </Text>
+                <View style={styles.titleRow}>
+          <View style={styles.titleRowHeader}>
+            <TouchableOpacity
+              onPress={goBack}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.backButton}
+            >
+              <Feather name="arrow-left" size={20} color={colors.text} />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle}>Sales Manager</Text>
+              <Text style={styles.headerSubtitle}>
+                View and manage your sales managers
+              </Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.searchContainer}>
@@ -413,10 +455,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  titleRow: {
+    titleRow: {
     flexDirection: "column",
     alignItems: "flex-start",
     marginBottom: 6,
+  },
+  titleRowHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+  },
+  backButton: {
+    marginRight: spacing.sm,
   },
   headerTitle: {
     fontSize: 20,

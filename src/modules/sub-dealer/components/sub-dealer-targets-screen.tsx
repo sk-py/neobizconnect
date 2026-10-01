@@ -3,10 +3,11 @@ import { useAuthStore } from "@/store/auth.store";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
     ActivityIndicator,
+    BackHandler,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -52,11 +53,34 @@ export const SubDealerTargetsScreen = () => {
     const insets = useSafeAreaInsets();
     const queryClient = useQueryClient();
     const user = useAuthStore((state) => state.user);
-        const canAssignTarget = user?.authority !== "Admin" && user?.authority !== "Super Admin";
+            const canAssignTarget = user?.authority !== "Admin" && user?.authority !== "Super Admin";
     const screenTitle = canAssignTarget ? "Sales Targets" : "Sub Dealer Sales List";
     const groupCompanyName = user?.group_company_name || "Neo";
 
-    
+    const goBack = () => {
+        if (canAssignTarget) {
+            router.push("/sub-dealer");
+        } else {
+            router.push("/dashboard");
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            const onBackPress = () => {
+                goBack();
+                return true;
+            };
+
+            const subscription = BackHandler.addEventListener(
+                "hardwareBackPress",
+                onBackPress,
+            );
+
+            return () => subscription.remove();
+        }, [router, canAssignTarget]),
+    );
+
     const currentYear = new Date().getFullYear().toString();
     const currentMonth = MONTH_NAMES[new Date().getMonth()];
 
@@ -187,8 +211,8 @@ export const SubDealerTargetsScreen = () => {
 
     return (
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <View style={styles.header}>
+                                <TouchableOpacity style={styles.backButton} onPress={goBack}>
                     <Feather name="arrow-left" size={24} color={colors.text} />
                 </TouchableOpacity>
                     <Text style={styles.headerTitle}>{screenTitle}</Text>
