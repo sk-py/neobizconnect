@@ -194,7 +194,7 @@ const STATUS_KEYS = [
 ];
 const AMOUNT_KEYS = ["doc_total", "DocTotal", "docTotal", "Amount", "TotalAmount"];
 const ITEMS_ARRAY_KEYS = ["items", "documentLines", "DocumentLines"];
-const QTY_KEYS = ["pending_order_quantity", "performa_invoice_quantity", "ar_invoice_quantity"];
+const QTY_KEYS = ["items_quantity", "pending_order_quantity", "performa_invoice_quantity", "ar_invoice_quantity"];
 
 const getStatusStyle = (status: string) => {
   const normalized = (status || "").toLowerCase();
@@ -283,10 +283,13 @@ type GenericDocCardProps = {
   onView?: (item: any) => void;
   onViewLR?: (item: any) => void;
   onViewPdf?: (item: any) => void;
-  pdfLoading?: boolean;
+    pdfLoading?: boolean;
+  showQuantity?: boolean;
 };
 
-const GenericDocCard = ({ item, docPrefix, onView, onViewLR, onViewPdf, pdfLoading }: GenericDocCardProps) => {
+const GenericDocCard = ({ item, docPrefix, onView, onViewLR, onViewPdf, pdfLoading, showQuantity }: GenericDocCardProps) => {
+  const rawQty = pick(item, QTY_KEYS) ?? getQtyFromItems(item);
+  const quantity = rawQty !== undefined ? Number(rawQty) : undefined;
   const docNo = pick(item, DOC_NO_KEYS);
   const cardName = pick(item, CARD_NAME_KEYS);
   const cardCode = pick(item, CARD_CODE_KEYS);
@@ -359,6 +362,13 @@ const GenericDocCard = ({ item, docPrefix, onView, onViewLR, onViewPdf, pdfLoadi
           <Text style={styles.ledgerInfoValue}>{date ? formatDate(date) : "-"}</Text>
         </View>
       </View>
+
+            {showQuantity && quantity !== undefined && !isNaN(quantity) && (
+        <View style={styles.ledgerBalanceRow}>
+          <Text style={styles.ledgerBalanceLabel}>Quantity</Text>
+          <Text style={styles.ledgerBalanceValue}>{quantity.toLocaleString("en-IN")}</Text>
+        </View>
+      )}
 
       {amount !== undefined && !isNaN(amount) && (
         <View style={styles.ledgerBalanceRow}>
@@ -739,6 +749,7 @@ export default function DealerDetailScreen() {
               key={item.id ?? idx}
               item={item}
               docPrefix="INV-"
+              showQuantity
               onView={(inv) => setSelectedInvoice(inv as ArInvoice)}
               onViewLR={(inv) => setSelectedLrInvoice(inv as ArInvoice)}
               onViewPdf={(inv) => handleViewPdf(inv as ArInvoice)}
