@@ -521,12 +521,12 @@ export default function DealerDetailScreen() {
   };
 
       const STAT_CARDS = [
-        { key: "pendingOrders", label: "Pending Orders", icon: "shopping-cart", bg: "#DBEAFE", iconColor: "#2563EB", value: summary ? summary.pending_order_quantity : null, amount: summary ? summary.pending_order_amount : null, quantity: null },
-    { key: "proformaInvoices", label: "Proforma Invoices", icon: "file-text", bg: "#EDE9FE", iconColor: "#7C3AED", value: summary ? summary.performa_invoice_quantity : null, amount: summary ? summary.performa_invoice_amount : null, quantity: null },
-        { key: "arInvoices", label: "AR Invoices", icon: "check-circle", bg: "#DCFCE7", iconColor: "#16A34A", value: summary ? summary.ar_invoice_quantity : null, amount: summary ? summary.ar_invoice_amount : null, quantity: null },
-    { key: "arCreditMemos", label: "AR Credit Memos", icon: "rotate-ccw", bg: "#FEE2E2", iconColor: "#DC2626", value: summary ? summary.ar_credit_count : null, amount: summary ? summary.ar_credit_amount : null, quantity: null },
-    { key: "targetAssigned", label: "Target Assigned", icon: "target", bg: "#FEF3C7", iconColor: "#D97706", value: summary ? summary.target_assigned_quantity : null, amount: null, quantity: null },
-    { key: "achievement", label: "Achievement", icon: "award", bg: "#FFEDD5", iconColor: "#EA580C", value: summary ? summary.achievement_quantity : null, amount: null, quantity: null },
+    { key: "pendingOrders", label: "Pending Orders", icon: "shopping-cart", bg: "#DBEAFE", iconColor: "#2563EB", value: summary ? summary.pending_order_quantity : null, count: summary ? summary.pending_order_count : null, amount: summary ? summary.pending_order_amount : null, quantity: null },
+    { key: "proformaInvoices", label: "Proforma Invoices", icon: "file-text", bg: "#EDE9FE", iconColor: "#7C3AED", value: summary ? summary.performa_invoice_quantity : null, count: summary ? summary.performa_invoice_count : null, amount: summary ? summary.performa_invoice_amount : null, quantity: null },
+    { key: "arInvoices", label: "AR Invoices", icon: "check-circle", bg: "#DCFCE7", iconColor: "#16A34A", value: summary ? summary.ar_invoice_quantity : null, count: summary ? summary.ar_invoice_count : null, amount: summary ? summary.ar_invoice_amount : null, quantity: null },
+    { key: "arCreditMemos", label: "AR Credit Memos", icon: "rotate-ccw", bg: "#FEE2E2", iconColor: "#DC2626", value: summary ? summary.ar_credit_count : null, count: null, amount: summary ? summary.ar_credit_amount : null, quantity: null },
+    { key: "targetAssigned", label: "Target Assigned", icon: "target", bg: "#FEF3C7", iconColor: "#D97706", value: summary ? summary.target_assigned_quantity : null, count: null, amount: null, quantity: null },
+    { key: "achievement", label: "Achievement", icon: "award", bg: "#FFEDD5", iconColor: "#EA580C", value: summary ? summary.achievement_quantity : null, count: null, amount: null, quantity: null },
   ] as const;
 
   if (isLoading) {
@@ -1268,7 +1268,12 @@ export default function DealerDetailScreen() {
                 <Text style={styles.statLabel} numberOfLines={1}>
                   {stat.label}
                 </Text>
-                    {stat.amount !== null && (
+                                {stat.count !== null && (
+                  <Text style={styles.statAmountLabel} numberOfLines={1}>
+                    Count: <Text style={styles.statAmount}>{stat.count}</Text>
+                  </Text>
+                )}
+                {stat.amount !== null && (
                   <View style={styles.statAmountBlock}>
                     <Text style={styles.statAmountLabel} numberOfLines={1}>
                       Amount
