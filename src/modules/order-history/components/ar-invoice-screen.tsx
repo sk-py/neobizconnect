@@ -5,11 +5,14 @@ import { ArInvoiceDocument } from "@/modules/order-history/types";
 import { useAuthStore } from "@/store/auth.store";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,12 +30,19 @@ export default function ArInvoiceScreen() {
   const groupCompanyName = user?.group_company_name || "Neo";
   const canSeeClientCode = user?.authority === "Admin" || user?.authority === "Super Admin" || user?.authority === "Sales Manager";
 
-  const [page, setPage] = useState(0);
+    const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDetails, setSelectedDetails] = useState<ArInvoiceDocument | null>(null);
   const [selectedLr, setSelectedLr] = useState<ArInvoiceDocument | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
+
+  const [fromDate, setFromDate] = useState<Date | null>(null);
+  const [toDate, setToDate] = useState<Date | null>(null);
+  const [appliedFromDate, setAppliedFromDate] = useState<string | undefined>(undefined);
+  const [appliedToDate, setAppliedToDate] = useState<string | undefined>(undefined);
+  const [activeDatePicker, setActiveDatePicker] = useState<"from" | "to" | null>(null);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["ar-invoice-stats", groupCompanyName],
@@ -75,23 +85,61 @@ export default function ArInvoiceScreen() {
       return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
     }
 
-    const date = new Date(withoutTime);
+        const date = new Date(withoutTime);
     if (isNaN(date.getTime())) return withoutTime;
 
     return date.toLocaleDateString("en-GB");
   };
 
+  const formatPickerDate = (d: Date) => {
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    return `${day}/${month}/${d.getFullYear()}`;
+  };
+
+  const toApiDateString = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const matchesDateRange = (item: ArInvoiceDocument, from?: string, to?: string) => {
+    if (!from && !to) return true;
+    const rawDate = item.document_date;
+    if (!rawDate) return false;
+    const dateStr = String(rawDate).split("T")[0];
+    if (from && dateStr < from) return false;
+    if (to && dateStr > to) return false;
+    return true;
+  };
+
+  const handleDateSearch = () => {
+    setAppliedFromDate(fromDate ? toApiDateString(fromDate) : undefined);
+    setAppliedToDate(toDate ? toApiDateString(toDate) : undefined);
+  };
+
+  const handleDateReset = () => {
+    setFromDate(null);
+    setToDate(null);
+    setAppliedFromDate(undefined);
+    setAppliedToDate(undefined);
+  };
+
   const filteredContent = useMemo(() => {
     const content = paginatedData?.content || [];
-    if (!searchQuery.trim()) return content;
-    const query = searchQuery.toLowerCase();
-    return content.filter(
-      (item: ArInvoiceDocument) =>
-        item.invoice_number?.toLowerCase().includes(query) ||
-        item.customer_name?.toLowerCase().includes(query) ||
-        item.customer_code?.toLowerCase().includes(query),
-    );
-  }, [paginatedData?.content, searchQuery]);
+    return content
+      .filter((item: ArInvoiceDocument) => {
+        if (!searchQuery.trim()) return true;
+        const query = searchQuery.toLowerCase();
+        return (
+          item.invoice_number?.toLowerCase().includes(query) ||
+          item.customer_name?.toLowerCase().includes(query) ||
+          item.customer_code?.toLowerCase().includes(query)
+        );
+      })
+      .filter((item: ArInvoiceDocument) => matchesDateRange(item, appliedFromDate, appliedToDate));
+  }, [paginatedData?.content, searchQuery, appliedFromDate, appliedToDate]);
 
   const renderCard = ({ item }: { item: ArInvoiceDocument }) => {
     const isDownloading = downloadingId === item.invoice_doc_entry;
@@ -182,21 +230,36 @@ export default function ArInvoiceScreen() {
         <Text style={styles.listSubtitle}>Here is a List of Invoice Orders</Text>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by invoice no, customer name..."
-          placeholderTextColor={colors.muted}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
-            <Feather name="x-circle" size={16} color={colors.muted} />
-          </TouchableOpacity>
-        )}
+            <View style={styles.filterRow}>
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by invoice no, customer name..."
+            placeholderTextColor={colors.muted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
+              <Feather name="x-circle" size={16} color={colors.muted} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.calendarIconBtn}
+          onPress={() => setFilterModalVisible(true)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Feather name="calendar" size={18} color={colors.primary} />
+        </TouchableOpacity>
       </View>
+
+      {(appliedFromDate || appliedToDate) && (
+        <Text style={styles.appliedDateText} numberOfLines={1}>
+          {fromDate ? formatPickerDate(fromDate) : "Any"} - {toDate ? formatPickerDate(toDate) : "Any"}
+        </Text>
+      )}
 
       {listLoading ? (
         <SkeletonInvoiceList />
@@ -418,6 +481,82 @@ export default function ArInvoiceScreen() {
         )}
       </Modal>
 
+            <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <Pressable style={styles.filterModalOverlay} onPress={() => setFilterModalVisible(false)}>
+          <Pressable style={styles.filterModalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.filterModalHeader}>
+              <Text style={styles.filterModalTitle}>Filter Invoice</Text>
+              <TouchableOpacity
+                onPress={() => setFilterModalVisible(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x" size={22} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.filterModalDivider} />
+
+            <Text style={styles.filterFieldLabel}>From Date</Text>
+            <TouchableOpacity style={styles.filterDateInput} onPress={() => setActiveDatePicker("from")}>
+              <Feather name="calendar" size={16} color={colors.error} />
+              <Text style={fromDate ? styles.filterDateValueText : styles.filterDatePlaceholder}>
+                {fromDate ? formatPickerDate(fromDate) : "DD/MM/YYYY"}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={[styles.filterFieldLabel, { marginTop: spacing.md }]}>To Date</Text>
+            <TouchableOpacity style={styles.filterDateInput} onPress={() => setActiveDatePicker("to")}>
+              <Feather name="calendar" size={16} color={colors.error} />
+              <Text style={toDate ? styles.filterDateValueText : styles.filterDatePlaceholder}>
+                {toDate ? formatPickerDate(toDate) : "DD/MM/YYYY"}
+              </Text>
+            </TouchableOpacity>
+
+            {activeDatePicker && (
+              <DateTimePicker
+                value={activeDatePicker === "from" ? fromDate ?? new Date() : toDate ?? new Date()}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                maximumDate={new Date()}
+                themeVariant="light"
+                onChange={(event, selectedDate) => {
+                  if (event.type === "dismissed") {
+                    setActiveDatePicker(null);
+                    return;
+                  }
+                  if (!selectedDate) return;
+                  if (activeDatePicker === "from") {
+                    setFromDate(selectedDate);
+                  } else {
+                    setToDate(selectedDate);
+                  }
+                  setActiveDatePicker(null);
+                }}
+              />
+            )}
+
+            <View style={styles.filterModalButtonRow}>
+              <TouchableOpacity style={styles.filterResetBtn} onPress={handleDateReset}>
+                <Text style={styles.filterResetBtnText}>Reset</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.filterApplyBtn}
+                onPress={() => {
+                  handleDateSearch();
+                  setFilterModalVisible(false);
+                }}
+              >
+                <Text style={styles.filterApplyBtnText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <PdfViewerModal
         visible={Boolean(pdfUri)}
         uri={pdfUri}
@@ -523,10 +662,27 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: "row", gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
   actionButton: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.surface, paddingVertical: 10, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border },
   actionText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
-  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingHorizontal: spacing.sm, height: 40 },
+    filterRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginHorizontal: spacing.md, marginBottom: spacing.sm },
+  searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 44 },
   searchIcon: { marginRight: spacing.sm },
   searchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, height: "100%" },
   clearSearchBtn: { padding: 4 },
+  calendarIconBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center", backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border },
+  appliedDateText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.primary, marginHorizontal: spacing.md, marginBottom: spacing.sm },
+  filterModalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: spacing.xl },
+  filterModalCard: { width: "100%", backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.lg },
+  filterModalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  filterModalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
+  filterModalDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
+  filterFieldLabel: { fontSize: 13, fontFamily: typography.semibold, color: colors.text, marginBottom: spacing.xs },
+  filterDateInput: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.sm, height: 44 },
+  filterDateValueText: { fontSize: 14, fontFamily: typography.medium, color: colors.text },
+  filterDatePlaceholder: { fontSize: 14, fontFamily: typography.medium, color: colors.muted },
+  filterModalButtonRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
+  filterResetBtn: { flex: 1, paddingVertical: 12, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center" },
+  filterResetBtnText: { fontSize: 14, fontFamily: typography.semibold, color: colors.text },
+  filterApplyBtn: { flex: 1, paddingVertical: 12, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: "center" },
+  filterApplyBtnText: { fontSize: 14, fontFamily: typography.semibold, color: colors.white },
   paginationFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
   paginationText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
   paginationControls: { flexDirection: "row", alignItems: "center", gap: 6 },

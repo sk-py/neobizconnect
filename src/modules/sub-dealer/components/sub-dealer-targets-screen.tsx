@@ -53,13 +53,14 @@ export const SubDealerTargetsScreen = () => {
     const insets = useSafeAreaInsets();
     const queryClient = useQueryClient();
     const user = useAuthStore((state) => state.user);
-    const canAssignTarget = user?.authority !== "Admin" && user?.authority !== "Super Admin";
-    const isAdminView = user?.authority === "Admin" || user?.authority === "Super Admin";
-    const screenTitle = canAssignTarget ? "Sales Records" : "Sub Dealer Sales List";
+        const isAdminView = user?.authority === "Admin" || user?.authority === "Super Admin";
+    // Only dealers can assign targets; Sales Managers get a read-only list
+    const canAssignTarget = user?.authority === "Dealer";
+    const screenTitle = isAdminView ? "Sub Dealer Sales List" : "Sales Targets";
     const groupCompanyName = user?.group_company_name || "Neo";
 
-        const goBack = () => {
-        if (isAdminView) {
+            const goBack = () => {
+        if (!isAdminView) {
             router.push("/sub-dealer-index");
         } else {
             router.push("/sub-dealer");
@@ -79,7 +80,7 @@ export const SubDealerTargetsScreen = () => {
             );
 
             return () => subscription.remove();
-        }, [router, canAssignTarget]),
+                }, [router, isAdminView]),
     );
 
     const currentYear = new Date().getFullYear().toString();
@@ -182,7 +183,7 @@ export const SubDealerTargetsScreen = () => {
                     <Text style={styles.dealerMeta}>Dealer: {item.card_name}</Text>
                     <Text style={styles.dealerMeta}>{item.location ? item.location.charAt(0).toUpperCase() + item.location.slice(1).toLowerCase() : "-"}</Text>
                 </View>
-                <TouchableOpacity style={styles.editBtn} onPress={() => handleEdit(item)}>
+                                    <TouchableOpacity style={styles.editBtn} onPress={() => handleEdit(item)}>
                     <Feather name="edit-2" size={14} color={colors.primary} />
                     <Text style={styles.editBtnText}>Edit</Text>
                 </TouchableOpacity>

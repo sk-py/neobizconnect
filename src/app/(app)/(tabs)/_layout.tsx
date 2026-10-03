@@ -131,6 +131,12 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
+                                {/* Route still exists (reachable via router.push) but never shown as a tab */}
+                <Tabs.Screen
+                    name='sales-target'
+                    options={{ href: null }}
+                />
+
                 <Tabs.Protected guard={canAccess("Notifications")}>
                     <Tabs.Screen
                         name='notifications'
