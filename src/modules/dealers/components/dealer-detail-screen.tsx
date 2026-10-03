@@ -283,11 +283,10 @@ type GenericDocCardProps = {
   onView?: (item: any) => void;
   onViewLR?: (item: any) => void;
   onViewPdf?: (item: any) => void;
-    pdfLoading?: boolean;
-  showQuantity?: boolean;
+  pdfLoading?: boolean;
 };
 
-const GenericDocCard = ({ item, docPrefix, onView, onViewLR, onViewPdf, pdfLoading, showQuantity }: GenericDocCardProps) => {
+const GenericDocCard = ({ item, docPrefix, onView, onViewLR, onViewPdf, pdfLoading }: GenericDocCardProps) => {
   const rawQty = pick(item, QTY_KEYS) ?? getQtyFromItems(item);
   const quantity = rawQty !== undefined ? Number(rawQty) : undefined;
   const docNo = pick(item, DOC_NO_KEYS);
@@ -363,7 +362,7 @@ const GenericDocCard = ({ item, docPrefix, onView, onViewLR, onViewPdf, pdfLoadi
         </View>
       </View>
 
-            {showQuantity && quantity !== undefined && !isNaN(quantity) && (
+            {quantity !== undefined && !isNaN(quantity) && (
         <View style={styles.ledgerBalanceRow}>
           <Text style={styles.ledgerBalanceLabel}>Quantity</Text>
           <Text style={styles.ledgerBalanceValue}>{quantity.toLocaleString("en-IN")}</Text>
@@ -749,7 +748,6 @@ export default function DealerDetailScreen() {
               key={item.id ?? idx}
               item={item}
               docPrefix="INV-"
-              showQuantity
               onView={(inv) => setSelectedInvoice(inv as ArInvoice)}
               onViewLR={(inv) => setSelectedLrInvoice(inv as ArInvoice)}
               onViewPdf={(inv) => handleViewPdf(inv as ArInvoice)}
