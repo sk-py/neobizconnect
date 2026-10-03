@@ -2,7 +2,7 @@
   "expo": {
     "name": "NeoBiz Connect",
     "slug": "neobizconnect",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "neobizconnect",
@@ -129,6 +129,15 @@
         {
           "mode": "production",
           "iosNSEFilePath": "./ios-custom/NotificationService.m"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
         }
       ]
     ],
