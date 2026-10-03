@@ -56,7 +56,6 @@ export const SubDealerTargetsScreen = () => {
         const isAdminView = user?.authority === "Admin" || user?.authority === "Super Admin";
     // Only dealers can assign targets; Sales Managers get a read-only list
     const canAssignTarget = user?.authority === "Dealer";
-    const canEditTarget = user?.authority !== "Sales Manager";
     const screenTitle = isAdminView ? "Sub Dealer Sales List" : "Sales Targets";
     const groupCompanyName = user?.group_company_name || "Neo";
 
@@ -184,12 +183,10 @@ export const SubDealerTargetsScreen = () => {
                     <Text style={styles.dealerMeta}>Dealer: {item.card_name}</Text>
                     <Text style={styles.dealerMeta}>{item.location ? item.location.charAt(0).toUpperCase() + item.location.slice(1).toLowerCase() : "-"}</Text>
                 </View>
-                                {canEditTarget && (
-                    <TouchableOpacity style={styles.editBtn} onPress={() => handleEdit(item)}>
-                        <Feather name="edit-2" size={14} color={colors.primary} />
-                        <Text style={styles.editBtnText}>Edit</Text>
-                    </TouchableOpacity>
-                )}
+                                    <TouchableOpacity style={styles.editBtn} onPress={() => handleEdit(item)}>
+                    <Feather name="edit-2" size={14} color={colors.primary} />
+                    <Text style={styles.editBtnText}>Edit</Text>
+                </TouchableOpacity>
             </View>
 
             <View style={styles.monthsGrid}>
