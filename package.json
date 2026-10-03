@@ -17,6 +17,7 @@
     "expo": "~57.0.16",
     "expo-background-task": "~57.0.15",
     "expo-battery": "~57.0.2",
+    "expo-build-properties": "~57.0.22",
     "expo-constants": "~57.0.10",
     "expo-dev-client": "~57.0.15",
     "expo-device": "~57.0.1",

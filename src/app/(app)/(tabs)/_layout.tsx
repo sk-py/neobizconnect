@@ -71,7 +71,7 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-                                             <Tabs.Protected guard={canAccess("User Setup")}>
+                <Tabs.Protected guard={canAccess("User Setup")}>
                     <Tabs.Screen
                         name='user-setup'
                         options={{
@@ -107,7 +107,7 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-                                <Tabs.Protected guard={canAccess("Admin Leads & Queries")}>
+                <Tabs.Protected guard={canAccess("Admin Leads & Queries")}>
                     <Tabs.Screen
                         name='leads-and-queries-screen'
                         options={{
@@ -119,7 +119,7 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-                                <Tabs.Protected guard={canAccess("Admin Sales Screen")}>
+                <Tabs.Protected guard={canAccess("Admin Sales Screen")}>
                     <Tabs.Screen
                         name='admin-sales-screen'
                         options={{
@@ -142,7 +142,7 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-                                                <Tabs.Protected guard={canAccess("Finances")}>
+                <Tabs.Protected guard={canAccess("Finances")}>
                     <Tabs.Screen
                         name='finances'
                         options={{
@@ -154,7 +154,7 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-                <Tabs.Protected guard={canAccess("Sales Target")}>
+                {/* <Tabs.Protected guard={canAccess("Sales Target")}>
                     <Tabs.Screen
                         name='sales-target'
                         options={{
@@ -165,7 +165,7 @@ const TabLayout = () => {
                             href: null
                         }}
                     />
-                </Tabs.Protected>
+                </Tabs.Protected> */}
 
                 {/* href: null -> no tab bar icon, reached only via in-app
                     navigation. Protected still governs whether the role can
@@ -371,7 +371,7 @@ const TabLayout = () => {
                     />
                 </Tabs.Protected>
 
-                        </Tabs>
+            </Tabs>
 
             {/* Custom Branding Footer */}
             <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
