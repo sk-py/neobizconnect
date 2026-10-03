@@ -85,9 +85,9 @@ export const SubDealerScreen = () => {
     const user = useAuthStore((state) => state.user);
     const groupCompanyName = user?.group_company_name || "Neo";
     const registeredByName = user?.name || "NA";
-        const canRegister = user?.authority !== "Admin" && user?.authority !== "Super Admin";
-    const isAdminView = !canRegister;
-    const screenTitle = canRegister ? "Sub-Dealers" : "Sub Dealer List";
+    const isAdminView = user?.authority === "Admin" || user?.authority === "Super Admin";
+    const canRegister = user?.authority === "Dealer";
+    const screenTitle = isAdminView ? "Sub Dealer List" : "Sub-Dealers";
 
         const goBack = () => {
         if (isAdminView) {
