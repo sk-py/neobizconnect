@@ -76,7 +76,11 @@ export default function DealerLeadQueryScreen() {
     }, [refetch])
   );
 
-            const goBack = () => {
+          const goBack = () => {
+    if (user?.authority === "Query Manager") {
+      router.navigate("/dashboard");
+      return;
+    }
     if (isDealer) {
       router.navigate("/dashboard");
     } else if (isAdminUser) {
