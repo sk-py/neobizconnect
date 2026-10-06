@@ -75,7 +75,7 @@ export default function DealerLeadQueryScreen() {
   );
 
     const goBack = () => {
-        if (isAdminUser) {
+    if (isAdminUser) {
       router.navigate("/dealer-query");
     } else {
       router.navigate("/sales-manager-modules");
