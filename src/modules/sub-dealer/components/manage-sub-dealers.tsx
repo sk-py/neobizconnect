@@ -91,12 +91,9 @@ export const SubDealerScreen = () => {
     const showDealerPicker = isAdminView || isManagerView;
     const screenTitle = isAdminView ? "Sub Dealer List" : "Sub-Dealers";
 
-        const goBack = () => {
-        if (isAdminView) {
-            router.push("/sub-dealer-index");
-        } else {
-            router.push("/sub-dealer");
-        }
+            const goBack = () => {
+        const isAdminUser = user?.authority === "Admin" || user?.authority === "Super Admin";
+                    router.navigate(isAdminView ? "/sub-dealer-index" : "/sub-dealer");
     };
 
     useFocusEffect(

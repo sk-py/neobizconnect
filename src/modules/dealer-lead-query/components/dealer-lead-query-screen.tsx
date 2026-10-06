@@ -75,10 +75,10 @@ export default function DealerLeadQueryScreen() {
   );
 
     const goBack = () => {
-    if (isAdminUser) {
-      router.push("/dealer-lead-query");
+        if (isAdminUser) {
+      router.navigate("/dealer-query");
     } else {
-      router.push("/sales-manager-modules");
+      router.navigate("/sales-manager-modules");
     }
   };
 
@@ -95,7 +95,7 @@ export default function DealerLeadQueryScreen() {
       );
 
       return () => subscription.remove();
-    }, [router]),
+      }, [router, isAdminUser]),
   );
 
   const { data: employees, isLoading: employeesLoading } = useQuery({
