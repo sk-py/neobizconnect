@@ -46,11 +46,13 @@ export const DealerQueryScreen = () => {
     const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
     const canCreate = !isAdmin;
 
-    const goBack = () => {
-        if (isAdmin) {
-            router.push("/dashboard");
+        const goBack = () => {
+        if (isDealer) {
+            router.navigate("/dashboard");
+        } else if (isAdmin) {
+            router.navigate("/leads-and-queries-screen");
         } else {
-            router.push("/sales-manager-modules");
+            router.navigate("/sales-manager-modules");
         }
     };
 
@@ -67,7 +69,7 @@ export const DealerQueryScreen = () => {
             );
 
             return () => subscription.remove();
-        }, [router, isAdmin]),
+            }, [router, isAdmin, isDealer]),
     );
 
     const [activeTab, setActiveTab] = useState<"list" | "create">("list");

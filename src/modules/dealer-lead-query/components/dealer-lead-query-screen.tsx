@@ -15,6 +15,7 @@ import {
   LeadQuery,
   TYPE_OF_QUERY_OPTIONS,
 } from "@/modules/dealer-lead-query/types";
+import { useAuthStore } from "@/store/auth.store";
 import { FieldSelect } from "@/components/custom/field-select";
 import { CountryCodeSelect } from "@/components/custom/country-code-select";
 import { COUNTRY_CODES, splitPhoneNumber } from "@/constants/country-codes";
@@ -53,6 +54,7 @@ export default function DealerLeadQueryScreen() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const isAdminUser = user?.authority === "Admin" || user?.authority === "Super Admin";
+  const isDealer = user?.authority === "Dealer";
   const [searchQuery, setSearchQuery] = useState("");
   const [editingLead, setEditingLead] = useState<LeadQuery | null>(null);
   const [editForm, setEditForm] = useState<LeadFormData | null>(null);
@@ -74,9 +76,11 @@ export default function DealerLeadQueryScreen() {
     }, [refetch])
   );
 
-    const goBack = () => {
-    if (isAdminUser) {
-      router.navigate("/dealer-query");
+            const goBack = () => {
+    if (isDealer) {
+      router.navigate("/dashboard");
+    } else if (isAdminUser) {
+      router.navigate("/leads-and-queries-screen");
     } else {
       router.navigate("/sales-manager-modules");
     }
@@ -95,7 +99,7 @@ export default function DealerLeadQueryScreen() {
       );
 
       return () => subscription.remove();
-      }, [router, isAdminUser]),
+                }, [router, isAdminUser, isDealer]),
   );
 
   const { data: employees, isLoading: employeesLoading } = useQuery({
