@@ -4,6 +4,7 @@ import { Feather } from "@react-native-vector-icons/feather";
 import { Controller, useForm } from "react-hook-form";
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,21 +15,60 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/hooks/use-auth";
 import axios from "axios";
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLogin } from "../hooks/use-auth";
 import { LoginForm, loginSchema } from "../schema";
 
 const LoginScreen = () => {
-  const router = useRouter();
+    const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const usernameRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
+    const passwordRef = useRef<TextInput>(null);
+    const scrollRef = useRef<ScrollView>(null);
+    const cardY = useRef(0);
+  const rootRef = useRef<View>(null);
+  const [kbOverlap, setKbOverlap] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
+    useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardVisible(true);
+
+      // Measure how much of the screen the keyboard really covers.
+      // It is 0 if the system already resized the window, so this is safe on every device.
+      setTimeout(() => {
+        rootRef.current?.measureInWindow((_x, y, _w, h) => {
+          const overlap = Math.max(0, y + h - e.endCoordinates.screenY);
+          setKbOverlap(overlap);
+
+          // Then bring the login card to the top of the visible area
+          setTimeout(() => {
+            scrollRef.current?.scrollTo({
+              y: Math.max(0, cardY.current - 60),
+              animated: true,
+            });
+          }, 80);
+        });
+      }, 100);
+    });
+
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardVisible(false);
+      setKbOverlap(0);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<
     "username" | "password" | null
@@ -70,12 +110,12 @@ const LoginScreen = () => {
   return (
     <KeyboardAvoidingView
       style={styles.keyboardView}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <SafeAreaView style={styles.safeArea}>
+              <SafeAreaView ref={rootRef} style={styles.safeArea} edges={["top", "left", "right"]}>
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+                    ref={scrollRef}
+                  contentContainerStyle={[styles.scrollContent, { paddingBottom: kbOverlap }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -93,28 +133,28 @@ const LoginScreen = () => {
             </Text>
           </View>
 
-          {/* Heading */}
-          <View style={styles.screenHeadings}>
-            <Text style={styles.screenTitle}>
-              Dealer Ordering,{"\n"}Sales & Inventory
-            </Text>
+            {/* Heading (hidden while typing so nothing gets cut off) */}
+          {!keyboardVisible && (
+            <View style={styles.screenHeadings}>
+                            <Text style={styles.screenTitle}>Dealer Ordering,</Text>
+              <Text style={styles.screenTitleAccent}>Sales & Inventory</Text>
 
-            <Text style={styles.screenSubtitle}>
-              One clean portal to place orders, monitor sales performance,
-              and check live inventory.
-            </Text>
-          </View>
-
-          {/* Login Card */}
-          <View style={styles.formCard}>
+              <Text style={styles.screenSubtitle}>
+                One clean portal to place orders, monitor sales performance,
+                and check live inventory.
+              </Text>
+            </View>
+          )}
+                      {/* Login Card */}
+          <View
+            style={styles.formCard}
+            onLayout={(e) => {
+              cardY.current = e.nativeEvent.layout.y;
+            }}
+          >
             <View style={styles.formHeader}>
-              <Text style={styles.formTitle}>
-                Welcome back.
-              </Text>
-
-              <Text style={styles.formSubtitle}>
-                Please login to continue.
-              </Text>
+              <Text style={styles.formTitle}>Welcome back.</Text>
+              <Text style={styles.formSubtitle}>Please login to continue.</Text>
             </View>
 
             {/* Username */}
@@ -294,9 +334,14 @@ const LoginScreen = () => {
           </View>
 
           {/* Footer */}
-          <View style={styles.footerContainer}>
+                    <View
+            style={[
+              styles.footerContainer,
+              { paddingBottom: keyboardVisible ? 12 : Math.max(insets.bottom, 12) + 8 },
+            ]}
+          >
             <Text style={styles.footerText}>
-              © 2024 Neo Wheels Ltd. All rights reserved.
+              © {new Date().getFullYear()} Neo Wheels Ltd. All rights reserved.
             </Text>
           </View>
         </ScrollView>
@@ -308,18 +353,19 @@ const LoginScreen = () => {
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  keyboardView: {
+    keyboardView: {
     flex: 1,
+      backgroundColor: "#FFF8F7",
   },
 
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background || "#FAFAFA",
+        backgroundColor: "#FFF8F7",
   },
 
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: spacing.xl,
+      paddingBottom: 0,
     paddingTop: spacing.md,
   },
 
@@ -352,24 +398,98 @@ const styles = StyleSheet.create({
   screenHeadings: {
     alignItems: "center",
     paddingHorizontal: spacing.lg,
-    paddingTop: 40,
-    paddingBottom: 32,
+        paddingTop: 28,
+    paddingBottom: 24,
+  },
+
+  screenHeadingsCompact: {
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+
+  hidden: {
+    display: "none",
+  },
+
+    eyebrowPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    marginBottom: 16,
+  },
+
+  eyebrowDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+
+  eyebrowText: {
+    fontSize: 11,
+    letterSpacing: 1.2,
+    fontFamily: typography.bold,
+    color: colors.primary,
+  },
+
+    screenTitleAccent: {
+    fontSize: 32,
+    fontFamily: typography.bold,
+    color: colors.primary,
+    textAlign: "center",
+    lineHeight: 40,
+    letterSpacing: -0.5,
+  },
+
+  featureRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 20,
+  },
+
+  featureChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border || "#E5E5E5",
+  },
+
+  featureChipText: {
+    fontSize: 12,
+    fontFamily: typography.medium,
+    color: colors.textSecondary,
   },
 
   screenTitle: {
-    fontSize: 26,
-    fontFamily: typography.bold,
+      fontSize: 22,
+    fontFamily: typography.semibold,
     textAlign: "center",
     color: colors.text,
-    lineHeight: 34,
+    lineHeight: 30,
+    letterSpacing: 0.2,
   },
 
   screenSubtitle: {
-    marginTop: 16,
-    fontSize: txtSize.body,
+      marginTop: 14,
+    maxWidth: 300,
+    fontSize: 14,
     lineHeight: 22,
+    letterSpacing: 0.2,
     textAlign: "center",
-    color: colors.muted,
+    color: "#4B5563",
     fontFamily: typography.medium,
   },
 
@@ -381,14 +501,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 18,
     elevation: 8,
-    shadowColor: "#808080",
-    shadowOpacity: 0.05,
+       shadowColor: colors.primary,
+    shadowOpacity: 0.08,
     shadowRadius: 18,
     shadowOffset: {
       width: 0,
       height: 10,
     },
-    marginBottom: 30,
+        marginBottom: 16,
   },
 
   formHeader: {
@@ -415,7 +535,7 @@ const styles = StyleSheet.create({
   },
 
   inputContainer: {
-    height: 46,
+        height: 50,
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
@@ -424,11 +544,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border || "#E5E5E5",
     borderRadius: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
 
   inputContainerFocused: {
     borderColor: colors.primary,
+    backgroundColor: colors.white,
   },
 
   inputContainerError: {
@@ -436,8 +557,8 @@ const styles = StyleSheet.create({
   },
 
   textInput: {
-    flex: 1,
-    height: 46,
+        flex: 1,
+    height: 50,
     padding: 0,
     fontSize: txtSize.body,
     fontFamily: typography.regular,
@@ -464,7 +585,7 @@ const styles = StyleSheet.create({
   },
 
   loginButton: {
-    height: 42,
+        height: 50,
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
@@ -472,6 +593,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 12,
     position: "relative",
+    elevation: 4,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
 
   loginButtonText: {
@@ -488,8 +614,8 @@ const styles = StyleSheet.create({
   footerContainer: {
     alignItems: "center",
     justifyContent: "flex-end",
-    textAlignVertical: "bottom",
-    marginTop: 20,
+    marginTop: 16,
+    paddingBottom: 20,
     flex: 1,
   },
 
