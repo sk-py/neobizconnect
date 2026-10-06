@@ -110,13 +110,13 @@ export const DealerProductsScreen = () => {
 
                     <View style={styles.rowLineTwo}>
                         <View style={styles.badgesContainer}>
-                            <Text style={styles.productCode}>{item.itemCode}</Text>
+                        <Text style={styles.productCode} numberOfLines={1}>{item.itemCode}</Text>
                             <View style={styles.sizeBadge}>
                                 <Text style={styles.sizeBadgeText}>{item.wheelSize}</Text>
                             </View>
                             <View style={item.inStockQty > 4 ? styles.stockBadge : styles.outOfStockBadge}>
                                 <View style={[styles.stockDot, { backgroundColor: item?.inStockQty > 4 ? colors.success : colors.error }]} />
-                                <Text style={[styles.stockBadgeText, { color: item?.inStockQty > 4 ? colors.success : colors.error }]}>
+                                                                <Text numberOfLines={1} style={[styles.stockBadgeText, { color: item?.inStockQty > 4 ? colors.success : colors.error }]}>
                                     {item.inStockQty > 4 ? `${item.inStockQty} in stock` : "Out of stock"}
                                 </Text>
                             </View>
@@ -290,7 +290,11 @@ export const DealerProductsScreen = () => {
                         activeOpacity={0.7}
                     >
                         <Text style={styles.compactDropdownText} numberOfLines={1}>
-                            {selectedStockLabel === "In Stock" ? "Stock" : selectedStockLabel}
+                                                        {selectedStockLabel === "In Stock"
+                                ? "Stock"
+                                : selectedStockLabel === "Out Of Stock"
+                                    ? "Out"
+                                    : "Offer"}
                         </Text>
                         <Feather name="chevron-down" size={12} color={colors.muted} />
                     </TouchableOpacity>
@@ -302,7 +306,7 @@ export const DealerProductsScreen = () => {
                     >
                         <Feather name="tag" size={10} color={colors.primary} />
                         <Text style={styles.compactDropdownText} numberOfLines={1}>
-                            {selectedSizeLabel === "All Sizes" ? "Size" : selectedSizeLabel}
+                         {selectedSizeLabel === "All Sizes" ? "Size" : selectedSizeLabel?.replace(" Inch", '"')}
                         </Text>
                         <Feather name="chevron-down" size={12} color={colors.muted} />
                     </TouchableOpacity>
@@ -664,11 +668,11 @@ const styles = StyleSheet.create({
         borderRadius: radius.md,
         borderWidth: 1,
         borderColor: colors.border,
-        gap: spacing.md,
+        gap: spacing.sm,
     },
-    imagePlaceholder: {
-        width: 48,
-        height: 48,
+        imagePlaceholder: {
+        width: 40,
+        height: 40,
         borderRadius: radius.sm,
         backgroundColor: colors.surface,
         alignItems: "center",
@@ -689,13 +693,14 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         alignItems: "center",
     },
-    badgesContainer: {
+        badgesContainer: {
         flexDirection: "row",
         alignItems: "center",
-        flexWrap: "wrap",
+        flexWrap: "nowrap",
         gap: 6,
         flex: 1,
-        paddingRight: 8,
+        paddingRight: 6,
+        minWidth: 0,
     },
     productName: {
         flex: 1,
@@ -703,17 +708,19 @@ const styles = StyleSheet.create({
         fontFamily: typography.bold,
         color: colors.text,
     },
-    productCode: {
+       productCode: {
         fontSize: 11,
         fontFamily: typography.medium,
         color: colors.muted,
+        flexShrink: 1,
     },
     priceText: {
         fontSize: txtSize.small,
         fontFamily: typography.bold,
         color: colors.text,
     },
-    sizeBadge: {
+        sizeBadge: {
+        flexShrink: 0,
         paddingHorizontal: 6,
         paddingVertical: 2,
         backgroundColor: colors.surface,
@@ -726,7 +733,8 @@ const styles = StyleSheet.create({
         fontFamily: typography.medium,
         color: colors.textSecondary,
     },
-    stockBadge: {
+        stockBadge: {
+        flexShrink: 0,
         flexDirection: "row",
         alignItems: "center",
         paddingHorizontal: 6,
@@ -735,7 +743,8 @@ const styles = StyleSheet.create({
         borderRadius: radius.xl,
         gap: 4,
     },
-    outOfStockBadge: {
+       outOfStockBadge: {
+        flexShrink: 0,
         flexDirection: "row",
         alignItems: "center",
         paddingHorizontal: 6,
@@ -755,12 +764,12 @@ const styles = StyleSheet.create({
         fontFamily: typography.medium,
         // color: colors.success,
     },
-    actionButton: {
-        paddingHorizontal: 16,
+        actionButton: {
+        paddingHorizontal: 12,
         paddingVertical: 8,
         backgroundColor: colors.primary,
         borderRadius: radius.sm,
-        minWidth: 70,
+        minWidth: 60,
         alignItems: "center",
     },
     inlineStepper: {
@@ -768,8 +777,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: colors.primary,
         borderRadius: radius.sm,
-        height: 32,
-        minWidth: 70,
+                height: 32,
+        minWidth: 60,
     },
     inlineStepperBtn: {
         paddingHorizontal: 8,

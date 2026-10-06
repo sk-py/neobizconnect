@@ -42,7 +42,7 @@ export default function ItemMasterScreen() {
     if (canSeeExtraDetails) {
       router.push("/admin-inventory");
     } else {
-      router.push("/sales-manager-modules");
+      router.push(user?.authority === "Sales Manager" ? "/dashboard" : "/sales-manager-modules");
     }
   };
 

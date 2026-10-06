@@ -60,11 +60,8 @@ export const SubDealerTargetsScreen = () => {
     const groupCompanyName = user?.group_company_name || "Neo";
 
             const goBack = () => {
-        if (!isAdminView) {
-            router.push("/sub-dealer-index");
-        } else {
-            router.push("/sub-dealer");
-        }
+        const isAdminUser = user?.authority === "Admin" || user?.authority === "Super Admin";
+        router.navigate(isAdminUser ? "/sub-dealer-index" : "/sub-dealer");
     };
 
     useFocusEffect(
