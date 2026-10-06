@@ -37,7 +37,7 @@ export default function DealersListScreen() {
     if (isAdmin) {
       router.push("/user-setup");
     } else {
-      router.push("/sales-manager-modules");
+      router.push(user?.authority === "Sales Manager" ? "/dashboard" : "/sales-manager-modules");
     }
   };
 

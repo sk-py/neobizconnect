@@ -95,7 +95,7 @@ export default function LeadQueryScreen() {
     if (isAdmin) {
       router.push("/leads-and-queries-screen");
     } else {
-      router.navigate("/dashboard");
+      router.push(isSalesManager || isQueryManager ? "/dashboard" : "/sales-manager-modules");
     }
   };
 

@@ -74,7 +74,7 @@ export default function OnlineLeadScreen() {
     if (isAdminUser) {
       router.push("/leads-and-queries-screen");
     } else {
-      router.push("/sales-manager-modules");
+      router.push(user?.authority === "Query Manager" ? "/dashboard" : "/sales-manager-modules");
     }
   };
 
