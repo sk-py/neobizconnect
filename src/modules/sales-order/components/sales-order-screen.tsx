@@ -293,7 +293,7 @@ export const DealerProductsScreen = () => {
                                                         {selectedStockLabel === "In Stock"
                                 ? "Stock"
                                 : selectedStockLabel === "Out Of Stock"
-                                    ? "No Stock"
+                                    ? "Out"
                                     : "Offer"}
                         </Text>
                         <Feather name="chevron-down" size={12} color={colors.muted} />
