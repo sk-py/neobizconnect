@@ -215,7 +215,7 @@ export default function CustomerLedgerScreen() {
             <Text style={styles.finLabel}>Debit</Text>
             <Text style={[styles.finValue, { color: colors.error }]}>₹{formatCurrency(item.DebitLC)}</Text>
           </View>
-          <View style={styles.finCol}>
+                    <View style={[styles.finCol, { alignItems: "flex-end" }]}>
             <Text style={styles.finLabel}>Credit</Text>
             <Text style={[styles.finValue, { color: colors.success }]}>₹{formatCurrency(item.CreditLC)}</Text>
           </View>
