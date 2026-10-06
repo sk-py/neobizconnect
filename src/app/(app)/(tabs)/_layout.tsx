@@ -383,7 +383,7 @@ const TabLayout = () => {
             <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2 }} >
                     <Text style={styles.footerText}>By</Text>
-                    <Image source={require("@/assets/images/favicon.png")} style={{ width: 20, height: 20, resizeMode: 'contain' }} />
+                    {/* <Image source={require("@/assets/images/favicon.png")} style={{ width: 20, height: 20, resizeMode: 'contain' }} /> */}
                     <View style={{ flexDirection: "row" }}>
                         <Text style={[styles.footerText, styles.primaryText]}>Neo</Text>
                         <Text style={[styles.footerText, { color: colors.black }]}>Wheels</Text>
