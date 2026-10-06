@@ -219,10 +219,6 @@ export default function CustomerLedgerScreen() {
             <Text style={styles.finLabel}>Credit</Text>
             <Text style={[styles.finValue, { color: colors.success }]}>₹{formatCurrency(item.CreditLC)}</Text>
           </View>
-          <View style={styles.finCol}>
-            <Text style={styles.finLabel}>Cum. Balance</Text>
-            <Text style={styles.finValue}>₹{formatCurrency(item.CumulativeBalanceLC)}</Text>
-          </View>
         </View>
 
         {isInvoice && item.OriginDocEntry && (
@@ -520,7 +516,7 @@ const SkeletonCard = () => (
     </View>
 
     <View style={styles.financialRow}>
-      {[0, 1, 2].map(i => (
+            {[0, 1].map(i => (
         <View key={i} style={styles.finCol}>
           <SkeletonBlock style={{ width: 40, height: 10, borderRadius: 3, marginBottom: 6 }} />
           <SkeletonBlock style={{ width: 55, height: 13, borderRadius: 3 }} />
