@@ -8,6 +8,31 @@ export const fetchSubDealers = async (
   return res.data;
 };
 
+export type DealerDropdownItem = { card_code: string; card_name: string };
+
+// Dealer dropdown for Sales Manager (GET .../Neo/Dealer/User/AccountBalenceList)
+export const fetchDealerDropdown = async (
+  groupCompanyName: string,
+): Promise<DealerDropdownItem[]> => {
+  const res = await api.get(`/${groupCompanyName}/Dealer/User/AccountBalenceList`);
+  const list = Array.isArray(res.data) ? res.data : res.data?.content ?? [];
+  return list.map((d: any) => ({
+    card_code: d.card_code ?? d.cardCode ?? d.CardCode ?? "",
+    card_name: d.card_name ?? d.cardName ?? d.CardName ?? "",
+  }));
+};
+
+export const fetchSubDealersByCardCode = async (
+  groupCompanyName: string,
+  cardCode: string,
+): Promise<SubDealer[]> => {
+  const res = await api.post(
+    `/List/${groupCompanyName}/Sub/Dealer/User/By/CardCode`,
+    { card_code: cardCode },
+  );
+  return Array.isArray(res.data) ? res.data : res.data?.content ?? [];
+};
+
 export const createSubDealer = async (
   groupCompanyName: string,
   payload: SubDealerPayload,

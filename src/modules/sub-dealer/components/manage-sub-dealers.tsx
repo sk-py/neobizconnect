@@ -27,7 +27,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
-import { createSubDealer, fetchSubDealers, updateSubDealer } from "../services/sub-dealers-api";
+import { createSubDealer, fetchDealerDropdown, fetchSubDealers, fetchSubDealersByCardCode, updateSubDealer } from "../services/sub-dealers-api";
 import { SubDealer } from "../types";
 
 const formSchema = z.object({
@@ -87,6 +87,8 @@ export const SubDealerScreen = () => {
     const registeredByName = user?.name || "NA";
     const isAdminView = user?.authority === "Admin" || user?.authority === "Super Admin";
     const canRegister = user?.authority === "Dealer";
+    const isManagerView = user?.authority === "Sales Manager" || isAdminView;
+    const showDealerPicker = isAdminView || isManagerView;
     const screenTitle = isAdminView ? "Sub Dealer List" : "Sub-Dealers";
 
         const goBack = () => {
@@ -124,9 +126,17 @@ export const SubDealerScreen = () => {
         enabled: isAdminView,
     });
 
-    const dealerOptions = (parentDealers ?? []).map(
-        (d) => `${d.cardName} (${d.cardCode})`,
-    );
+    const { data: managerDealers, isLoading: managerDealersLoading } = useQuery({
+        queryKey: ["dealer-dropdown", groupCompanyName],
+        queryFn: () => fetchDealerDropdown(groupCompanyName),
+        enabled: isManagerView,
+    });
+
+    const dealerOptions = isManagerView
+        ? (managerDealers ?? []).map((d) => `${d.card_name} (${d.card_code})`)
+        : (parentDealers ?? []).map((d) => `${d.cardName} (${d.cardCode})`);
+
+    const dealerPickerLoading = isManagerView ? managerDealersLoading : dealersOptionsLoading;
 
     const handleDealerSelect = (label: string) => {
         setSelectedDealerLabel(label);
@@ -134,16 +144,28 @@ export const SubDealerScreen = () => {
         setSelectedDealerCode(match ? match[1] : null);
     };
 
-    // --- Data Fetching ---
-    const { data: dealers, isLoading, isRefetching, refetch } = useQuery({
+    const allSubDealersQuery = useQuery({
         queryKey: ["sub-dealers", groupCompanyName],
         queryFn: () => fetchSubDealers(groupCompanyName),
-        enabled: Boolean(groupCompanyName),
+        enabled: Boolean(groupCompanyName) && !isManagerView,
     });
 
-    const listData = isAdminView
-        ? (dealers ?? []).filter((d) => d.card_code === selectedDealerCode)
-        : dealers;
+    const managerSubDealersQuery = useQuery({
+        queryKey: ["sub-dealers", "by-dealer", groupCompanyName, selectedDealerCode],
+        queryFn: () => fetchSubDealersByCardCode(groupCompanyName, selectedDealerCode as string),
+        enabled: isManagerView && Boolean(selectedDealerCode),
+    });
+
+    const activeQuery = isManagerView ? managerSubDealersQuery : allSubDealersQuery;
+    const isLoading = activeQuery.isLoading;
+    const isRefetching = activeQuery.isRefetching;
+    const refetch = activeQuery.refetch;
+
+    const listData: SubDealer[] = isManagerView
+        ? managerSubDealersQuery.data ?? []
+        : isAdminView
+          ? (allSubDealersQuery.data ?? []).filter((d) => d.card_code === selectedDealerCode)
+          : allSubDealersQuery.data ?? [];
 
     // --- Mutations ---
     const createMutation = useMutation({
@@ -439,7 +461,7 @@ export const SubDealerScreen = () => {
 
             {activeTab === "list" ? (
                 <>
-                    {isAdminView && (
+                                        {showDealerPicker && (
                         <View style={styles.dealerPickerContainer}>
                             <FieldSelect
                                 label="Select Dealer"
@@ -448,7 +470,7 @@ export const SubDealerScreen = () => {
                                 onChange={handleDealerSelect}
                                 searchable
                                 placeholder="Select Dealer..."
-                                loading={dealersOptionsLoading}
+                                loading={dealerPickerLoading}
                             />
                         </View>
                     )}
@@ -459,7 +481,7 @@ export const SubDealerScreen = () => {
                         </Text>
                     </Pressable> */}
 
-                    {isAdminView && !selectedDealerCode ? (
+                        {showDealerPicker && !selectedDealerCode ? (
                         <View style={styles.centerBox}>
                             <Feather name="users" size={48} color={colors.muted} />
                             <Text style={styles.emptyTitle}>Select a dealer to view their sub-dealers</Text>
