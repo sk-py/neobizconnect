@@ -8,7 +8,7 @@ import { getDevicePushTokenAsync, getPermissionsAsync, requestPermissionsAsync }
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchDealerProfile } from "../service/profile.api";
 
 const isValidValue = (val?: string | null) => {
@@ -20,6 +20,7 @@ const isValidValue = (val?: string | null) => {
 export const ProfileScreen = () => {
   const router = useRouter();
   const { user, clearSession } = useAuth();
+  const insets = useSafeAreaInsets();
   const groupCompanyName = user?.group_company_name || "Neo";
   const [pushEnabled, setPushEnabled] = useState(true);
 
@@ -142,7 +143,10 @@ export const ProfileScreen = () => {
 
   return (
     <View style={styles.safeArea} >
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing.xxl }]}
+        showsVerticalScrollIndicator={false}
+      >
 
         {/* 1. Identity Header (Row Layout) */}
         <View style={styles.profileHeader}>
