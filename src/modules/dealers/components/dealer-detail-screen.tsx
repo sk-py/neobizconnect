@@ -1048,13 +1048,7 @@ export default function DealerDetailScreen() {
                     Rs. {formatCurrency(entry.CreditLC)}
                   </Text>
                 </View>
-              </View>
-              <View style={styles.ledgerBalanceRow}>
-                <Text style={styles.ledgerBalanceLabel}>Cumulative Balance</Text>
-                <Text style={styles.ledgerBalanceValue}>
-                  Rs. {formatCurrency(entry.CumulativeBalanceLC)}
-                </Text>
-              </View>
+                           </View>
               <View style={styles.ledgerInvoiceRow}>
                     <View style={{ flex: 1 }}>
                   <Text style={styles.ledgerInfoLabel}>Document Number</Text>
