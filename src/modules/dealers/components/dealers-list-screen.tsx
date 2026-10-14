@@ -151,7 +151,7 @@ export default function DealersListScreen() {
     const email = item.emailAddress;
     const d = item as DealerRow;
     const salesManager =
-      d.salesManager && d.salesManager !== "-No Sales Employee-" ? d.salesManager : "-";
+    d.salesManager && d.salesManager !== "-No Sales Employee-" ? d.salesManager : "NA";
     const isActive = d.lock_status === 1;
     const loginCreated = !!d.employeeDetails;
 
@@ -170,14 +170,14 @@ export default function DealersListScreen() {
           >
             {isSuperAdmin && !loginCreated ? (
               <TouchableOpacity
-                style={styles.createLoginBtnTop}
+                style={[styles.createLoginBtnOutline, { backgroundColor: "#2563EB", borderColor: "#2563EB" }]}
                 onPress={(event) => {
                   event.stopPropagation();
                   setLoginDealer(item);
                 }}
               >
                 <Feather name="lock" size={12} color={colors.white} />
-                <Text style={styles.createLoginText}>Create Login</Text>
+                <Text style={[styles.createLoginTextOutline, { color: colors.white }]}>Create Login</Text>
               </TouchableOpacity>
             ) : null}
 
@@ -197,26 +197,33 @@ export default function DealersListScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.dealerCode}>
-            {item.cardCode || "-"}
-          </Text>
+                    <View style={styles.codeRow}>
+            <Text style={styles.dealerCode}>
+              {item.cardCode || "-"}
+            </Text>
 
-          {isSuperAdmin ? (
-            <View style={styles.adminExtra}>
-              <View style={styles.adminLine}>
-                <Feather name="user" size={12} color={colors.textSecondary} />
-                <Text style={styles.adminValue} numberOfLines={1}>{salesManager}</Text>
-              </View>
-
+            {isSuperAdmin ? (
               <View style={[styles.statusBadge, { backgroundColor: isActive ? "#DCFCE7" : "#FEE2E2" }]}>
                 <Text style={[styles.statusBadgeText, { color: isActive ? colors.success : colors.error }]}>
                   {isActive ? "Active" : "Inactive"}
                 </Text>
               </View>
+            ) : null}
+          </View>
 
-              <View style={styles.loginStatusRow}>
-                <View style={[styles.dot, { backgroundColor: loginCreated ? colors.success : colors.error }]} />
-                <Text style={styles.adminValue}>{loginCreated ? "Created" : "Not Created"}</Text>
+          {isSuperAdmin ? (
+            <View style={styles.adminColumn}>
+              <View style={styles.adminLine}>
+                <Text style={styles.adminLabelWide}>Sales Manager:</Text>
+                <Text style={styles.adminValue} numberOfLines={1}>{salesManager}</Text>
+              </View>
+
+              <View style={styles.adminLine}>
+                <Text style={styles.adminLabelWide}>Login Status:</Text>
+                <View style={styles.loginStatusRow}>
+                  <View style={[styles.dot, { backgroundColor: loginCreated ? colors.success : colors.error }]} />
+                  <Text style={styles.adminValue}>{loginCreated ? "Created" : "Not Created"}</Text>
+                </View>
               </View>
             </View>
           ) : null}
@@ -707,6 +714,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 6,
     gap: 8,
+  },
+
+  codeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  adminColumn: {
+    marginTop: 4,
+    gap: 4,
+  },
+
+  adminLabelWide: {
+    width: 100,
+    fontSize: txtSize.xs,
+    fontFamily: typography.medium,
+    color: colors.textSecondary,
+  },
+
+  createLoginBtnOutline: {
+    position: "absolute",
+    top: -4,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.white,
+  },
+
+  createLoginTextOutline: {
+    fontSize: txtSize.xs,
+    fontFamily: typography.bold,
+    color: colors.primary,
   },
 
   createLoginBtnTop: {

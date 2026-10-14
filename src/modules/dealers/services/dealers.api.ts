@@ -13,8 +13,13 @@ export type CreateDealerLoginPayload = {
 export const createDealerLogin = async (
   payload: CreateDealerLoginPayload,
 ): Promise<void> => {
-  void payload;
-  throw new Error("Create Login API is not connected yet.");
+  await api.post(`/Add/Neo/Dealer/User`, {
+    user_code: payload.cardCode,
+    password: payload.password,
+    username: payload.username,
+    status: String(payload.status),
+    brand_type: payload.brandTypes,
+  });
 };
 
 export const fetchDealers = async (): Promise<Dealer[]> => {
