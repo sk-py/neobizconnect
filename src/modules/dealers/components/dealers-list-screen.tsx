@@ -155,14 +155,32 @@ export default function DealersListScreen() {
     const isActive = d.lock_status === 1;
     const loginCreated = !!d.employeeDetails;
 
-    return (
+       return (
       <TouchableOpacity
         style={styles.row}
         activeOpacity={0.7}
         onPress={() => openDealerDetails(item)}
       >
         <View style={styles.rowMain}>
-          <View style={styles.nameRow}>
+          <View
+            style={[
+              styles.nameRow,
+              isSuperAdmin && !loginCreated && { paddingRight: 112 },
+            ]}
+          >
+            {isSuperAdmin && !loginCreated ? (
+              <TouchableOpacity
+                style={styles.createLoginBtnTop}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  setLoginDealer(item);
+                }}
+              >
+                <Feather name="lock" size={12} color={colors.white} />
+                <Text style={styles.createLoginText}>Create Login</Text>
+              </TouchableOpacity>
+            ) : null}
+
             <TouchableOpacity
               onPress={(event) => {
                 event.stopPropagation();
@@ -186,39 +204,20 @@ export default function DealersListScreen() {
           {isSuperAdmin ? (
             <View style={styles.adminExtra}>
               <View style={styles.adminLine}>
-                <Text style={styles.adminLabel}>Sales Manager</Text>
+                <Feather name="user" size={12} color={colors.textSecondary} />
                 <Text style={styles.adminValue} numberOfLines={1}>{salesManager}</Text>
               </View>
 
-              <View style={styles.adminLine}>
-                <Text style={styles.adminLabel}>Status</Text>
-                <View style={[styles.statusBadge, { backgroundColor: isActive ? "#DCFCE7" : "#FEE2E2" }]}>
-                  <Text style={[styles.statusBadgeText, { color: isActive ? colors.success : colors.error }]}>
-                    {isActive ? "Active" : "Inactive"}
-                  </Text>
-                </View>
+              <View style={[styles.statusBadge, { backgroundColor: isActive ? "#DCFCE7" : "#FEE2E2" }]}>
+                <Text style={[styles.statusBadgeText, { color: isActive ? colors.success : colors.error }]}>
+                  {isActive ? "Active" : "Inactive"}
+                </Text>
               </View>
 
-              <View style={styles.adminLine}>
-                <Text style={styles.adminLabel}>Login Status</Text>
-                <View style={styles.loginStatusRow}>
-                  <View style={[styles.dot, { backgroundColor: loginCreated ? colors.success : colors.error }]} />
-                  <Text style={styles.adminValue}>{loginCreated ? "Created" : "Not Created"}</Text>
-                </View>
+              <View style={styles.loginStatusRow}>
+                <View style={[styles.dot, { backgroundColor: loginCreated ? colors.success : colors.error }]} />
+                <Text style={styles.adminValue}>{loginCreated ? "Created" : "Not Created"}</Text>
               </View>
-
-              {!loginCreated ? (
-                <TouchableOpacity
-                  style={styles.createLoginBtn}
-                  onPress={(event) => {
-                    event.stopPropagation();
-                    setLoginDealer(item);
-                  }}
-                >
-                  <Feather name="lock" size={13} color={colors.white} />
-                  <Text style={styles.createLoginText}>Create Login</Text>
-                </TouchableOpacity>
-              ) : null}
             </View>
           ) : null}
 
@@ -242,7 +241,6 @@ export default function DealersListScreen() {
                 </Text>
               </TouchableOpacity>
             ) : null}
-
 
             {email ? (
               <TouchableOpacity
@@ -279,7 +277,7 @@ export default function DealersListScreen() {
   };
 
   return (
-    <SafeAreaView
+  <SafeAreaView
       style={styles.safeArea}
       edges={["top", "left", "right"]}
     >
@@ -703,9 +701,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
 
- adminExtra: {
+  adminExtra: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
     marginTop: 6,
+    gap: 8,
+  },
+
+  createLoginBtnTop: {
+    position: "absolute",
+    top: -4,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary,
   },
 
   adminLine: {
