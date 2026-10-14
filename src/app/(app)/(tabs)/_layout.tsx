@@ -13,7 +13,6 @@ const TabLayout = () => {
     const { user } = useAuth();
     const userRole = user?.authority as UserRole | undefined;
     const isAdminLike = userRole === "Admin" || userRole === "Super Admin";
-    console.log("DEBUG userRole:", JSON.stringify(userRole));
     const insets = useSafeAreaInsets();
 
     const { initializePush } = usePushNotifications(user?.user_id);

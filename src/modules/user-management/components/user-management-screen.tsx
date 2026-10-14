@@ -129,7 +129,7 @@ export default function UserManagementScreen() {
       setAuthorityLabel("");
       setPassword("");
       setFormError(null);
-      Alert.alert("Success", "User created successfully.");
+      setSuccessMsg("User created successfully.");
       setTab("list");
     },
     onError: (err: any) => {

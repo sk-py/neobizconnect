@@ -11,8 +11,6 @@ export const fetchUsersList = async (): Promise<DealerEmployee[]> => {
   const response = await api.get<DealerEmployee[]>(
     `/Dealer/Employee/Details/By/Authority`,
   );
-  console.log("API RESPONSE:", JSON.stringify(response.data).slice(0, 3000));
-  console.log("API RESPONSE:", JSON.stringify(response.data).slice(0, 3000));
   return response.data;
 };
 
@@ -73,9 +71,7 @@ export const updateUser = async (
     branchid: existing.branchid,
     login_otp: null,
   };
-  console.log("UPDATE BODY:", JSON.stringify(body));
   const res = await api.post(`/Update/Neo/Query-Admin-SuperAdmin/User`, body);
-  console.log("UPDATE RESPONSE:", res.status, JSON.stringify(res.data));
 };
 
 export const createUser = async (
