@@ -45,6 +45,16 @@ export interface CreateUserPayload {
   password: string;
 }
 
+export interface UpdateUserPayload {
+  id: number;
+  firstName: string;
+  lastName?: string;
+  email: string;
+  mobile?: string;
+  authorityId: number;
+  password: string;
+}
+
 export const AUTHORITY_OPTIONS: { label: string; value: number }[] = [
   { label: "Super Admin", value: 2 },
   { label: "Admin", value: 3 },

@@ -3,6 +3,7 @@ import { SkeletonList } from "@/components/custom/skeleton";
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import {
   createUser,
+  updateUser,
   fetchUsersCount,
   fetchUsersList,
 } from "@/modules/user-management/services/user-management.api";
@@ -14,6 +15,7 @@ import { useMemo, useState } from "react";
 import {
   Alert,
   Linking,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,7 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 10;
 
@@ -32,10 +34,20 @@ const isActive = (status: string | null | undefined) =>
 
 export default function UserManagementScreen() {
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<TabKey>("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
-  const [showPasswordId, setShowPasswordId] = useState<number | null>(null);
+    const [showPasswordId, setShowPasswordId] = useState<number | null>(null);
+
+  const [editingUser, setEditingUser] = useState<DealerEmployee | null>(null);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editMobile, setEditMobile] = useState("");
+  const [editAuthorityLabel, setEditAuthorityLabel] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
 
  
   const [firstName, setFirstName] = useState("");
@@ -120,33 +132,94 @@ export default function UserManagementScreen() {
     });
   };
 
+    const openEdit = (item: DealerEmployee) => {
+    const matched = AUTHORITY_OPTIONS.find(
+      (a) => a.label.toLowerCase() === String(item.authority_name ?? "").toLowerCase(),
+    );
+    setEditingUser(item);
+    setEditFirstName(item.firstname ?? "");
+    setEditLastName(item.lastname ?? "");
+    setEditEmail(item.email ?? "");
+    setEditMobile(item.number ?? "");
+    setEditAuthorityLabel(matched?.label ?? item.authority_name ?? "");
+    setEditPassword(item.account_password ?? "");
+    setEditError(null);
+  };
+
+  const closeEdit = () => {
+    setEditingUser(null);
+    setEditError(null);
+  };
+
+  const updateMutation = useMutation({
+    mutationFn: updateUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-management-list"] });
+      queryClient.invalidateQueries({ queryKey: ["user-management-count"] });
+      closeEdit();
+      Alert.alert("Success", "User updated successfully.");
+    },
+    onError: (err: any) => {
+      setEditError(err?.message || "Failed to update user.");
+    },
+  });
+
+  const handleUpdateUser = () => {
+    if (!editingUser) return;
+    setEditError(null);
+    if (!editFirstName.trim()) return setEditError("First name is required.");
+    if (!editEmail.trim()) return setEditError("Email address is required.");
+    const authority = AUTHORITY_OPTIONS.find((a) => a.label === editAuthorityLabel);
+    if (!authority) return setEditError("Please select an authority.");
+    if (!editPassword.trim()) return setEditError("Password is required.");
+
+    updateMutation.mutate({
+      id: editingUser.id,
+      firstName: editFirstName.trim(),
+      lastName: editLastName.trim() || undefined,
+      email: editEmail.trim(),
+      mobile: editMobile.trim() || undefined,
+      authorityId: authority.value,
+      password: editPassword.trim(),
+    });
+  };
+
   const renderUserRow = ({ item }: { item: DealerEmployee }) => {
     const active = isActive(item.login_status);
     const showPassword = showPasswordId === item.id;
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardTop}>
+                <View style={styles.cardTop}>
           <View style={styles.cardTopLeft}>
             <Text style={styles.userName} numberOfLines={1}>
               {item.firstname} {item.lastname}
             </Text>
             <Text style={styles.authorityText}>{item.authority_name}</Text>
           </View>
-          <View
-            style={[
-              styles.statusBadge,
-              active ? styles.statusBadgeActive : styles.statusBadgeInactive,
-            ]}
-          >
-            <Text
+          <View style={styles.cardTopRight}>
+            <TouchableOpacity
+              style={styles.editBtn}
+              onPress={() => openEdit(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="edit-2" size={14} color="#2563EB" />
+            </TouchableOpacity>
+            <View
               style={[
-                styles.statusBadgeText,
-                { color: active ? colors.success : colors.error },
+                styles.statusBadge,
+                active ? styles.statusBadgeActive : styles.statusBadgeInactive,
               ]}
             >
-              {active ? "Active" : "Inactive"}
-            </Text>
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  { color: active ? colors.success : colors.error },
+                ]}
+              >
+                {active ? "Active" : "Inactive"}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -420,6 +493,111 @@ export default function UserManagementScreen() {
       </View>
 
       {tab === "list" ? renderListTab() : renderCreateTab()}
+          <Modal
+        visible={!!editingUser}
+        transparent
+        animationType="slide"
+        onRequestClose={closeEdit}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.formTitle}>Edit User</Text>
+              <TouchableOpacity onPress={closeEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Feather name="x" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+              <ScrollView
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={[styles.modalScroll, { paddingBottom: insets.bottom + 40 }]}
+            >
+                  <Text style={styles.fieldLabel}>
+                First Name<Text style={styles.required}> *</Text>
+              </Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter first name"
+                placeholderTextColor={colors.muted}
+                value={editFirstName}
+                onChangeText={setEditFirstName}
+              />
+
+              <Text style={styles.fieldLabel}>Last Name</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter last name"
+                placeholderTextColor={colors.muted}
+                value={editLastName}
+                onChangeText={setEditLastName}
+              />
+
+              <Text style={styles.fieldLabel}>
+                Email Address<Text style={styles.required}> *</Text>
+              </Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="example@email.com"
+                placeholderTextColor={colors.muted}
+                value={editEmail}
+                onChangeText={setEditEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+
+              <Text style={styles.fieldLabel}>Mobile Number</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter mobile number"
+                placeholderTextColor={colors.muted}
+                value={editMobile}
+                onChangeText={setEditMobile}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.fieldLabel}>
+                Authority<Text style={styles.required}> *</Text>
+              </Text>
+              <FieldSelect
+                label="Authority"
+                value={editAuthorityLabel}
+                options={AUTHORITY_OPTIONS.map((a) => a.label)}
+                onChange={setEditAuthorityLabel}
+                placeholder="Select authority"
+              />
+
+              <Text style={styles.fieldLabel}>
+                Password<Text style={styles.required}> *</Text>
+              </Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter password"
+                placeholderTextColor={colors.muted}
+                value={editPassword}
+                onChangeText={setEditPassword}
+                secureTextEntry
+              />
+
+              {editError && (
+                <View style={styles.saveErrorBox}>
+                  <Feather name="alert-triangle" size={14} color={colors.error} />
+                  <Text style={styles.saveErrorText}>{editError}</Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.createBtn, updateMutation.isPending && styles.createBtnDisabled]}
+                onPress={handleUpdateUser}
+                disabled={updateMutation.isPending}
+              >
+                <Text style={styles.createBtnText}>
+                  {updateMutation.isPending ? "Updating..." : "Update"}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -495,5 +673,11 @@ const styles = StyleSheet.create({
 
   createBtn: { marginTop: spacing.lg, paddingVertical: 14, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: "center" },
   createBtnDisabled: { opacity: 0.6 },
+  cardTopRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  editBtn: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: radius.sm, backgroundColor: "#EFF6FF" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
+  modalCard: { maxHeight: "90%", backgroundColor: colors.white, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingTop: spacing.md },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalScroll: { padding: spacing.md, paddingBottom: spacing.xl },
   createBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.white },
 });

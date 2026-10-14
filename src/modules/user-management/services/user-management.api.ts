@@ -1,5 +1,10 @@
 import { api } from "@/services/axios";
-import { CreateUserPayload, DealerEmployee, UserCountSummary } from "../types";
+import {
+  CreateUserPayload,
+  DealerEmployee,
+  UpdateUserPayload,
+  UserCountSummary,
+} from "../types";
 
 export const fetchUsersList = async (): Promise<DealerEmployee[]> => {
   const response = await api.get<DealerEmployee[]>(
@@ -14,6 +19,12 @@ export const fetchUsersCount = async (): Promise<UserCountSummary> => {
   );
   return response.data;
 };
+export const updateUser = async (
+  payload: UpdateUserPayload,
+): Promise<void> => {
+  await api.put(`/Dealer/Employee/Update`, payload);
+};
+
 export const createUser = async (
   payload: CreateUserPayload,
 ): Promise<void> => {
