@@ -106,6 +106,20 @@ export default function DealersListScreen() {
     );
   }, [data, searchQuery]);
 
+  const loginInfo = useMemo(() => {
+    const ed = (loginDealer as DealerRow | null)?.employeeDetails as
+      | { email?: string; account_password?: string; lock_status?: number }
+      | null
+      | undefined;
+    if (!ed) return null;
+    return {
+      username: ed.email ?? loginDealer?.emailAddress ?? "",
+      password: ed.account_password ?? "",
+      active: ed.lock_status === 1,
+      brands: (loginDealer as DealerRow).brand_type ?? [],
+    };
+  }, [loginDealer]);
+
   const brandOptions = useMemo(() => {
     const set = new Set<string>();
     data.forEach((d) => {
@@ -165,19 +179,19 @@ export default function DealersListScreen() {
           <View
             style={[
               styles.nameRow,
-              isSuperAdmin && !loginCreated && { paddingRight: 112 },
+              isSuperAdmin && { paddingRight: 124 },
             ]}
           >
-            {isSuperAdmin && !loginCreated ? (
+            {isSuperAdmin ? (
               <TouchableOpacity
-                style={[styles.createLoginBtnOutline, { backgroundColor: "#2563EB", borderColor: "#2563EB" }]}
+style={[styles.createLoginBtnOutline,{ backgroundColor: loginCreated ? "#DCFCE7" : "#FEE2E2", borderColor: loginCreated ? "#BBF7D0" : "#FECACA", top: -4, right: -24 }]}
                 onPress={(event) => {
                   event.stopPropagation();
                   setLoginDealer(item);
                 }}
               >
-                <Feather name="lock" size={12} color={colors.white} />
-                <Text style={[styles.createLoginTextOutline, { color: colors.white }]}>Create Login</Text>
+                <Feather name={loginCreated ? "edit-2" : "lock"} size={12} color={loginCreated ? "#166534" : "#B91C1C"} />
+<Text style={[styles.createLoginTextOutline, { color: loginCreated ? "#166534" : "#B91C1C" }]}>{loginCreated ? "Manage Login" : "Create Login"}</Text>
               </TouchableOpacity>
             ) : null}
 
@@ -506,6 +520,7 @@ export default function DealersListScreen() {
           dealer={loginDealer}
           visible={loginDealer !== null}
           brandOptions={brandOptions}
+          login={loginInfo}
           onClose={() => setLoginDealer(null)}
           onCreated={() => {
             setLoginDealer(null);

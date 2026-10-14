@@ -14,13 +14,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { createDealerLogin } from "../services/dealers.api";
+import { createDealerLogin, updateDealerLogin } from "../services/dealers.api";
 import { Dealer } from "../types";
 
 type Props = {
   dealer: Dealer | null;
   visible: boolean;
   brandOptions: string[];
+  login?: { username: string; password: string; active: boolean; brands: string[] } | null;
   onClose: () => void;
   onCreated: () => void;
 };
@@ -42,7 +43,8 @@ const apiError = (err: any, fallback: string) => {
   return err?.message && !err?.response ? err.message : fallback;
 };
 
-export function CreateDealerLoginModal({ dealer, visible, brandOptions, onClose, onCreated }: Props) {
+export function CreateDealerLoginModal({ dealer, visible, brandOptions, login, onClose, onCreated }: Props) {
+  const isEdit = !!login;
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -55,11 +57,11 @@ export function CreateDealerLoginModal({ dealer, visible, brandOptions, onClose,
 
   useEffect(() => {
     if (visible) {
-      setUsername(dealer?.emailAddress ?? "");
-      setPassword("");
+      setUsername(login?.username ?? dealer?.emailAddress ?? "");
+      setPassword(login?.password ?? "");
       setShowPassword(false);
-      setActive(false);
-      setBrands([]);
+      setActive(login?.active ?? false);
+      setBrands(login?.brands ?? []);
       setBrandOpen(false);
       setError(null);
       setSaving(false);
@@ -77,7 +79,7 @@ export function CreateDealerLoginModal({ dealer, visible, brandOptions, onClose,
     if (!password.trim()) return setError("Password is required.");
     try {
       setSaving(true);
-      await createDealerLogin({
+      await (isEdit ? updateDealerLogin : createDealerLogin)({
         dealerId: dealer.id,
         cardCode: dealer.cardCode,
         username: username.trim(),
@@ -87,7 +89,7 @@ export function CreateDealerLoginModal({ dealer, visible, brandOptions, onClose,
       });
       setDone(true);
     } catch (e: any) {
-      setError(apiError(e, "Failed to create login."));
+      setError(apiError(e, "Failed to save login."));
     } finally {
       setSaving(false);
     }
@@ -106,7 +108,7 @@ export function CreateDealerLoginModal({ dealer, visible, brandOptions, onClose,
                 <Feather name="check" size={28} color={colors.white} />
               </View>
               <Text style={styles.title}>Success</Text>
-              <Text style={styles.doneText}>Login created successfully.</Text>
+              <Text style={styles.doneText}>{isEdit ? "Login updated successfully." : "Login created successfully."}</Text>
               <TouchableOpacity style={styles.primaryBtn} onPress={onCreated}>
                 <Text style={styles.primaryBtnText}>OK</Text>
               </TouchableOpacity>
@@ -114,7 +116,7 @@ export function CreateDealerLoginModal({ dealer, visible, brandOptions, onClose,
           ) : (
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <View style={styles.headerRow}>
-                <Text style={styles.title}>Create Login</Text>
+                <Text style={styles.title}>{isEdit ? "Manage Login" : "Create Login"}</Text>
                 <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Feather name="x" size={20} color={colors.text} />
                 </TouchableOpacity>
@@ -125,6 +127,7 @@ export function CreateDealerLoginModal({ dealer, visible, brandOptions, onClose,
                 style={styles.input}
                 value={username}
                 onChangeText={setUsername}
+                editable={!isEdit}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 placeholder="Username"
@@ -213,7 +216,7 @@ export function CreateDealerLoginModal({ dealer, visible, brandOptions, onClose,
                   {saving ? (
                     <ActivityIndicator color={colors.white} />
                   ) : (
-                    <Text style={styles.primaryBtnText}>Create Login</Text>
+                    <Text style={styles.primaryBtnText}>{isEdit ? "Update Login" : "Create Login"}</Text>
                   )}
                 </TouchableOpacity>
               </View>

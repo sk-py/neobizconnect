@@ -22,6 +22,19 @@ export const createDealerLogin = async (
   });
 };
 
+// Same endpoint as create: the backend updates the login when it already exists.
+export const updateDealerLogin = async (
+  payload: CreateDealerLoginPayload,
+): Promise<void> => {
+  await api.post(`/Add/Neo/Dealer/User`, {
+    user_code: payload.cardCode,
+    password: payload.password,
+    username: payload.username,
+    status: String(payload.status),
+    brand_type: payload.brandTypes,
+  });
+};
+
 export const fetchDealers = async (): Promise<Dealer[]> => {
   const response = await api.get<Dealer[]>(`/Neo/Dealer/User`);
   return response.data;
