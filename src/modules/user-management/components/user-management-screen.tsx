@@ -34,6 +34,18 @@ type TabKey = "list" | "create";
 const isActive = (status: string | null | undefined) =>
   (status ?? "").trim().toUpperCase() === "ACTIVE";
 
+const getApiErrorMessage = (err: any, fallback: string): string => {
+  const data = err?.response?.data;
+  if (typeof data === "string" && data.trim()) return data.trim();
+  if (data && typeof data === "object") {
+    const msg =
+      data.message ?? data.Message ?? data.detail ?? data.error ?? data.msg ?? data.title;
+    if (typeof msg === "string" && msg.trim()) return msg.trim();
+    if (Array.isArray(data.errors) && data.errors.length) return String(data.errors[0]);
+  }
+  return fallback;
+};
+
 export default function UserManagementScreen() {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
@@ -133,7 +145,7 @@ export default function UserManagementScreen() {
       setTab("list");
     },
     onError: (err: any) => {
-      setFormError(err?.message || "Failed to create user.");
+      setFormError(getApiErrorMessage(err, "Failed to create user."));
     },
   });
 
@@ -184,7 +196,7 @@ export default function UserManagementScreen() {
       setSuccessMsg("User updated successfully.");
     },
     onError: (err: any) => {
-      setEditError(err?.message || "Failed to update user.");
+      setEditError(getApiErrorMessage(err, "Failed to update user."));
     },
   });
 
