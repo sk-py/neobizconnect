@@ -30,6 +30,11 @@ export interface DealerEmployee {
   manager?: unknown[];
 }
 
+export interface AuthorityOption {
+  label: string;
+  value: number;
+}
+
 export interface UserCountSummary {
   active: number;
   inactive: number;
@@ -46,6 +51,7 @@ export interface CreateUserPayload {
 }
 
 export interface UpdateUserPayload {
+  existing: DealerEmployee;
   id: number;
   firstName: string;
   lastName?: string;

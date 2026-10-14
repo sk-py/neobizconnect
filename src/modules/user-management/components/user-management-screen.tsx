@@ -5,16 +5,18 @@ import {
   createUser,
   updateUser,
   fetchUsersCount,
+    fetchAuthorities,
   fetchUsersList,
 } from "@/modules/user-management/services/user-management.api";
-import { AUTHORITY_OPTIONS, DealerEmployee } from "@/modules/user-management/types";
+import { DealerEmployee } from "@/modules/user-management/types";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Linking,
+   Keyboard,
   Modal,
   ScrollView,
   StyleSheet,
@@ -35,7 +37,21 @@ const isActive = (status: string | null | undefined) =>
 export default function UserManagementScreen() {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<TabKey>("list");
+    const [tab, setTab] = useState<TabKey>("list");
+  const [kbHeight, setKbHeight] = useState(0);
+  const createScrollRef = useRef<ScrollView>(null);
+  const editScrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKbHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKbHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
     const [showPasswordId, setShowPasswordId] = useState<number | null>(null);
@@ -48,6 +64,8 @@ export default function UserManagementScreen() {
   const [editAuthorityLabel, setEditAuthorityLabel] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
+    const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showEditPassword, setShowEditPassword] = useState(false);
 
  
   const [firstName, setFirstName] = useState("");
@@ -67,6 +85,11 @@ export default function UserManagementScreen() {
   } = useQuery({
     queryKey: ["user-management-list"],
     queryFn: fetchUsersList,
+  });
+
+    const { data: authorityOptions = [], isLoading: authoritiesLoading } = useQuery({
+    queryKey: ["user-management-authorities"],
+    queryFn: fetchAuthorities,
   });
 
   const { data: counts } = useQuery({
@@ -118,7 +141,7 @@ export default function UserManagementScreen() {
     setFormError(null);
     if (!firstName.trim()) return setFormError("First name is required.");
     if (!email.trim()) return setFormError("Email address is required.");
-    const authority = AUTHORITY_OPTIONS.find((a) => a.label === authorityLabel);
+    const authority = authorityOptions.find((a) => a.label === authorityLabel);
     if (!authority) return setFormError("Please select an authority.");
     if (!password.trim()) return setFormError("Password is required.");
 
@@ -133,8 +156,8 @@ export default function UserManagementScreen() {
   };
 
     const openEdit = (item: DealerEmployee) => {
-    const matched = AUTHORITY_OPTIONS.find(
-      (a) => a.label.toLowerCase() === String(item.authority_name ?? "").toLowerCase(),
+    const matched = authorityOptions.find(
+            (a) => a.value === item.authorityid,
     );
     setEditingUser(item);
     setEditFirstName(item.firstname ?? "");
@@ -143,6 +166,7 @@ export default function UserManagementScreen() {
     setEditMobile(item.number ?? "");
     setEditAuthorityLabel(matched?.label ?? item.authority_name ?? "");
     setEditPassword(item.account_password ?? "");
+    setShowEditPassword(false);
     setEditError(null);
   };
 
@@ -157,7 +181,7 @@ export default function UserManagementScreen() {
       queryClient.invalidateQueries({ queryKey: ["user-management-list"] });
       queryClient.invalidateQueries({ queryKey: ["user-management-count"] });
       closeEdit();
-      Alert.alert("Success", "User updated successfully.");
+      setSuccessMsg("User updated successfully.");
     },
     onError: (err: any) => {
       setEditError(err?.message || "Failed to update user.");
@@ -169,12 +193,13 @@ export default function UserManagementScreen() {
     setEditError(null);
     if (!editFirstName.trim()) return setEditError("First name is required.");
     if (!editEmail.trim()) return setEditError("Email address is required.");
-    const authority = AUTHORITY_OPTIONS.find((a) => a.label === editAuthorityLabel);
+    const authority = authorityOptions.find((a) => a.label === editAuthorityLabel);
     if (!authority) return setEditError("Please select an authority.");
     if (!editPassword.trim()) return setEditError("Password is required.");
 
     updateMutation.mutate({
       id: editingUser.id,
+      existing: editingUser,
       firstName: editFirstName.trim(),
       lastName: editLastName.trim() || undefined,
       email: editEmail.trim(),
@@ -379,7 +404,11 @@ export default function UserManagementScreen() {
   );
 
   const renderCreateTab = () => (
-    <ScrollView contentContainerStyle={styles.formScroll}>
+        <ScrollView
+      ref={createScrollRef}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={[styles.formScroll, { paddingBottom: kbHeight + 40 }]}
+    >
       <Text style={styles.formTitle}>Create User</Text>
       <Text style={styles.formSubtitle}>Add a new user and assign authority access.</Text>
 
@@ -432,7 +461,8 @@ export default function UserManagementScreen() {
       <FieldSelect
         label="Authority"
         value={authorityLabel}
-        options={AUTHORITY_OPTIONS.map((a) => a.label)}
+        options={authorityOptions.map((a) => a.label)}
+        loading={authoritiesLoading}
         onChange={setAuthorityLabel}
         placeholder="Select authority"
       />
@@ -444,7 +474,10 @@ export default function UserManagementScreen() {
         style={styles.textInput}
         placeholder="Enter password"
         placeholderTextColor={colors.muted}
-        value={password}
+                value={password}
+        onFocus={() =>
+          setTimeout(() => createScrollRef.current?.scrollToEnd({ animated: true }), 250)
+        }
         onChangeText={setPassword}
         secureTextEntry
       />
@@ -510,7 +543,11 @@ export default function UserManagementScreen() {
 
               <ScrollView
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={[styles.modalScroll, { paddingBottom: insets.bottom + 40 }]}
+                            ref={editScrollRef}
+              contentContainerStyle={[
+                styles.modalScroll,
+                { paddingBottom: insets.bottom + kbHeight + 40 },
+              ]}
             >
                   <Text style={styles.fieldLabel}>
                 First Name<Text style={styles.required}> *</Text>
@@ -561,7 +598,7 @@ export default function UserManagementScreen() {
               <FieldSelect
                 label="Authority"
                 value={editAuthorityLabel}
-                options={AUTHORITY_OPTIONS.map((a) => a.label)}
+                options={authorityOptions.map((a) => a.label)}
                 onChange={setEditAuthorityLabel}
                 placeholder="Select authority"
               />
@@ -573,7 +610,10 @@ export default function UserManagementScreen() {
                 style={styles.textInput}
                 placeholder="Enter password"
                 placeholderTextColor={colors.muted}
-                value={editPassword}
+                                value={editPassword}
+                onFocus={() =>
+                  setTimeout(() => editScrollRef.current?.scrollToEnd({ animated: true }), 250)
+                }
                 onChangeText={setEditPassword}
                 secureTextEntry
               />
@@ -595,6 +635,25 @@ export default function UserManagementScreen() {
                 </Text>
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+          <Modal
+        visible={!!successMsg}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSuccessMsg(null)}
+      >
+        <View style={styles.successOverlay}>
+          <View style={styles.successCard}>
+            <View style={styles.successIcon}>
+              <Feather name="check" size={28} color={colors.white} />
+            </View>
+            <Text style={styles.successTitle}>Success</Text>
+            <Text style={styles.successText}>{successMsg}</Text>
+            <TouchableOpacity style={styles.successBtn} onPress={() => setSuccessMsg(null)}>
+              <Text style={styles.successBtnText}>OK</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -679,5 +738,15 @@ const styles = StyleSheet.create({
   modalCard: { maxHeight: "90%", backgroundColor: colors.white, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingTop: spacing.md },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalScroll: { padding: spacing.md, paddingBottom: spacing.xl },
+    successOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center", padding: spacing.lg },
+  successCard: { width: "100%", maxWidth: 320, backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.lg, alignItems: "center" },
+  successIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.success, alignItems: "center", justifyContent: "center", marginBottom: spacing.md },
+  successTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
+  successText: { fontSize: txtSize.small, fontFamily: typography.medium, color: colors.textSecondary, textAlign: "center", marginTop: 4, marginBottom: spacing.lg },
+  successBtn: { alignSelf: "stretch", paddingVertical: 12, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: "center" },
+  successBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.white },
+    passwordInputWrap: { justifyContent: "center" },
+  passwordInput: { paddingRight: 44 },
+  passwordEye: { position: "absolute", right: 12, height: "100%", justifyContent: "center" },
   createBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.white },
 });
