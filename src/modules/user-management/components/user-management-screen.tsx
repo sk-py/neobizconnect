@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   saveErrorBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: "#FEF2F2", borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.md },
   saveErrorText: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.error, flex: 1 },
 
-  createBtn: { marginTop: spacing.lg, paddingVertical: 14, borderRadius: radius.sm, backgroundColor: colors.text, alignItems: "center" },
+  createBtn: { marginTop: spacing.lg, paddingVertical: 14, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: "center" },
   createBtnDisabled: { opacity: 0.6 },
   createBtnText: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.white },
 });
