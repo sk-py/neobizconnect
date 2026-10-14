@@ -10,6 +10,7 @@ import { DealerQuickViewModal } from "@/modules/dealers/components/dealer-quick-
 import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { Dealer } from "@/modules/dealers/types";
 import { useAuth } from "@/hooks/use-auth";
+import { CreateDealerLoginModal } from "@/modules/dealers/components/create-dealer-login-modal";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
@@ -28,9 +29,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 10;
 
+type DealerRow = Dealer & {
+  salesManager?: string | null;
+  lock_status?: number | null;
+  brand_type?: string[] | null;
+  employeeDetails?: unknown | null;
+};
+
 export default function DealersListScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const isSuperAdmin = user?.authority === "Super Admin";
   const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
 
   const goBack = () => {
@@ -43,6 +52,7 @@ export default function DealersListScreen() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
+  const [loginDealer, setLoginDealer] = useState<Dealer | null>(null);
   const [quickViewDealer, setQuickViewDealer] =
     useState<Dealer | null>(null);
 
@@ -96,6 +106,14 @@ export default function DealersListScreen() {
     );
   }, [data, searchQuery]);
 
+  const brandOptions = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach((d) => {
+      ((d as DealerRow).brand_type ?? []).forEach((b) => b && set.add(b));
+    });
+    return Array.from(set);
+  }, [data]);
+
   const totalItems = filteredData.length;
   const totalPages = Math.max(
     1,
@@ -131,6 +149,11 @@ export default function DealersListScreen() {
   const renderRow = ({ item }: { item: Dealer }) => {
     const phone = item.phone1 || item.phone2;
     const email = item.emailAddress;
+    const d = item as DealerRow;
+    const salesManager =
+      d.salesManager && d.salesManager !== "-No Sales Employee-" ? d.salesManager : "-";
+    const isActive = d.lock_status === 1;
+    const loginCreated = !!d.employeeDetails;
 
     return (
       <TouchableOpacity
@@ -160,6 +183,45 @@ export default function DealersListScreen() {
             {item.cardCode || "-"}
           </Text>
 
+          {isSuperAdmin ? (
+            <View style={styles.adminExtra}>
+              <View style={styles.adminLine}>
+                <Text style={styles.adminLabel}>Sales Manager</Text>
+                <Text style={styles.adminValue} numberOfLines={1}>{salesManager}</Text>
+              </View>
+
+              <View style={styles.adminLine}>
+                <Text style={styles.adminLabel}>Status</Text>
+                <View style={[styles.statusBadge, { backgroundColor: isActive ? "#DCFCE7" : "#FEE2E2" }]}>
+                  <Text style={[styles.statusBadgeText, { color: isActive ? colors.success : colors.error }]}>
+                    {isActive ? "Active" : "Inactive"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.adminLine}>
+                <Text style={styles.adminLabel}>Login Status</Text>
+                <View style={styles.loginStatusRow}>
+                  <View style={[styles.dot, { backgroundColor: loginCreated ? colors.success : colors.error }]} />
+                  <Text style={styles.adminValue}>{loginCreated ? "Created" : "Not Created"}</Text>
+                </View>
+              </View>
+
+              {!loginCreated ? (
+                <TouchableOpacity
+                  style={styles.createLoginBtn}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    setLoginDealer(item);
+                  }}
+                >
+                  <Feather name="lock" size={13} color={colors.white} />
+                  <Text style={styles.createLoginText}>Create Login</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+
           <View style={styles.contactGroup}>
             {phone ? (
               <TouchableOpacity
@@ -180,6 +242,7 @@ export default function DealersListScreen() {
                 </Text>
               </TouchableOpacity>
             ) : null}
+
 
             {email ? (
               <TouchableOpacity
@@ -433,6 +496,19 @@ export default function DealersListScreen() {
         </>
       )}
 
+      {isSuperAdmin ? (
+        <CreateDealerLoginModal
+          dealer={loginDealer}
+          visible={loginDealer !== null}
+          brandOptions={brandOptions}
+          onClose={() => setLoginDealer(null)}
+          onCreated={() => {
+            setLoginDealer(null);
+            void refetch();
+          }}
+        />
+      ) : null}
+
       <DealerQuickViewModal
         dealer={quickViewDealer}
         visible={quickViewDealer !== null}
@@ -625,6 +701,72 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.sm,
     backgroundColor: colors.surface,
+  },
+
+ adminExtra: {
+    marginTop: 6,
+    gap: 6,
+  },
+
+  adminLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  adminLabel: {
+    width: 92,
+    fontSize: txtSize.xs,
+    fontFamily: typography.medium,
+    color: colors.textSecondary,
+  },
+
+  adminValue: {
+    flexShrink: 1,
+    fontSize: txtSize.xs,
+    fontFamily: typography.semibold,
+    color: colors.text,
+  },
+
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+
+  statusBadgeText: {
+    fontSize: txtSize.xs,
+    fontFamily: typography.bold,
+  },
+
+  loginStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+
+  createLoginBtn: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary,
+  },
+
+  createLoginText: {
+    fontSize: txtSize.xs,
+    fontFamily: typography.bold,
+    color: colors.white,
   },
 
   pageButtonDisabled: {
