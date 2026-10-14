@@ -6,7 +6,7 @@ const BASE_URLS: Record<Environment, string> = {
   test: "https://crm-test.actifyzone.com/crm-test/Crm/Portal",
 };
 
-const ENVIRONMENT: Environment = "production";
+const ENVIRONMENT: Environment = "uat";
 
 export const BASE_URL = BASE_URLS[ENVIRONMENT];
 
