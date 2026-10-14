@@ -69,6 +69,9 @@ export function CreateDealerLoginModal({ dealer, visible, brandOptions, login, o
     }
   }, [visible, dealer]);
 
+  const allSelected = brandOptions.length > 0 && brandOptions.every((b) => brands.includes(b));
+  const toggleAll = () => setBrands(allSelected ? [] : [...brandOptions]);
+
   const toggleBrand = (b: string) =>
     setBrands((cur) => (cur.includes(b) ? cur.filter((x) => x !== b) : [...cur, b]));
 
@@ -180,12 +183,22 @@ export function CreateDealerLoginModal({ dealer, visible, brandOptions, login, o
               <Text style={styles.label}>Brand Type</Text>
               <TouchableOpacity style={styles.select} onPress={() => setBrandOpen((o) => !o)}>
                 <Text style={[styles.selectText, !brands.length && { color: colors.muted }]} numberOfLines={1}>
-                  {brands.length ? brands.join(", ") : "Select Brand Types"}
+                  {allSelected ? "All" : brands.length ? brands.join(", ") : "Select Brand Types"}
                 </Text>
                 <Feather name={brandOpen ? "chevron-up" : "chevron-down"} size={16} color={colors.muted} />
               </TouchableOpacity>
               {brandOpen ? (
                 <View style={styles.options}>
+                  {brandOptions.length > 0 ? (
+                    <TouchableOpacity style={styles.optionRow} onPress={toggleAll}>
+                      <Feather
+                        name={allSelected ? "check-square" : "square"}
+                        size={16}
+                        color={allSelected ? colors.primary : colors.muted}
+                      />
+                      <Text style={[styles.optionText, { fontFamily: typography.bold }]}>All</Text>
+                    </TouchableOpacity>
+                  ) : null}
                   {brandOptions.length === 0 ? (
                     <Text style={styles.noOptions}>No brand types available</Text>
                   ) : (
