@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const TabLayout = () => {
     const { user } = useAuth();
     const userRole = user?.authority as UserRole | undefined;
+    const isAdminLike = userRole === "Admin" || userRole === "Super Admin";
     console.log("DEBUG userRole:", JSON.stringify(userRole));
     const insets = useSafeAreaInsets();
 
@@ -79,7 +80,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='users' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? "/user-setup" : null
+                            href: isAdminLike ? "/user-setup" : null
                         }}
                     />
                 </Tabs.Protected>
@@ -91,7 +92,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='user-plus' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? "/sub-dealer-index" : null
+                            href: isAdminLike ? "/sub-dealer-index" : null
                         }}
                     />
                 </Tabs.Protected>
@@ -103,7 +104,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='package' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? "/admin-inventory" : null
+                            href: isAdminLike ? "/admin-inventory" : null
                         }}
                     />
                 </Tabs.Protected>
@@ -115,7 +116,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='message-square' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? "/leads-and-queries-screen" : null
+                            href: isAdminLike ? "/leads-and-queries-screen" : null
                         }}
                     />
                 </Tabs.Protected>
@@ -127,7 +128,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='shopping-bag' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? "/admin-sales-screen" : null
+                            href: isAdminLike ? "/admin-sales-screen" : null
                         }}
                     />
                 </Tabs.Protected>
@@ -183,7 +184,7 @@ const TabLayout = () => {
                         options={{
                             title: "Dealers",
                             tabBarIcon: ({ color, size }) => (<Feather name='briefcase' color={color} size={size} />),
-                            href: userRole === "Admin" ? null : "/dealers"
+                            href: isAdminLike ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -194,7 +195,7 @@ const TabLayout = () => {
                         options={{
                             title: "Sales Manager",
                             tabBarIcon: ({ color, size }) => (<Feather name='user-check' color={color} size={size} />),
-                            href: userRole === "Admin" ? null : "/dealers"
+                            href: isAdminLike ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -207,7 +208,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='package' color={color} size={size} />
                             ),
-                            href: userRole === "Admin" ? null : "/item-master"
+                            href: isAdminLike ? null : "/item-master"
                         }}
                     />
                 </Tabs.Protected>
@@ -220,7 +221,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='repeat' color={color} size={size} />
                             ),
-                            href: user?.authority === "Sales Manager" || userRole === "Admin" ? null : "/transaction-history"
+                            href: user?.authority === "Sales Manager" || isAdminLike ? null : "/transaction-history"
                         }}
                     />
                 </Tabs.Protected>
@@ -245,7 +246,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='rotate-ccw' size={size} color={color} />
                             ),
-                            href: user?.authority === "Sales Manager" || userRole === "Admin" ? null : "/order-history"
+                            href: user?.authority === "Sales Manager" || isAdminLike ? null : "/order-history"
                         }}
                     />
                 </Tabs.Protected>
@@ -258,7 +259,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size, focused }) => (
                                 <Feather name={focused ? 'book-open' : 'book'} size={size} color={color} />
                             ),
-                            href: user?.authority === "Sales Manager" || userRole === "Admin" ? null : "/customer-ledger"
+                            href: user?.authority === "Sales Manager" || isAdminLike ? null : "/customer-ledger"
                         }}
                     />
                 </Tabs.Protected>
@@ -271,7 +272,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='message-square' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? null : "/dealers"
+                            href: isAdminLike ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -296,7 +297,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='users' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? null : "/dealers"
+                            href: isAdminLike ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -309,7 +310,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='target' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? null : "/dealers"
+                            href: isAdminLike ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
@@ -335,7 +336,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='message-square' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? null : "/lead-query"
+                            href: isAdminLike ? null : "/lead-query"
                         }}
                     />
                 </Tabs.Protected>
@@ -360,7 +361,7 @@ const TabLayout = () => {
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='inbox' size={size} color={color} />
                             ),
-                            href: userRole === "Admin" ? null : "/dealers"
+                            href: isAdminLike ? null : "/dealers"
                         }}
                     />
                 </Tabs.Protected>
