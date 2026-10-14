@@ -11,6 +11,8 @@ export const fetchUsersList = async (): Promise<DealerEmployee[]> => {
   const response = await api.get<DealerEmployee[]>(
     `/Dealer/Employee/Details/By/Authority`,
   );
+  console.log("API RESPONSE:", JSON.stringify(response.data).slice(0, 3000));
+  console.log("API RESPONSE:", JSON.stringify(response.data).slice(0, 3000));
   return response.data;
 };
 
@@ -18,6 +20,7 @@ export const fetchUsersCount = async (): Promise<UserCountSummary> => {
   const response = await api.get<UserCountSummary>(
     `/Dealer/Employee/Details/By/Authority/Count`,
   );
+  console.log("API RESPONSE:", JSON.stringify(response.data).slice(0, 3000));
   return response.data;
 };
 export const fetchAuthorities = async (): Promise<AuthorityOption[]> => {
@@ -38,14 +41,17 @@ export const fetchAuthorities = async (): Promise<AuthorityOption[]> => {
 export const updateUser = async (
   payload: UpdateUserPayload,
 ): Promise<void> => {
-    const { existing } = payload;
-    await api.post(`/Update/Neo/Query-Admin-SuperAdmin/User`, {
+  const { existing } = payload;
+  const body = {
     id: payload.id,
     employee_code: existing.employee_code ?? "0",
     firstname: payload.firstName,
+    first_name: payload.firstName,
     lastname: payload.lastName ?? "",
+    last_name: payload.lastName ?? "",
     email: payload.email,
     number: payload.mobile ?? "",
+    mobile_number: payload.mobile ?? "",
     department: existing.department ?? "",
     designation: existing.designation ?? "",
     region: existing.region ?? "",
@@ -56,15 +62,20 @@ export const updateUser = async (
     country: existing.country ?? "",
     pin_code: existing.pin_code ?? "",
     account_password: payload.password,
+    password: payload.password,
     lock_status: existing.lock_status,
     login_status: existing.login_status,
     authorityid: payload.authorityId,
+    authority_id: String(payload.authorityId),
     companyid: existing.companyid,
     groupid: existing.groupid,
     locationid: existing.locationid,
     branchid: existing.branchid,
     login_otp: null,
-  });
+  };
+  console.log("UPDATE BODY:", JSON.stringify(body));
+  const res = await api.post(`/Update/Neo/Query-Admin-SuperAdmin/User`, body);
+  console.log("UPDATE RESPONSE:", res.status, JSON.stringify(res.data));
 };
 
 export const createUser = async (

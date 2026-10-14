@@ -2,11 +2,22 @@ import { colors, radius, spacing, txtSize, typography } from "@/constants/theme"
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export const UsersSetupIndexScreen = () => {
     const router = useRouter();
+    const { user } = useAuth();
+    const isSuperAdmin = user?.authority === "Super Admin";
+    const SUPER_ADMIN_OPTION = {
+        id: "user-management",
+        title: "User Management",
+        description: "Create and edit Query Manager, Admin and Super Admin logins.",
+        icon: "user-plus",
+        route: "/user-management",
+        iconColor: colors.primary,
+    };
 
     useFocusEffect(
         useCallback(() => {
@@ -24,7 +35,7 @@ export const UsersSetupIndexScreen = () => {
         }, [router]),
     );
 
-    const MENU_OPTIONS = [
+    const BASE_MENU_OPTIONS = [
         {
             id: "dealers",
             title: "Dealers",
@@ -51,7 +62,7 @@ export const UsersSetupIndexScreen = () => {
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                {MENU_OPTIONS.map((option) => (
+                {(isSuperAdmin ? [...BASE_MENU_OPTIONS, SUPER_ADMIN_OPTION] : BASE_MENU_OPTIONS).map((option) => (
                     <Pressable
                         key={option.id}
                         style={({ pressed }) => [

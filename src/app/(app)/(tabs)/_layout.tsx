@@ -132,8 +132,13 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-                                {/* Route still exists (reachable via router.push) but never shown as a tab */}
-                <Tabs.Screen
+<Tabs.Protected guard={userRole === "Super Admin"}>
+                    <Tabs.Screen
+                        name='user-management'
+                        options={{ href: null }}
+                    />
+                </Tabs.Protected>
+                {/* Route still exists (reachable via router.push) but never shown as a tab */}                <Tabs.Screen
                     name='sales-target'
                     options={{ href: null }}
                 />
