@@ -21,13 +21,18 @@ export const fetchUsersCount = async (): Promise<UserCountSummary> => {
   return response.data;
 };
 export const fetchAuthorities = async (): Promise<AuthorityOption[]> => {
-  const response = await api.get<any[]>(`/AUTHORITY_ENDPOINT_HERE`);
-  return (response.data ?? [])
-    .map((a) => ({
-      label: String(a.authority_name ?? a.name ?? a.label ?? ""),
-      value: Number(a.id ?? a.authority_id ?? a.authorityid ?? a.value),
-    }))
-    .filter((a) => a.label && !Number.isNaN(a.value));
+  const response = await api.get<DealerEmployee[]>(
+    `/Dealer/Employee/Details/By/Authority`,
+  );
+
+  const unique = new Map<number, string>();
+  (response.data ?? []).forEach((u) => {
+    if (u.authorityid != null && u.authority_name && !unique.has(u.authorityid)) {
+      unique.set(u.authorityid, u.authority_name);
+    }
+  });
+
+  return Array.from(unique, ([value, label]) => ({ label, value }));
 };
 
 export const updateUser = async (
