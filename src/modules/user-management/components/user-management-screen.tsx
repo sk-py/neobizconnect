@@ -86,6 +86,7 @@ export default function UserManagementScreen() {
   const [mobile, setMobile] = useState("");
   const [authorityLabel, setAuthorityLabel] = useState("");
   const [password, setPassword] = useState("");
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -482,17 +483,26 @@ export default function UserManagementScreen() {
       <Text style={styles.fieldLabel}>
         Password<Text style={styles.required}> *</Text>
       </Text>
-      <TextInput
-        style={styles.textInput}
-        placeholder="Enter password"
-        placeholderTextColor={colors.muted}
-                value={password}
-        onFocus={() =>
-          setTimeout(() => createScrollRef.current?.scrollToEnd({ animated: true }), 250)
-        }
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+            <View style={styles.passwordInputWrap}>
+        <TextInput
+          style={[styles.textInput, styles.passwordInput]}
+          placeholder="Enter password"
+          placeholderTextColor={colors.muted}
+          value={password}
+          onFocus={() =>
+            setTimeout(() => createScrollRef.current?.scrollToEnd({ animated: true }), 250)
+          }
+          onChangeText={setPassword}
+          secureTextEntry={!showCreatePassword}
+        />
+        <TouchableOpacity
+          style={styles.passwordEye}
+          onPress={() => setShowCreatePassword((v) => !v)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Feather name={showCreatePassword ? "eye" : "eye-off"} size={16} color={colors.muted} />
+        </TouchableOpacity>
+      </View>
 
       {formError && (
         <View style={styles.saveErrorBox}>
@@ -618,17 +628,26 @@ export default function UserManagementScreen() {
               <Text style={styles.fieldLabel}>
                 Password<Text style={styles.required}> *</Text>
               </Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter password"
-                placeholderTextColor={colors.muted}
-                                value={editPassword}
-                onFocus={() =>
-                  setTimeout(() => editScrollRef.current?.scrollToEnd({ animated: true }), 250)
-                }
-                onChangeText={setEditPassword}
-                secureTextEntry
-              />
+                           <View style={styles.passwordInputWrap}>
+                <TextInput
+                  style={[styles.textInput, styles.passwordInput]}
+                  placeholder="Enter password"
+                  placeholderTextColor={colors.muted}
+                  value={editPassword}
+                  onFocus={() =>
+                    setTimeout(() => editScrollRef.current?.scrollToEnd({ animated: true }), 250)
+                  }
+                  onChangeText={setEditPassword}
+                  secureTextEntry={!showEditPassword}
+                />
+                <TouchableOpacity
+                  style={styles.passwordEye}
+                  onPress={() => setShowEditPassword((v) => !v)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather name={showEditPassword ? "eye" : "eye-off"} size={16} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
 
               {editError && (
                 <View style={styles.saveErrorBox}>
