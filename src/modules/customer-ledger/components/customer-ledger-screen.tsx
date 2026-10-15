@@ -76,6 +76,11 @@ export default function CustomerLedgerScreen() {
     useCallback(() => {
       const onBackPress = () => {
 
+        if (user?.authority === "Super Admin") {
+          router.push("/admin-sales-screen");
+          return true;
+        }
+
         if (user?.authority !== "Sales Manager") return;
 
         router.push("/sales-manager-modules");
@@ -83,7 +88,7 @@ export default function CustomerLedgerScreen() {
       };
       const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
       return () => subscription.remove();
-    }, [router]),
+    }, [router, user?.authority]),
   );
 
   // Query: Fetch Ledger Data (Dynamic based on role)
