@@ -147,6 +147,7 @@ const TabLayout = () => {
                         name='notifications'
                         options={{
                             title: "Notifications",
+                            href: userRole === "Super Admin" ? null : undefined,
                             tabBarIcon: ({ color, size }) => (
                                 <Feather name='bell' size={size} color={color} />
                             )
