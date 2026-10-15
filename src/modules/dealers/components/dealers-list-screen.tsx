@@ -184,14 +184,14 @@ export default function DealersListScreen() {
           >
             {isSuperAdmin ? (
               <TouchableOpacity
-style={[styles.createLoginBtnOutline,{ backgroundColor: loginCreated ? "#DCFCE7" : "#FEE2E2", borderColor: loginCreated ? "#BBF7D0" : "#FECACA", top: -4, right: -24 }]}
+style={[styles.createLoginBtnOutline,{ backgroundColor: loginCreated ? "#DCFCE7" : "#DBEAFE", borderColor: loginCreated ? "#BBF7D0" : "#BFDBFE", top: -4, right: -24 }]}
                 onPress={(event) => {
                   event.stopPropagation();
                   setLoginDealer(item);
                 }}
               >
-                <Feather name={loginCreated ? "edit-2" : "lock"} size={12} color={loginCreated ? "#166534" : "#B91C1C"} />
-<Text style={[styles.createLoginTextOutline, { color: loginCreated ? "#166534" : "#B91C1C" }]}>{loginCreated ? "Manage Login" : "Create Login"}</Text>
+                <Feather name={loginCreated ? "edit-2" : "lock"} size={12} color={loginCreated ? "#166534" : "#1E40AF"} />
+                <Text style={[styles.createLoginTextOutline, { color: loginCreated ? "#166534" : "#1E40AF" }]}>{loginCreated ? "Manage Login" : "Create Login"}</Text>
               </TouchableOpacity>
             ) : null}
 
