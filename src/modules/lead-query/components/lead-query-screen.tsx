@@ -471,8 +471,8 @@ export default function LeadQueryScreen() {
 
             {!isLoading && !isError && filteredData.length > 0 ? (
         <View style={styles.paginationBar}>
-          <Text style={styles.paginationText}>
-            Showing {rangeStart} to {rangeEnd} of {totalItems} entries
+          <Text style={styles.paginationText} numberOfLines={1}>
+            Showing {rangeStart}-{rangeEnd} of {totalItems}
           </Text>
 
           <View style={styles.paginationControls}>
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
   listContent: { padding: spacing.md },
 
   paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.white },
-  paginationText: { flex: 1, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationText: { flexShrink: 1, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
   paginationControls: { flexDirection: "row", alignItems: "center", gap: 5 },
   pageButton: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surface },
   pageButtonDisabled: { opacity: 0.45 },
