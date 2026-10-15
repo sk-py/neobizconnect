@@ -139,7 +139,7 @@ export function SalesManagerLoginModal({ manager, visible, login, onClose, onCre
                     placeholderTextColor={colors.muted}
                   />
                   <TouchableOpacity style={styles.eye} onPress={() => setShowPassword((s) => !s)}>
-                    <Feather name={showPassword ? "eye-off" : "eye"} size={16} color={colors.muted} />
+                    <Feather name={showPassword ? "eye" : "eye-off"} size={16} color={colors.muted} />
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity
