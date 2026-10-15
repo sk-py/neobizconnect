@@ -342,9 +342,9 @@ export const SubDealerTargetsScreen = () => {
                         
                         <Text style={styles.inputLabel}>Select Year</Text>
                         <View style={styles.yearSelectorRow}>
-                            {["2025", "2026", "2027"].map(yr => (
-                                <TouchableOpacity key={yr} style={[styles.yearChip, filterYear === yr && styles.yearChipActive]} onPress={() => setFilterYear(yr)}>
-                                    <Text style={[styles.yearChipText, filterYear === yr && styles.yearChipTextActive]}>{yr}</Text>
+                            {Array.from({ length: 11 }, (_, i) => String(2021 + i)).map(yr => (
+<TouchableOpacity key={yr} style={[styles.yearChip, styles.filterYearChip, filterYear === yr && styles.yearChipActive]} onPress={() => setFilterYear(yr)}>
+                                        <Text style={[styles.yearChipText, filterYear === yr && styles.yearChipTextActive]}>{yr}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -435,11 +435,12 @@ const styles = StyleSheet.create({
     dropdownTrigger: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: radius.sm },
     dropdownText: { fontSize: 14, fontFamily: typography.medium, color: colors.text },
     
-    yearSelectorRow: { flexDirection: "row", gap: spacing.sm },
+    yearSelectorRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     yearChip: { flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm },
     yearChipActive: { backgroundColor: colors.text, borderColor: colors.text },
     yearChipText: { fontSize: 14, fontFamily: typography.medium, color: colors.text },
-    yearChipTextActive: { color: colors.white, fontFamily: typography.bold },
+   yearChipTextActive: { color: colors.white, fontFamily: typography.bold },
+    filterYearChip: { flex: 0, flexGrow: 0, width: "22%" },
 
     targetGrid: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, overflow: "hidden", marginBottom: spacing.xxl },
     targetGridHeader: { flexDirection: "row", backgroundColor: "#DBEAFE", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
