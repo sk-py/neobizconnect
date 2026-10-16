@@ -76,6 +76,11 @@ export default function CustomerLedgerScreen() {
     useCallback(() => {
       const onBackPress = () => {
 
+        if (user?.authority === "Super Admin") {
+          router.push("/admin-sales-screen");
+          return true;
+        }
+
         if (user?.authority !== "Sales Manager") return;
 
         router.push("/sales-manager-modules");
@@ -83,7 +88,7 @@ export default function CustomerLedgerScreen() {
       };
       const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
       return () => subscription.remove();
-    }, [router]),
+    }, [router, user?.authority]),
   );
 
   // Query: Fetch Ledger Data (Dynamic based on role)
@@ -117,15 +122,16 @@ export default function CustomerLedgerScreen() {
   // Local Search Filtering for Ledger
   const filteredData = useMemo(() => {
     if (!data?.AccountBalance) return [];
-    if (!searchQuery.trim()) return data.AccountBalance;
+const baseList: LedgerEntry[] = isDealer ? data.AccountBalance : data.AccountBalance.filter((item: LedgerEntry) => { const d = (item.PostingDate || "").slice(0, 10); if (appliedFromDate && d < appliedFromDate) return false; if (appliedToDate && d > appliedToDate) return false; return true; });
+    if (!searchQuery.trim()) return baseList;
 
     const query = searchQuery.toLowerCase();
-    return data.AccountBalance.filter((item: LedgerEntry) =>
+    return baseList.filter((item: LedgerEntry) =>
       item.OriginNo?.toLowerCase().includes(query) ||
       item.Details?.toLowerCase().includes(query) ||
       item.Origin?.toLowerCase().includes(query)
     );
-  }, [data?.AccountBalance, searchQuery]);
+  }, [data?.AccountBalance, searchQuery, appliedFromDate, appliedToDate, isDealer]);
 
     useEffect(() => {
     setPage(0);
@@ -156,7 +162,7 @@ export default function CustomerLedgerScreen() {
     return num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const toISODate = (date: Date) => date.toISOString().split("T")[0];
+  const toISODate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   const displayDate = (date: Date | null) => date ? date.toLocaleDateString("en-GB") : "DD/MM/YYYY";
   const formatApiDate = (isoString: string) => {
     if (!isoString) return "-";

@@ -12,6 +12,7 @@ import { SalesManager } from "@/modules/sales-managers/types";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useAuth } from "@/hooks/use-auth";
+import { SalesManagerLoginModal } from "@/modules/sales-managers/components/sales-manager-login-modal";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -35,6 +36,11 @@ const isActiveStatus = (manager: SalesManager) =>
 const hasPortalAccount = (manager: SalesManager) =>
   manager.employeeDetails !== null;
 
+const getBlockedReason = (manager: SalesManager): string | null => {
+ if (!manager.email || !manager.email.trim()) return "No email";
+  return null;
+};
+
 const getMobile = (manager: SalesManager) =>
   manager.mobile || manager.employeeDetails?.number || null;
 
@@ -45,6 +51,7 @@ export default function SalesManagersListScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
+  const isSuperAdmin = user?.authority === "Super Admin";
 
   const goBack = () => {
     if (isAdmin) {
@@ -72,6 +79,7 @@ export default function SalesManagersListScreen() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
+  const [loginManager, setLoginManager] = useState<SalesManager | null>(null);
   const [quickViewManager, setQuickViewManager] =
     useState<SalesManager | null>(null);
 
@@ -89,7 +97,17 @@ export default function SalesManagersListScreen() {
     retry: 2,
   });
 
-    const filteredData = useMemo(() => {
+    const loginInfo = useMemo(() => {
+    const ed = loginManager?.employeeDetails;
+    if (!ed) return null;
+    return {
+      username: ed.email ?? loginManager?.email ?? "",
+      password: ed.account_password ?? "",
+      active: ed.lock_status === 1,
+    };
+  }, [loginManager]);
+
+  const filteredData = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
     if (!query) {
@@ -139,14 +157,42 @@ export default function SalesManagersListScreen() {
     const renderRow = ({ item }: { item: SalesManager }) => {
     const active = isActiveStatus(item);
     const mobile = getMobile(item);
-    const email = getEmail(item);
+    const rawEmail = getEmail(item);
     const liveLogin = hasPortalAccount(item);
     const loginStatus = liveLogin ? "Created" : "Not Created";
+    const blockedReason = getBlockedReason(item);
+    const email = isSuperAdmin && !(liveLogin && !blockedReason) ? null : rawEmail;
 
     return (
       <View style={styles.row}>
         <View style={styles.rowMain}>
-          <View style={styles.nameRow}>
+          <View style={[styles.nameRow, isSuperAdmin && { paddingRight: 124 }]}>
+            {isSuperAdmin && liveLogin && !blockedReason ? (
+              <TouchableOpacity
+                style={[
+                  styles.manageBtn,
+                  {
+                    backgroundColor: liveLogin ? "#DCFCE7" : "#FEE2E2",
+                    borderColor: liveLogin ? "#BBF7D0" : "#FECACA",
+                  },
+                ]}
+                onPress={() => setLoginManager(item)}
+              >
+                <Feather
+                  name={liveLogin ? "edit-2" : "lock"}
+                  size={12}
+                  color={liveLogin ? "#166534" : "#B91C1C"}
+                />
+                <Text style={[styles.manageBtnText, { color: liveLogin ? "#166534" : "#B91C1C" }]}>
+                  {liveLogin ? "Manage Login" : "Create Login"}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+           {isSuperAdmin && blockedReason ? (
+              <View style={[styles.blockedChip, { backgroundColor: "transparent" }]}>
+                <Text style={styles.blockedText}>{blockedReason}</Text>
+              </View>
+            ) : null}
             <TouchableOpacity
               onPress={() => setQuickViewManager(item)}
               hitSlop={{ top: 6, bottom: 6, left: 0, right: 6 }}
@@ -433,6 +479,19 @@ export default function SalesManagersListScreen() {
         </>
       )}
 
+      {isSuperAdmin ? (
+        <SalesManagerLoginModal
+          manager={loginManager}
+          visible={loginManager !== null}
+          login={loginInfo}
+          onClose={() => setLoginManager(null)}
+          onCreated={() => {
+            setLoginManager(null);
+            void refetch();
+          }}
+        />
+      ) : null}
+
       <SalesManagerQuickViewModal
         manager={quickViewManager}
         visible={quickViewManager !== null}
@@ -584,6 +643,43 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: txtSize.xs,
     fontFamily: typography.semibold,
+  },
+
+ manageBtn: {
+    position: "absolute",
+    top: -4,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+  },
+
+  manageBtnText: {
+    fontSize: txtSize.xs,
+    fontFamily: typography.bold,
+  },
+
+  blockedChip: {
+    position: "absolute",
+    top: -2,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+  },
+
+  blockedText: {
+    fontSize: txtSize.xs,
+    fontFamily: typography.medium,
+    color: colors.textSecondary,
   },
 
   loginStatusRow: {

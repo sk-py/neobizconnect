@@ -50,13 +50,29 @@ export default function ArInvoiceScreen() {
     enabled: Boolean(groupCompanyName),
   });
 
-  const { data: paginatedData, isLoading: listLoading, isRefetching, refetch } = useQuery({
+  const { data: paginatedData, isLoading: listLoading, isRefetching, refetch, error: listError } = useQuery({
     queryKey: ["ar-invoice-list", groupCompanyName, page],
     queryFn: () => fetchArInvoices(groupCompanyName, page),
     enabled: Boolean(groupCompanyName),
     placeholderData: (previousData) => previousData,
   });
 
+  const isFiltering = Boolean(appliedFromDate || appliedToDate || searchQuery.trim());
+
+  const { data: allInvoices, isFetching: allLoading } = useQuery({
+    queryKey: ["ar-invoice-all", groupCompanyName, paginatedData?.totalPages],
+    queryFn: async () => {
+      const totalPages = paginatedData?.totalPages ?? 1;
+      const pages = await Promise.all(
+        Array.from({ length: totalPages }, (_, i) => fetchArInvoices(groupCompanyName, i))
+      );
+      return pages.flatMap((p) => p?.content || []);
+    },
+    enabled: Boolean(groupCompanyName) && isFiltering && Boolean(paginatedData?.totalPages),
+    staleTime: 60000,
+  });
+
+console.log("AR LIST:", paginatedData?.totalItems, paginatedData?.content?.length, "dates:", appliedFromDate, appliedToDate, "search:", searchQuery, "first date:", paginatedData?.content?.[0]?.document_date);
   const { mutate: handleDownloadPdf } = useMutation({
     mutationFn: (docEntry: string) => downloadInvoicePdf(groupCompanyName, docEntry),
     onMutate: (docEntry) => setDownloadingId(docEntry),
@@ -85,7 +101,7 @@ export default function ArInvoiceScreen() {
       return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
     }
 
-        const date = new Date(withoutTime);
+    const date = new Date(withoutTime);
     if (isNaN(date.getTime())) return withoutTime;
 
     return date.toLocaleDateString("en-GB");
@@ -108,7 +124,7 @@ export default function ArInvoiceScreen() {
     if (!from && !to) return true;
     const rawDate = item.document_date;
     if (!rawDate) return false;
-    const dateStr = String(rawDate).split("T")[0];
+    const dateStr = String(rawDate).trim().slice(0, 10);
     if (from && dateStr < from) return false;
     if (to && dateStr > to) return false;
     return true;

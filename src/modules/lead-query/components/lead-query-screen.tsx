@@ -41,6 +41,8 @@ const formatDate = (isoDate: string) => {
   if (isNaN(d.getTime())) return isoDate;
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 };
+const PAGE_SIZE = 10;
+
 export default function LeadQueryScreen() {
   const router = useRouter();
     const { user } = useAuth();
@@ -49,7 +51,8 @@ export default function LeadQueryScreen() {
   const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
   const canCreate = isQueryManager;
 
-    const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
   const [editingLead, setEditingLead] = useState<LeadQuery | null>(null);
   const [editForm, setEditForm] = useState<LeadFormData | null>(null);
     const [saving, setSaving] = useState(false);
@@ -137,7 +140,19 @@ export default function LeadQueryScreen() {
     });
   }, [data, searchQuery]);
 
-        const openEditModal = (lead: LeadQuery) => {
+    const totalItems = filteredData.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+
+  const paginatedData = useMemo(() => {
+    const start = safePage * PAGE_SIZE;
+    return filteredData.slice(start, start + PAGE_SIZE);
+  }, [filteredData, safePage]);
+
+  const rangeStart = totalItems === 0 ? 0 : safePage * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(totalItems, (safePage + 1) * PAGE_SIZE);
+
+  const openEditModal = (lead: LeadQuery) => {
     const form = lead.formJson?.[0];
     setEditingLead(lead);
     setEditForm(form ? { ...form } : null);
@@ -409,10 +424,16 @@ export default function LeadQueryScreen() {
             placeholder="Search name, phone, city, or car model..."
             placeholderTextColor={colors.muted}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              setPage(0);
+            }}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchBtn}>
+            <TouchableOpacity onPress={() => {
+              setSearchQuery("");
+              setPage(0);
+            }} style={styles.clearSearchBtn}>
               <Feather name="x-circle" size={13} color={colors.muted} />
             </TouchableOpacity>
           )}
@@ -437,7 +458,7 @@ export default function LeadQueryScreen() {
         </View>
       ) : (
         <LegendList
-          data={filteredData}
+          data={paginatedData}
           keyExtractor={(item: LeadQuery) => String(item.id)}
           renderItem={renderRow}
           contentContainerStyle={styles.listContent}
@@ -448,7 +469,53 @@ export default function LeadQueryScreen() {
         />
       )}
 
-            <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
+            {!isLoading && !isError && filteredData.length > 0 ? (
+        <View style={styles.paginationBar}>
+          <Text style={styles.paginationText} numberOfLines={1}>
+            Showing {rangeStart}-{rangeEnd} of {totalItems}
+          </Text>
+
+          <View style={styles.paginationControls}>
+            <TouchableOpacity
+              style={[styles.pageButton, safePage === 0 && styles.pageButtonDisabled]}
+              disabled={safePage === 0}
+              onPress={() => setPage(0)}
+            >
+              <Feather name="chevrons-left" size={15} color={safePage === 0 ? colors.muted : colors.text} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.pageButton, safePage === 0 && styles.pageButtonDisabled]}
+              disabled={safePage === 0}
+              onPress={() => setPage((current) => Math.max(0, current - 1))}
+            >
+              <Feather name="chevron-left" size={15} color={safePage === 0 ? colors.muted : colors.text} />
+            </TouchableOpacity>
+
+            <Text style={styles.pageText}>
+              {safePage + 1} / {totalPages}
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.pageButton, safePage >= totalPages - 1 && styles.pageButtonDisabled]}
+              disabled={safePage >= totalPages - 1}
+              onPress={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+            >
+              <Feather name="chevron-right" size={15} color={safePage >= totalPages - 1 ? colors.muted : colors.text} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.pageButton, safePage >= totalPages - 1 && styles.pageButtonDisabled]}
+              disabled={safePage >= totalPages - 1}
+              onPress={() => setPage(totalPages - 1)}
+            >
+              <Feather name="chevrons-right" size={15} color={safePage >= totalPages - 1 ? colors.muted : colors.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
+
+      <Modal visible={!!editingLead && !!editForm} transparent animationType="fade" onRequestClose={closeEditModal}>
                <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior="padding"
@@ -636,6 +703,13 @@ const styles = StyleSheet.create({
   clearSearchBtn: { padding: 2 },
 
   listContent: { padding: spacing.md },
+
+  paginationBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.white },
+  paginationText: { flexShrink: 1, fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
+  paginationControls: { flexDirection: "row", alignItems: "center", gap: 5 },
+  pageButton: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surface },
+  pageButtonDisabled: { opacity: 0.45 },
+  pageText: { minWidth: 32, textAlign: "center", fontSize: txtSize.xs, fontFamily: typography.semibold, color: colors.text },
 
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
 

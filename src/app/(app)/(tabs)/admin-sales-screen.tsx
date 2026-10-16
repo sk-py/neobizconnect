@@ -1,13 +1,26 @@
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/hooks/use-auth";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export const SalesIndexScreen = () => {
     const router = useRouter();
+    const { user } = useAuth();
+    const isSuperAdmin = user?.authority === "Super Admin";
 
-        const MENU_OPTIONS = [
+    const CUSTOMER_LEDGER_OPTION = {
+        id: "customer-ledger",
+        title: "Customer Ledger",
+        description: "View dealer ledgers and balances.",
+        icon: "book",
+        route: "/customer-ledger",
+        iconColor: "#F59E0B", // Amber
+        iconBg: "#FFFBEB"
+    };
+
+        const BASE_MENU_OPTIONS = [
                         {
             id: "sales-target",
             title: "Sales Target",
@@ -44,7 +57,7 @@ export const SalesIndexScreen = () => {
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                {MENU_OPTIONS.map((option) => (
+                {(isSuperAdmin ? [...BASE_MENU_OPTIONS, CUSTOMER_LEDGER_OPTION] : BASE_MENU_OPTIONS).map((option) => (
                     <Pressable
                         key={option.id}
                         style={({ pressed }) => [
