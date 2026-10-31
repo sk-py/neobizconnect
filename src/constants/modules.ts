@@ -27,15 +27,15 @@ export type AppModuleName =
   | "Sales Manager Modules"
   | "Notifications"
   | "User Setup"
-    | "Admin Leads & Queries"
+  | "Admin Leads & Queries"
   | "Admin Sales Screen"
   | "Admin Inventory"
-    | "Admin Sub Dealer"
+  | "Admin Sub Dealer"
   | "Sales Target"
   | "Finances";
 
 export const MODULES: Record<AppModuleName, readonly UserRole[]> = {
-  Tracker: ["None"],
+  Tracker: ["Sales Manager"],
   Dashboard: [
     "Sales Manager",
     "Dealer",
@@ -60,9 +60,9 @@ export const MODULES: Record<AppModuleName, readonly UserRole[]> = {
   "Dealer Lead Query": ["Query Manager"],
   "Online Lead": ["Query Manager", "Admin", "Super Admin"],
   Notifications: ["Admin", "Super Admin"],
- "User Setup": ["Admin", "Super Admin"],
+  "User Setup": ["Admin", "Super Admin"],
   "Admin Leads & Queries": ["Admin", "Super Admin"],
- "Admin Sales Screen": ["Admin", "Super Admin"],
+  "Admin Sales Screen": ["Admin", "Super Admin"],
   "Admin Inventory": ["Admin", "Super Admin"],
   "Admin Sub Dealer": ["Admin", "Super Admin"],
   "Sales Target": ["Admin", "Super Admin"],
