@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Feather from '@react-native-vector-icons/feather/static';
 import { Tabs } from 'expo-router';
 import { useEffect } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TabLayout = () => {
@@ -48,21 +48,10 @@ const TabLayout = () => {
                     }
                 }}
             >
-                <Tabs.Protected guard={canAccess("Tracker")}>
-                    <Tabs.Screen
-                        name='index'
-                        options={{
-                            title: "Tracker",
-                            tabBarIcon: ({ color, size }) => (
-                                <Feather name='map-pin' size={size} color={color} />
-                            )
-                        }}
-                    />
-                </Tabs.Protected>
 
                 <Tabs.Protected guard={canAccess("Dashboard")}>
                     <Tabs.Screen
-                        name='dashboard'
+                        name='index'
                         options={{
                             title: "NeoBizConnect",
                             tabBarIcon: ({ color, size }) => (

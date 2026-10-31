@@ -1,9 +1,5 @@
-import { SalesManagerHomeScreen } from '@/modules/sales-manager-tracking/components/sales-manager-home-screen'
+import { DashboardScreen } from "@/modules/dashboard/components/dealer-dashboard";
 
-const TrackerRoute = () => {
-  return (
-    <SalesManagerHomeScreen />
-  )
+export default function ProfileRoute() {
+    return <DashboardScreen />;
 }
-
-export default TrackerRoute

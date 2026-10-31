@@ -72,17 +72,6 @@
         }
       ],
       [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to track your location in the background to map field sales routes while the app is closed.",
-          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to log attendance and verify dealer visits.",
-          "locationAlwaysUsageDescription": "Allow $(PRODUCT_NAME) to track your location in the background to map field sales routes while the app is closed.",
-          "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true,
-          "isIosBackgroundLocationEnabled": true
-        }
-      ],
-      [
         "expo-notifications",
         {
           "icon": "./assets/images/ic_stat_react_logo.png",
@@ -90,12 +79,6 @@
           "defaultChannel": "channel",
           "sounds": ["./assets/sounds/notifications_sound.wav"],
           "enableBackgroundRemoteNotifications": true
-        }
-      ],
-      [
-        "expo-local-authentication",
-        {
-          "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID for signing in."
         }
       ],
       "@react-native-vector-icons/feather",
