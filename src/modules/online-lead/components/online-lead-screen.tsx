@@ -1,4 +1,7 @@
-import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
+import { FieldSelect } from "@/components/custom/field-select";
+import { SkeletonList } from "@/components/custom/skeleton";
+import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
 import {
   fetchAssignedToOptions,
   fetchOnlineLeads,
@@ -16,14 +19,10 @@ import {
   OnlineLeadFormData,
   TYPE_OF_QUERY_OPTIONS,
 } from "@/modules/online-lead/types";
-import { FieldSelect } from "@/components/custom/field-select";
-import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "expo-router";
+import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
-import { useFocusEffect } from "expo-router";
-import { LegendList } from "@legendapp/list/react-native";
-import { SkeletonList } from "@/components/custom/skeleton";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   BackHandler,
@@ -74,7 +73,7 @@ export default function OnlineLeadScreen() {
     if (isAdminUser) {
       router.push("/leads-and-queries-screen");
     } else {
-      router.push(user?.authority === "Query Manager" ? "/dashboard" : "/sales-manager-modules");
+      router.push(user?.authority === "Query Manager" ? "/" : "/sales-manager-modules");
     }
   };
 
@@ -336,13 +335,13 @@ export default function OnlineLeadScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
                 <View style={styles.titleRow}>
-          <TouchableOpacity
+      { user?.authority !== "Query Manager" &&   <TouchableOpacity
             onPress={goBack}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.backButton}
           >
             <Feather name="arrow-left" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </TouchableOpacity>}
           <Text style={styles.title}>Online Lead</Text>
           <View style={{ flex: 1 }} />
                     {!isAdminUser && (

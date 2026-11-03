@@ -58,7 +58,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       await deleteItemAsync("accessToken");
-      await AsyncStorage.clear();
+      const keys = await AsyncStorage.getAllKeys();
+      const keysToRemove = keys.filter((key) => key !== "pushEnabled");
+      await AsyncStorage.multiRemove(keysToRemove);
     } catch (error) {
       console.error("Failed to clear AsyncStorage on logout:", error);
     }
@@ -91,7 +93,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         user: response,
         isAuthenticated: true,
       });
-        } catch (error: any) {
+    } catch (error: any) {
       if (error?.response?.status === 401) {
         console.warn("Auth hydration: stored session expired, logging out.");
       } else {

@@ -1,4 +1,5 @@
-import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
+import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
 import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { fetchSalesManagers } from "@/modules/sales-managers/services/sales-managers.api";
 import {
@@ -31,7 +32,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "@/hooks/use-auth";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
@@ -88,7 +88,7 @@ export const SalesManagerTargetsScreen = () => {
   const { user } = useAuth();
   const isAdmin = user?.authority === "Admin" || user?.authority === "Super Admin";
 
-    const goBack = () => {
+  const goBack = () => {
     if (isAdmin) {
       router.push("/admin-sales-screen");
     } else {
@@ -115,7 +115,7 @@ export const SalesManagerTargetsScreen = () => {
   // UI state
   const [activeTab, setActiveTab] = useState<"list" | "assign">("list");
   const [role, setRole] = useState<QuotaRole>("Dealer");
-    const [filterYear, setFilterYear] = useState("2026-2027");
+  const [filterYear, setFilterYear] = useState("2026-2027");
   const [isYearModalOpen, setIsYearModalOpen] = useState(false);
   const [isFormYearModalOpen, setIsFormYearModalOpen] = useState(false);
 
@@ -126,7 +126,7 @@ export const SalesManagerTargetsScreen = () => {
   // View modal
   const [viewingItem, setViewingItem] = useState<SalesQuotaListItem | null>(null);
 
-    // Form state (Create/Edit tab)
+  // Form state (Create/Edit tab)
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [selectedEntityCode, setSelectedEntityCode] = useState<string | null>(null);
   const [formFinancialYear, setFormFinancialYear] = useState("2026-2027");
@@ -162,7 +162,7 @@ export const SalesManagerTargetsScreen = () => {
     enabled: activeTab === "assign" && role === "Dealer",
   });
 
-    const entityOptions: EntityOption[] = useMemo(() => {
+  const entityOptions: EntityOption[] = useMemo(() => {
     if (role === "Dealer") {
       return dealers.map((d) => ({ code: d.cardCode, name: d.cardName, salesManager: d.salesManager }));
     }
@@ -177,7 +177,7 @@ export const SalesManagerTargetsScreen = () => {
     );
   }, [entityOptions, entitySearchQuery]);
 
-  
+
   const isMonthLocked = (month: QuotaMonthName): boolean => {
     if (formMode === "edit") return isMonthPassed(formFinancialYear, month);
     if (!effectiveFromMonth) return true;
@@ -296,7 +296,7 @@ export const SalesManagerTargetsScreen = () => {
   });
 
   // --- Handlers ---
-        const handleEdit = (item: SalesQuotaListItem) => {
+  const handleEdit = (item: SalesQuotaListItem) => {
     setFormMode("edit");
     setRole(item.role);
     setSelectedEntityCode(item.user_code);
@@ -313,7 +313,7 @@ export const SalesManagerTargetsScreen = () => {
     setActiveTab("assign");
   };
 
-    const handleMonthValueChange = (month: string, val: string) => {
+  const handleMonthValueChange = (month: string, val: string) => {
     const sanitized = val.replace(/[^0-9.]/g, "");
 
     // Outside create mode (or before an Effective From month is chosen)
@@ -388,7 +388,7 @@ export const SalesManagerTargetsScreen = () => {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-                  <TouchableOpacity style={styles.backButton} onPress={goBack}>
+          <TouchableOpacity style={styles.backButton} onPress={goBack}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
@@ -397,7 +397,7 @@ export const SalesManagerTargetsScreen = () => {
           </View>
         </View>
 
-                {/* Stat cards (List tab only) */}
+        {/* Stat cards (List tab only) */}
         {activeTab === "list" && (
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
@@ -431,7 +431,7 @@ export const SalesManagerTargetsScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === "assign" && styles.tabBtnActive]}
-                                    onPress={() => {
+            onPress={() => {
               setActiveTab("assign");
               setFormMode("create");
               setRole("Dealer");
@@ -443,7 +443,7 @@ export const SalesManagerTargetsScreen = () => {
               setSelectedEntityCode(null);
             }}
           >
-                        <Feather
+            <Feather
               name={activeTab === "assign" && formMode === "edit" ? "edit-2" : "plus-circle"}
               size={16}
               color={activeTab === "assign" ? colors.primary : colors.muted}
@@ -569,7 +569,7 @@ export const SalesManagerTargetsScreen = () => {
           )}
         </>
       ) : (
-                <KeyboardAvoidingView
+        <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 44 : 0}
           style={{ flex: 1 }}
@@ -585,7 +585,7 @@ export const SalesManagerTargetsScreen = () => {
                 {ROLES.map((r) => {
                   const active = role === r;
                   return (
-                                        <TouchableOpacity
+                    <TouchableOpacity
                       key={r}
                       disabled={formMode === "edit"}
                       style={[
@@ -593,7 +593,7 @@ export const SalesManagerTargetsScreen = () => {
                         active && styles.roleFilterPillActive,
                         formMode === "edit" && { opacity: 0.6 },
                       ]}
-                                            onPress={() => {
+                      onPress={() => {
                         setRole(r);
                         setSelectedEntityCode(null);
                         setEntitySearchQuery("");
@@ -608,7 +608,7 @@ export const SalesManagerTargetsScreen = () => {
 
             <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Select {role}</Text>
-                          <TouchableOpacity
+              <TouchableOpacity
                 style={[styles.dropdownTrigger, formMode === "edit" && styles.readOnlyField]}
                 disabled={formMode === "edit"}
                 onPress={() => setIsEntityModalOpen(true)}
@@ -637,7 +637,7 @@ export const SalesManagerTargetsScreen = () => {
 
             <View style={styles.formGroup}>
               <Text style={styles.inputLabel}>Financial Year</Text>
-                           <TouchableOpacity
+              <TouchableOpacity
                 style={[styles.dropdownTrigger, formMode === "edit" && styles.readOnlyField]}
                 disabled={formMode === "edit"}
                 onPress={() => setIsFormYearModalOpen(true)}
@@ -697,7 +697,7 @@ export const SalesManagerTargetsScreen = () => {
                 </View>
               </View>
 
-                            {QUOTA_MONTHS.map((month: QuotaMonthName) => {
+              {QUOTA_MONTHS.map((month: QuotaMonthName) => {
                 const locked = isMonthLocked(month);
                 return (
                   <View key={month} style={styles.targetRow}>
@@ -727,7 +727,7 @@ export const SalesManagerTargetsScreen = () => {
             </View>
           </ScrollView>
 
-              <View style={[styles.formFooter, { paddingBottom: spacing.md }]}>
+          <View style={[styles.formFooter, { paddingBottom: spacing.md }]}>
             <View style={styles.totalBlock}>
               <Text style={styles.totalFooterLabel}>Net Quantity</Text>
               <Text style={styles.totalFooterValue} numberOfLines={1} adjustsFontSizeToFit>
@@ -753,7 +753,12 @@ export const SalesManagerTargetsScreen = () => {
       <Modal visible={isYearModalOpen} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Filter by Financial Year</Text>
+            <View style={{flexDirection:"row", alignItems:"center", justifyContent:"space-between"}}>
+              <Text style={styles.modalTitle}>Filter by Financial Year</Text>
+              <TouchableOpacity onPress={()=>setIsYearModalOpen(false)} style={{marginBottom: spacing.lg}}>
+                <Feather name="x" size={14} />
+              </TouchableOpacity>
+            </View>
             <View style={styles.yearSelectorRow}>
               {FINANCIAL_YEARS.map((yr) => (
                 <TouchableOpacity
@@ -772,7 +777,7 @@ export const SalesManagerTargetsScreen = () => {
         </View>
       </Modal>
 
-            {/* Form Financial Year Modal */}
+      {/* Form Financial Year Modal */}
       <Modal visible={isFormYearModalOpen} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -795,13 +800,13 @@ export const SalesManagerTargetsScreen = () => {
         </View>
       </Modal>
 
-           {/* Effective From Month Modal */}
+      {/* Effective From Month Modal */}
       <Modal visible={isEffectiveMonthModalOpen} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Select Effective From Month</Text>
             <ScrollView style={{ maxHeight: 320 }}>
-                            {QUOTA_MONTHS.map((m) => {
+              {QUOTA_MONTHS.map((m) => {
                 const isSelected = effectiveFromMonth === m;
                 return (
                   <TouchableOpacity
@@ -817,7 +822,7 @@ export const SalesManagerTargetsScreen = () => {
                     }}
                   >
                     <Text style={[styles.managerSelectName, isSelected && styles.managerSelectNameActive]}>{m}</Text>
-                      {isSelected && <Feather name="check" size={16} color={colors.primary} />}
+                    {isSelected && <Feather name="check" size={16} color={colors.primary} />}
                   </TouchableOpacity>
                 );
               })}
@@ -829,7 +834,7 @@ export const SalesManagerTargetsScreen = () => {
         </View>
       </Modal>
 
-                  {/* Entity Selector Modal */}
+      {/* Entity Selector Modal */}
       <Modal visible={isEntityModalOpen} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.managerModalContainer}>
           <View style={styles.modalHeader}>
@@ -838,7 +843,7 @@ export const SalesManagerTargetsScreen = () => {
               <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
-                     <View style={styles.entitySearchBar}>
+          <View style={styles.entitySearchBar}>
             <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
@@ -879,7 +884,7 @@ export const SalesManagerTargetsScreen = () => {
       {/* View Modal */}
       <Modal visible={Boolean(viewingItem)} transparent animationType="fade" onRequestClose={() => setViewingItem(null)}>
         <View style={styles.modalOverlay}>
-                <View style={[styles.modalCard, { maxHeight: SCREEN_HEIGHT * 0.82 }]}>
+          <View style={[styles.modalCard, { maxHeight: SCREEN_HEIGHT * 0.82 }]}>
             <View style={styles.viewModalHeader}>
               <View style={styles.viewModalHeaderLeft}>
                 <View style={styles.viewModalIconCircle}>
@@ -892,8 +897,8 @@ export const SalesManagerTargetsScreen = () => {
               </TouchableOpacity>
             </View>
 
-                        {viewingItem && (
-                            <ScrollView style={{ maxHeight: SCREEN_HEIGHT * 0.82 - 70 }} showsVerticalScrollIndicator={false}>
+            {viewingItem && (
+              <ScrollView style={{ maxHeight: SCREEN_HEIGHT * 0.82 - 70 }} showsVerticalScrollIndicator={false}>
                 <View style={styles.viewInfoGrid}>
                   <View style={styles.viewInfoBlock}>
                     <Text style={styles.viewInfoLabel}>Name</Text>
@@ -934,7 +939,7 @@ export const SalesManagerTargetsScreen = () => {
                   </View>
                 </View>
 
-                               <View style={[styles.monthHeaderRow, { marginTop: spacing.sm }]}>
+                <View style={[styles.monthHeaderRow, { marginTop: spacing.sm }]}>
                   <View style={styles.monthHeaderLabel}>
                     <Feather name="calendar" size={13} color={colors.text} />
                     <Text style={styles.monthHeaderText}>Month</Text>
@@ -944,7 +949,7 @@ export const SalesManagerTargetsScreen = () => {
                     <Text style={styles.monthHeaderText}>Quantity</Text>
                   </View>
                 </View>
-                                {QUOTA_MONTHS.map((month) => {
+                {QUOTA_MONTHS.map((month) => {
                   const detail = findDetailForMonth(viewingItem.details, month);
                   return (
                     <View key={month} style={styles.monthRow}>
@@ -973,7 +978,7 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
 
   statsRow: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
-      statCard: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, minHeight: 64, overflow: "hidden" },
+  statCard: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, minHeight: 64, overflow: "hidden" },
   statTextBlock: { flex: 1, paddingRight: spacing.xs },
   statLabel: { fontSize: txtSize.xs, fontFamily: typography.medium, color: colors.textSecondary },
   statValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginTop: 2 },
@@ -986,7 +991,7 @@ const styles = StyleSheet.create({
   tabTextActive: { color: colors.primary, fontFamily: typography.bold },
 
   searchFilterRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
-    searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 40 },
+  searchContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 40 },
   entitySearchBar: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, height: 40, margin: spacing.md, marginBottom: 0 },
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, fontSize: txtSize.small, fontFamily: typography.medium, color: colors.text, height: "100%", padding: 0 },
@@ -1002,7 +1007,7 @@ const styles = StyleSheet.create({
   listContent: { padding: spacing.md, gap: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.surface },
-   nameRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  nameRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   srNo: { fontSize: 12, fontFamily: typography.medium, color: colors.muted, flexShrink: 0 },
   entityName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, flex: 1, flexShrink: 1, flexWrap: "wrap" },
   entityMeta: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary, marginTop: 2 },
@@ -1015,19 +1020,19 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginBottom: 4 },
   totalValue: { fontSize: 14, fontFamily: typography.bold, color: colors.text },
 
-    formContainer: { padding: spacing.md, paddingBottom: spacing.xxl * 2 },
+  formContainer: { padding: spacing.md, paddingBottom: spacing.xxl * 2 },
   formGroup: { marginBottom: spacing.lg },
   inputLabel: { fontSize: 13, fontFamily: typography.bold, color: colors.text, marginBottom: 8 },
-    dropdownTrigger: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: radius.sm, overflow: "hidden" },
-    dropdownTriggerLeft: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
+  dropdownTrigger: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: radius.sm, overflow: "hidden" },
+  dropdownTriggerLeft: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
   dropdownText: { fontSize: 14, fontFamily: typography.medium, color: colors.text, flexShrink: 1 },
   readOnlyField: { backgroundColor: colors.surface },
   helperText: { fontSize: 11, fontFamily: typography.medium, color: colors.muted, marginTop: 6 },
 
   yearSelectorRow: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
-  yearChip: { flex: 1, minWidth: 90, paddingVertical: 10, alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm },
-    yearChipActive: { backgroundColor: colors.white, borderColor: colors.primary, borderWidth: 2 },
-  yearChipText: { fontSize: 14, fontFamily: typography.medium, color: colors.text },
+  yearChip: { flex: 1, minWidth: 90, paddingVertical: 10, alignItems: "center", backgroundColor: colors.white, borderWidth: 2, borderColor: colors.border, borderRadius: radius.sm },
+  yearChipActive: { backgroundColor: colors.white, borderColor: colors.primary, borderWidth: 2 },
+  yearChipText: { fontSize: 12, fontFamily: typography.medium, color: colors.text },
   yearChipTextActive: { color: colors.primary, fontFamily: typography.bold },
 
   targetGrid: { backgroundColor: colors.white, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, overflow: "hidden", marginBottom: spacing.xxl },
@@ -1048,11 +1053,11 @@ const styles = StyleSheet.create({
 
   targetRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.surface },
   targetMonthLabel: { flex: 1, fontSize: 14, fontFamily: typography.bold, color: colors.text },
-    targetInput: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontFamily: typography.medium, color: colors.text, textAlign: "right" },
+  targetInput: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontFamily: typography.medium, color: colors.text, textAlign: "right" },
   targetInputLocked: { backgroundColor: "#F3F4F6", color: colors.muted },
 
   formFooter: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.white, paddingHorizontal: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-    totalBlock: { flexShrink: 0 },
+  totalBlock: { flexShrink: 0 },
   totalFooterLabel: { fontSize: 11, fontFamily: typography.bold, color: colors.muted, marginBottom: 2 },
   totalFooterValue: { fontSize: 18, fontFamily: typography.bold, color: colors.text },
   submitBtn: { flex: 1, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center" },
@@ -1060,16 +1065,16 @@ const styles = StyleSheet.create({
   submitBtnText: { fontSize: 14, fontFamily: typography.bold, color: colors.white },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: spacing.xl },
-    modalCard: { backgroundColor: colors.white, padding: spacing.md, borderRadius: radius.lg, flexShrink: 1 },
+  modalCard: { backgroundColor: colors.white, padding: spacing.md, borderRadius: radius.lg, flexShrink: 1 },
   modalTitle: { fontSize: 18, fontFamily: typography.bold, color: colors.text, marginBottom: spacing.lg },
-    applyBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.sm, alignItems: "center", marginTop: spacing.md },
+  applyBtn: { backgroundColor: colors.primary, paddingVertical: 12, borderRadius: radius.sm, alignItems: "center", marginTop: spacing.md },
 
   managerModalContainer: { flex: 1, backgroundColor: colors.surface },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   managerSelectRow: { padding: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, borderRadius: radius.sm, marginBottom: spacing.sm },
   managerSelectName: { fontSize: 15, fontFamily: typography.bold, color: colors.text, marginBottom: 4 },
   managerSelectCode: { fontSize: 12, fontFamily: typography.medium, color: colors.textSecondary },
-    effectiveMonthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  effectiveMonthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   effectiveMonthRowActive: { backgroundColor: colors.white, borderWidth: 2, borderColor: colors.primary },
   managerSelectNameActive: { color: colors.primary, fontFamily: typography.bold },
 
@@ -1089,7 +1094,7 @@ const styles = StyleSheet.create({
   viewInfoValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text },
 
   viewSummaryRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
-    viewSummaryBox: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F8FAFC", borderRadius: radius.md, padding: spacing.sm, overflow: "hidden" },
+  viewSummaryBox: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F8FAFC", borderRadius: radius.md, padding: spacing.sm, overflow: "hidden" },
   viewSummaryValue: { fontSize: txtSize.small, fontFamily: typography.bold, color: colors.text, marginTop: 2 },
   summaryIconCircle: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" },
 

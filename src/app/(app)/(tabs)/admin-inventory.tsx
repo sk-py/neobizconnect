@@ -11,7 +11,7 @@ export const InventoryIndexScreen = () => {
     useFocusEffect(
         useCallback(() => {
             const onBackPress = () => {
-                router.push("/dashboard");
+                router.push("/");
                 return true;
             };
 

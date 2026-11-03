@@ -48,7 +48,7 @@ export const DealerQueryScreen = () => {
 
         const goBack = () => {
         if (isDealer) {
-            router.navigate("/dashboard");
+            router.navigate("/");
         } else if (isAdmin) {
             router.navigate("/leads-and-queries-screen");
         } else {

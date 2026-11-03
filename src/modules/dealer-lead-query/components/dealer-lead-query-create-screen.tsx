@@ -1,4 +1,8 @@
-import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
+import { CountryCodeSelect } from "@/components/custom/country-code-select";
+import { FieldSelect } from "@/components/custom/field-select";
+import { COUNTRY_CODES } from "@/constants/country-codes";
+import { colors, spacing, txtSize, typography } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
 import {
   createLeadQuery,
   fetchSalesManagerOptions,
@@ -12,23 +16,18 @@ import {
   LeadFormData,
   TYPE_OF_QUERY_OPTIONS,
 } from "@/modules/dealer-lead-query/types";
-import { FieldSelect } from "@/components/custom/field-select";
-import { CountryCodeSelect } from "@/components/custom/country-code-select";
-import { COUNTRY_CODES } from "@/constants/country-codes";
-import { useAuth } from "@/hooks/use-auth";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 

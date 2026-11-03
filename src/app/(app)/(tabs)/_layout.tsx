@@ -1,11 +1,13 @@
+import { PushPermissionModal } from '@/components/shared/push-permission-modal';
 import { hasModuleAccess, type AppModuleName, type UserRole } from '@/constants/modules';
 import { colors, typography } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Feather from '@react-native-vector-icons/feather/static';
+import { getPermissionsAsync } from 'expo-notifications';
 import { Tabs } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,26 +18,56 @@ const TabLayout = () => {
     const insets = useSafeAreaInsets();
 
     const { initializePush } = usePushNotifications(user?.user_id);
+    const [showPushModal, setShowPushModal] = useState(false);
 
     useEffect(() => {
         const setupPush = async () => {
             if (!user?.user_id) return;
 
-            const pushEnabled = await AsyncStorage.getItem("pushEnabled");
+            const { status } = await getPermissionsAsync();
 
-            // Default to true. Only skip if the user explicitly toggled it off.
-            if (pushEnabled !== "false") {
+            if (status === 'granted') {
+                // Already accepted previously: sync token silently
                 await initializePush();
+            } else {
+                // First time or previously skipped: show custom UI
+                setShowPushModal(true);
             }
         };
 
         setupPush();
     }, [user?.user_id, initializePush]);
 
+    const handleAcceptPush = async () => {
+        setShowPushModal(false);
+        await AsyncStorage.setItem("pushEnabled", "true");
+        const token = await initializePush();
+        if (!token) {
+            // User denied the native OS system popup
+            await AsyncStorage.setItem("pushEnabled", "false");
+        }
+    };
+
+    const handleRejectPush = async () => {
+        setShowPushModal(false);
+        await AsyncStorage.setItem("pushEnabled", "false");
+    };
+
+    const handleSkipPush = () => {
+        // Close modal without saving to AsyncStorage so it asks again next launch
+        setShowPushModal(false);
+    };
+
     const canAccess = (moduleName: AppModuleName) => hasModuleAccess(moduleName, userRole);
 
     return (
         <View style={styles.container}>
+            <PushPermissionModal
+                visible={showPushModal}
+                onAccept={handleAcceptPush}
+                onReject={handleRejectPush}
+                onSkip={handleSkipPush}
+            />
             <Tabs
                 screenOptions={{
                     headerShown: false,
@@ -120,7 +152,7 @@ const TabLayout = () => {
                         }}
                     />
                 </Tabs.Protected>
-<Tabs.Protected guard={userRole === "Super Admin"}>
+                <Tabs.Protected guard={userRole === "Super Admin"}>
                     <Tabs.Screen
                         name='user-management'
                         options={{ href: null }}
@@ -196,7 +228,7 @@ const TabLayout = () => {
 
                 <Tabs.Protected guard={canAccess("Item Master")}>
                     <Tabs.Screen
-                                                name='item-master'
+                        name='item-master'
                         options={{
                             title: "Stock",
                             tabBarIcon: ({ color, size }) => (
@@ -324,7 +356,7 @@ const TabLayout = () => {
 
                 <Tabs.Protected guard={canAccess("Lead Query")}>
                     <Tabs.Screen
-                                               name='lead-query'
+                        name='lead-query'
                         options={{
                             title: "Leads & Queries",
                             tabBarIcon: ({ color, size }) => (

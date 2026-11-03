@@ -30,7 +30,8 @@ export const usePushNotifications = (userId?: number | string | null) => {
       if (!userId || lastSyncedTokenRef.current === token) return;
 
       const pushEnabled = await AsyncStorage.getItem("pushEnabled");
-      if (pushEnabled !== "false") {
+      console.log(pushEnabled);
+      if (pushEnabled !== "false" && pushEnabled !== null) {
         lastSyncedTokenRef.current = token;
         await syncPushToken(userId, token);
       }
@@ -106,7 +107,7 @@ export const usePushNotifications = (userId?: number | string | null) => {
           return;
         }
 
-        const route = (data?.url || data?.route || "/dashboard") as any;
+        const route = (data?.url || data?.route || "/") as any;
         router.push(route);
       });
 
@@ -157,10 +158,10 @@ export async function registerForPushNotificationsAsync(): Promise<
   }
 
   if (finalStatus !== "granted") {
-    Alert.alert(
-      "Permission Denied",
-      "Failed to get push token for push notifications!",
-    );
+    // Alert.alert(
+    //   "Permission Denied",
+    //   "Failed to get push token for push notifications!",
+    // );
     return null;
   }
 

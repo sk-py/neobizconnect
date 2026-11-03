@@ -42,7 +42,7 @@ export default function ItemMasterScreen() {
     if (canSeeExtraDetails) {
       router.push("/admin-inventory");
     } else {
-      router.push(user?.authority === "Sales Manager" ? "/dashboard" : "/sales-manager-modules");
+      router.push(user?.authority === "Sales Manager" ? "/" : "/sales-manager-modules");
     }
   };
 
@@ -221,13 +221,13 @@ export default function ItemMasterScreen() {
       <View style={styles.header}>
                 <View style={styles.titleRow2}>
           <View style={styles.titleRowHeader}>
-            <TouchableOpacity
+         { user?.authority !== "Sales Manager" &&  <TouchableOpacity
               onPress={goBack}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.backButton}
             >
               <Feather name="arrow-left" size={20} color={colors.text} />
-            </TouchableOpacity>
+            </TouchableOpacity>}
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle}>Inventory</Text>
               <Text style={styles.headerSubtitle}>View your stock levels and inventory details</Text>

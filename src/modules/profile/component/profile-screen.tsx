@@ -32,14 +32,18 @@ export const ProfileScreen = () => {
 
   const handleLogout = async () => {
     const tokenData = await getDevicePushTokenAsync();
-    await AsyncStorage.setItem("pushEnabled", "false");
-    await removePushToken(user?.user_id!, tokenData.data);
+    const status = await AsyncStorage.getItem("pushEnabled");
+    if (status !== "false" && status !== null) {
+      await removePushToken(user?.user_id!, tokenData.data);
+    }
     clearSession();
   };
 
   useEffect(() => {
+
     AsyncStorage.getItem("pushEnabled").then((val) => {
-      if (val === "false") {
+      console.log(val);
+      if (val === "false" || val === null) {
         setPushEnabled(false);
       }
     });
@@ -63,11 +67,11 @@ export const ProfileScreen = () => {
             "Permission Required",
             "Push notifications are blocked. Please enable them in your device settings.",
             [
-              { text: "Cancel", style: "cancel" },
+              { text: "Skip for now", style: "cancel" },
               { text: "Open Settings", onPress: () => Linking.openSettings() }
             ]
           );
-          return; 
+          return;
         }
 
         const tokenData = await getDevicePushTokenAsync();
@@ -98,7 +102,7 @@ export const ProfileScreen = () => {
 
   // Dynamically map all billing and shipping addresses
   const addressFields: any[] = [];
-  
+
   profile.bill_to?.forEach((bill: any, index: number) => {
     const addr = `${bill.bill_to_buildingfloorroom ? bill.bill_to_buildingfloorroom + " " : ""}${bill.bill_to_address}`;
     if (isValidValue(addr)) {
@@ -143,7 +147,7 @@ export const ProfileScreen = () => {
 
   return (
     <View style={styles.safeArea} >
-            <ScrollView
+      <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing.xxl }]}
         showsVerticalScrollIndicator={false}
       >
@@ -188,7 +192,7 @@ export const ProfileScreen = () => {
         <View style={styles.sectionGroup}>
           <Text style={styles.sectionTitle}>Settings</Text>
           <View style={styles.sectionCard}>
-            
+
             <View style={styles.infoRow}>
               <Feather name="bell" size={18} color={colors.textSecondary} style={styles.infoIcon} />
               <View style={styles.infoTextContainer}>
@@ -204,8 +208,8 @@ export const ProfileScreen = () => {
               />
             </View>
 
-            <Pressable 
-              style={({ pressed }) => [styles.infoRow, styles.infoRowLast, pressed && styles.pressedRow]} 
+            <Pressable
+              style={({ pressed }) => [styles.infoRow, styles.infoRowLast, pressed && styles.pressedRow]}
               onPress={() => router.push("/change-password")}
             >
               <Feather name="lock" size={18} color={colors.textSecondary} style={styles.infoIcon} />
@@ -322,7 +326,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.surface,
-    alignItems: "center", 
+    alignItems: "center",
   },
   infoRowLast: {
     borderBottomWidth: 0,

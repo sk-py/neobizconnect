@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
 // const API_BASE_URL = "http://10.100.21.156:3500";
@@ -31,7 +32,7 @@ export const syncPushToken = async (
       const errorData = await response.json();
       throw new Error(errorData.error || `HTTP ${response.status}`);
     }
-
+    AsyncStorage.setItem("pushEnabled", "true");
     console.log("[Push API] Token synced successfully");
     return true;
   } catch (error) {

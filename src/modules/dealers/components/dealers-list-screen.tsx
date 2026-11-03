@@ -6,11 +6,11 @@ import {
   txtSize,
   typography,
 } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
+import { CreateDealerLoginModal } from "@/modules/dealers/components/create-dealer-login-modal";
 import { DealerQuickViewModal } from "@/modules/dealers/components/dealer-quick-view-modal";
 import { fetchDealers } from "@/modules/dealers/services/dealers.api";
 import { Dealer } from "@/modules/dealers/types";
-import { useAuth } from "@/hooks/use-auth";
-import { CreateDealerLoginModal } from "@/modules/dealers/components/create-dealer-login-modal";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
@@ -46,7 +46,7 @@ export default function DealersListScreen() {
     if (isAdmin) {
       router.push("/user-setup");
     } else {
-      router.push(user?.authority === "Sales Manager" ? "/dashboard" : "/sales-manager-modules");
+      router.push(user?.authority === "Sales Manager" ? "/" : "/sales-manager-modules");
     }
   };
 
@@ -305,13 +305,13 @@ style={[styles.createLoginBtnOutline,{ backgroundColor: loginCreated ? "#DCFCE7"
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={styles.titleRowHeader}>
-            <TouchableOpacity
+         { user?.authority !== "Sales Manager" && <TouchableOpacity
               onPress={goBack}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.backButton}
             >
               <Feather name="arrow-left" size={20} color={colors.text} />
-            </TouchableOpacity>
+            </TouchableOpacity>}
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle}>Dealers</Text>
               <Text style={styles.headerSubtitle}>View and manage your dealer network</Text>

@@ -1,11 +1,11 @@
 import { FieldSelect } from "@/components/custom/field-select";
 import { SkeletonList } from "@/components/custom/skeleton";
 import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
 import {
-  fetchAssignedToOptions,
   fetchLeadQueries,
   fetchQueryManagerOptions,
-  updateLeadQuery,
+  updateLeadQuery
 } from "@/modules/lead-query/services/lead-query.api";
 import {
   EmployeeOption,
@@ -13,7 +13,6 @@ import {
   LeadFormData,
   LeadQuery,
 } from "@/modules/lead-query/types";
-import { useAuth } from "@/hooks/use-auth";
 import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
@@ -24,7 +23,6 @@ import {
   KeyboardAvoidingView,
   Linking,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -98,7 +96,7 @@ export default function LeadQueryScreen() {
     if (isAdmin) {
       router.push("/leads-and-queries-screen");
     } else {
-      router.push(isSalesManager || isQueryManager ? "/dashboard" : "/sales-manager-modules");
+      router.push(isSalesManager || isQueryManager ? "/" : "/sales-manager-modules");
     }
   };
 
@@ -395,13 +393,13 @@ export default function LeadQueryScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
                 <View style={styles.titleRow}>
-          <TouchableOpacity
+       { user?.authority !== "Sales Manager" &&  <TouchableOpacity
             onPress={goBack}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.backButton}
           >
             <Feather name="arrow-left" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </TouchableOpacity>}
           <View style={styles.titleTextBlock}>
             <Text style={styles.headerTitle}>Leads & Queries</Text>
             <Text style={styles.headerSubtitle}>Manage new leads and customer inquiries</Text>

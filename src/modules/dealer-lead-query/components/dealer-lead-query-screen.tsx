@@ -1,4 +1,9 @@
-import { colors, radius, spacing, typography, txtSize } from "@/constants/theme";
+import { CountryCodeSelect } from "@/components/custom/country-code-select";
+import { FieldSelect } from "@/components/custom/field-select";
+import { SkeletonList } from "@/components/custom/skeleton";
+import { COUNTRY_CODES, splitPhoneNumber } from "@/constants/country-codes";
+import { colors, radius, spacing, txtSize, typography } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
 import {
   fetchAssignedToOptions,
   fetchLeadQueries,
@@ -15,30 +20,23 @@ import {
   LeadQuery,
   TYPE_OF_QUERY_OPTIONS,
 } from "@/modules/dealer-lead-query/types";
-import { useAuthStore } from "@/store/auth.store";
-import { FieldSelect } from "@/components/custom/field-select";
-import { CountryCodeSelect } from "@/components/custom/country-code-select";
-import { COUNTRY_CODES, splitPhoneNumber } from "@/constants/country-codes";
-import { useAuth } from "@/hooks/use-auth";
-import { useRouter, useFocusEffect } from "expo-router";
+import { LegendList } from "@legendapp/list/react-native";
 import { Feather } from "@react-native-vector-icons/feather/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LegendList } from "@legendapp/list/react-native";
-import { SkeletonList } from "@/components/custom/skeleton";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   BackHandler,
   KeyboardAvoidingView,
   Linking,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -78,11 +76,11 @@ export default function DealerLeadQueryScreen() {
 
           const goBack = () => {
     if (user?.authority === "Query Manager") {
-      router.navigate("/dashboard");
+      router.navigate("/");
       return;
     }
     if (isDealer) {
-      router.navigate("/dashboard");
+      router.navigate("/");
     } else if (isAdminUser) {
       router.navigate("/leads-and-queries-screen");
     } else {
@@ -299,13 +297,13 @@ export default function DealerLeadQueryScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
             <View style={styles.header}>
         <View style={styles.titleRow}>
-          <TouchableOpacity
+        { user?.authority !== "Query Manager" && <TouchableOpacity
             onPress={goBack}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.backButton}
           >
             <Feather name="arrow-left" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </TouchableOpacity>}
           <Text style={styles.title}>Lead / Query</Text>
           <View style={{ flex: 1 }} />
           <TouchableOpacity style={styles.createBtn} onPress={() => router.push("/dealer-lead-query-create")}>
